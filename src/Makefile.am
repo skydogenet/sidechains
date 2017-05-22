@@ -81,6 +81,7 @@ BITCOIN_CORE_H = \
   base58.h \
   bloom.h \
   blockencodings.h \
+  bmm.h \
   chain.h \
   chainparams.h \
   chainparamsbase.h \
@@ -118,7 +119,6 @@ BITCOIN_CORE_H = \
   policy/fees.h \
   policy/policy.h \
   policy/rbf.h \
-  pow.h \
   protocol.h \
   random.h \
   reverselock.h \
@@ -137,6 +137,7 @@ BITCOIN_CORE_H = \
   support/cleanse.h \
   support/events.h \
   support/lockedpool.h \
+  sidechainclient.h \
   sync.h \
   threadsafety.h \
   threadinterrupt.h \
@@ -179,6 +180,7 @@ libbitcoin_server_a_SOURCES = \
   addrdb.cpp \
   bloom.cpp \
   blockencodings.cpp \
+  bmm.cpp \
   chain.cpp \
   checkpoints.cpp \
   httprpc.cpp \
@@ -192,7 +194,6 @@ libbitcoin_server_a_SOURCES = \
   noui.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
-  pow.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
   rpc/mining.cpp \
@@ -202,6 +203,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/server.cpp \
   script/sigcache.cpp \
   script/ismine.cpp \
+  sidechainclient.cpp \
   timedata.cpp \
   torcontrol.cpp \
   txdb.cpp \
@@ -272,6 +274,8 @@ libbitcoin_consensus_a_SOURCES = \
   prevector.h \
   primitives/block.cpp \
   primitives/block.h \
+  primitives/sidechain.cpp \
+  primitives/sidechain.h \
   primitives/transaction.cpp \
   primitives/transaction.h \
   pubkey.cpp \

@@ -165,7 +165,7 @@ private:
 public:
     BlockAssembler(const CChainParams& chainparams);
     /** Construct a new block template with coinbase to scriptPubKeyIn */
-    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn);
+    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, const bool& fAssumeValid = false);
 
 private:
     // utility functions
@@ -209,5 +209,11 @@ private:
 /** Modify the extranonce in a block */
 void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
+
+/** Create a payout transaction for any new deposits */
+CTransaction CreateDepositTx();
+
+/** Create joined WT^ to be sent to the mainchain */
+CTransaction CreateWTJoinTx(uint32_t nHeight);
 
 #endif // BITCOIN_MINER_H
