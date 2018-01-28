@@ -111,6 +111,7 @@ private:
     QAction *openRPCConsoleAction;
     QAction *openAction;
     QAction *showHelpMessageAction;
+    QAction *sidechainAction;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -204,6 +205,8 @@ private Q_SLOTS:
     void gotoSignMessageTab(QString addr = "");
     /** Show Sign/Verify Message dialog and switch to verify message tab */
     void gotoVerifyMessageTab(QString addr = "");
+    /** Switch to sidechain page */
+    void gotoSidechainPage();
 
     /** Show open dialog */
     void openClicked();
@@ -233,7 +236,7 @@ private Q_SLOTS:
 
     /** Show progress dialog e.g. for verifychain */
     void showProgress(const QString &title, int nProgress);
-    
+
     /** When hideTrayIcon setting is changed in OptionsModel hide or show the icon accordingly. */
     void setTrayIconVisible(bool);
 

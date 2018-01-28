@@ -6,6 +6,7 @@
 #include <validation.h>
 
 #include <arith_uint256.h>
+#include <bmm.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <checkpoints.h>
@@ -28,6 +29,7 @@
 #include <script/script.h>
 #include <script/sigcache.h>
 #include <script/standard.h>
+#include <sidechainclient.h>
 #include <timedata.h>
 #include <tinyformat.h>
 #include <txdb.h>
@@ -46,6 +48,10 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/thread.hpp>
+
+// TODO remove. See TODO note in ConnectBlock()
+#include "sidechainclient.h"
+#include "core_io.h"
 
 #if defined(NDEBUG)
 # error "Bitcoin cannot be compiled without assertions."
@@ -199,6 +205,8 @@ private:
 
 CCriticalSection cs_main;
 
+BMM bmm;
+
 BlockMap& mapBlockIndex = g_chainstate.mapBlockIndex;
 CChain& chainActive = g_chainstate.chainActive;
 CBlockIndex *pindexBestHeader = nullptr;
@@ -218,6 +226,13 @@ size_t nCoinCacheUsage = 5000 * 300;
 uint64_t nPruneTarget = 0;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
+bool fSidechainIndex = true;
+
+// TODO make configurable
+//! BMM h* verification options
+bool fVerifyCriticalHashReadBlock = true;
+bool fVerifyCriticalHashCheckBlock = true;
+bool fVerifyCriticalHashAcceptBlockHeader = true;
 
 uint256 hashAssumeValid;
 arith_uint256 nMinimumChainWork;
@@ -279,6 +294,7 @@ CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& loc
 std::unique_ptr<CCoinsViewDB> pcoinsdbview;
 std::unique_ptr<CCoinsViewCache> pcoinsTip;
 std::unique_ptr<CBlockTreeDB> pblocktree;
+std::unique_ptr<CSidechainTreeDB> psidechaintree;
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -351,7 +367,7 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp, bool 
 
     CBlockIndex* tip = chainActive.Tip();
     assert(tip != nullptr);
-    
+
     CBlockIndex index;
     index.pprev = tip;
     // CheckSequenceLocks() uses chainActive.Height()+1 to evaluate
@@ -497,6 +513,10 @@ void UpdateMempoolForReorg(DisconnectedBlockTransactions &disconnectpool, bool f
     // UpdateTransactionsFromBlock finds descendants of any transactions in
     // the disconnectpool that were added back and cleans up the mempool state.
     mempool.UpdateTransactionsFromBlock(vHashUpdate);
+
+    std::cout << std::endl << std::endl;
+    std::cout << "Mempool reorg... chainActive->tip height: " << chainActive.Tip()->nHeight << std::endl;
+    std::cout << std::endl << std::endl;
 
     // We also need to remove any now-immature transactions
     mempool.removeForReorg(pcoinsTip.get(), chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
@@ -1116,6 +1136,10 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
+    // Optionally verify that block has a valid h* proof
+    if (fVerifyCriticalHashReadBlock && !VerifyCriticalHashProof(block))
+        return error("%s: ReadBlockFromDisk: bad-critical-hash", __func__);
+
     return true;
 }
 
@@ -1137,15 +1161,8 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
-    // Force block reward to zero when right shift is undefined.
-    if (halvings >= 64)
-        return 0;
-
-    CAmount nSubsidy = 50 * COIN;
-    // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
-    nSubsidy >>= halvings;
-    return nSubsidy;
+    // TODO
+    return 0;
 }
 
 bool IsInitialBlockDownload()
@@ -1990,6 +2007,49 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     if (!WriteTxIndexDataForBlock(block, state, pindex))
         return false;
 
+    if (fSidechainIndex) {
+
+        // TODO Cleanup
+        // Sending the lastest WT^ shouldn't take place here, and validation
+        // should not have to use or depend on the sidechain client.
+        {
+            // Send latest WT^ to the mainchain each block
+            std::vector<SidechainWTJoin> vWTJoin = psidechaintree->GetWTJoins(THIS_SIDECHAIN.nSidechain);
+            if (vWTJoin.size()) {
+                SidechainClient client;
+                client.BroadcastWTJoin(EncodeHexTx(vWTJoin.back().wtJoin));
+            }
+        }
+
+        // Collect sidechain objects
+        std::vector<std::pair<uint256, const SidechainObj *> > vSidechainObjects;
+        for (const CTransactionRef& tx : block.vtx) {
+            for (const CTxOut& txout : tx->vout) {
+                const CScript& scriptPubKey = txout.scriptPubKey;
+                size_t script_sz = scriptPubKey.size();
+                if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+                    continue;
+
+                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+                if (!obj)
+                    continue;
+
+                obj->txid = tx->GetHash();
+                vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
+            }
+        }
+        // Write sidechain objects to db
+        if (vSidechainObjects.size()) {
+            bool ret = psidechaintree->WriteSidechainIndex(vSidechainObjects);
+            if (!ret)
+                return state.Error("Failed to write sidechain index!");
+
+            // Cleanup
+            for (size_t i = 0; i < vSidechainObjects.size(); i++)
+                delete vSidechainObjects[i].second;
+        }
+    }
+
     assert(pindex->phashBlock);
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
@@ -2084,6 +2144,9 @@ bool static FlushStateToDisk(const CChainParams& chainparams, CValidationState &
                 }
                 if (!pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
                     return AbortNode(state, "Failed to write to block index database");
+                }
+                if (!psidechaintree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
+                    return AbortNode(state, "Failed to write to sidechain index database");
                 }
             }
             // Finally remove any pruned files
@@ -3016,8 +3079,71 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (fCheckPOW && fCheckMerkleRoot)
         block.fChecked = true;
 
+    // Check h* for BMM block
+    if (fVerifyCriticalHashCheckBlock && !VerifyCriticalHashProof(block))
+        return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof");
+
     return true;
 }
+
+bool VerifyCriticalHashProof(const CBlock& block)
+{
+    if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
+        return true;
+
+    const CTransaction& criticalTx(block.criticalTx);
+    if (!criticalTx.IsCoinBase() || criticalTx.vout.empty())
+        return false;
+
+    if (block.criticalProof.empty())
+        return false;
+
+    // Copy of block - BMM header data to compute h*
+    CBlock strippedBlock(block);
+    strippedBlock.Blind();
+
+    // h*
+    uint256 hashStrippedBlock = strippedBlock.GetHash();
+
+    // Loop through the coinbase and look for h*
+    uint256 hashCritical;
+    for (const CTxOut& out : criticalTx.vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+
+        if (scriptPubKey.size() < sizeof(uint256) + 2)
+            continue;
+        if (scriptPubKey[0] != OP_RETURN)
+            continue;
+
+        CScript::const_iterator phash = scriptPubKey.begin() + 1;
+        std::vector<unsigned char> vch;
+        opcodetype opcode;
+        if (!scriptPubKey.GetOp2(phash, opcode, &vch))
+            continue;
+        if (vch.size() != sizeof(uint256))
+            continue;
+
+        const uint256& hashPossible = uint256(vch);
+        if (hashPossible == hashStrippedBlock)
+            hashCritical = hashPossible;
+    }
+
+    // Check that h* is a valid hash of this block - BMM header data (blinded)
+    if (hashStrippedBlock != hashCritical)
+        return false;
+
+    // TODO
+    // Should be cached? making call each time for testing.
+    // Verify that critical hash was included in mainchain coinbase.
+    uint256 txid;
+    SidechainClient client;
+    client.VerifyCriticalHashProof(block.criticalProof, txid);
+    if (txid != criticalTx.GetHash())
+        return false;
+
+    return true;
+}
+
 
 bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params)
 {
@@ -3237,6 +3363,9 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
 
         if (!CheckBlockHeader(block, state, chainparams.GetConsensus()))
             return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
+
+        if (fVerifyCriticalHashAcceptBlockHeader && !VerifyCriticalHashProof(block))
+            return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof");
 
         // Get prev block index
         CBlockIndex* pindexPrev = nullptr;
@@ -4164,6 +4293,7 @@ bool LoadBlockIndex(const CChainParams& chainparams)
         // Use the provided setting for -txindex in the new database
         fTxIndex = gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX);
         pblocktree->WriteFlag("txindex", fTxIndex);
+        pblocktree->WriteFlag("sidechain", fSidechainIndex);
     }
     return true;
 }

@@ -10,6 +10,8 @@
 #include <serialize.h>
 #include <uint256.h>
 
+#include <string>
+
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
  * requirements.  When they solve the proof-of-work, they broadcast the block
@@ -28,6 +30,10 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
 
+    // BMM header contents
+    std::string criticalProof;
+    CMutableTransaction criticalTx;
+
     CBlockHeader()
     {
         SetNull();
@@ -43,6 +49,8 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
+        READWRITE(criticalProof);
+        READWRITE(criticalTx);
     }
 
     void SetNull()
@@ -53,11 +61,19 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
+        criticalProof = "";
+        criticalTx = CMutableTransaction();
+    }
+
+    void Blind()
+    {
+        criticalProof = "";
+        criticalTx = CMutableTransaction();
     }
 
     bool IsNull() const
     {
-        return (nBits == 0);
+        return (criticalProof.empty() && criticalTx.IsEmpty());
     }
 
     uint256 GetHash() const;
@@ -113,6 +129,8 @@ public:
         block.nTime          = nTime;
         block.nBits          = nBits;
         block.nNonce         = nNonce;
+        block.criticalProof  = criticalProof;
+        block.criticalTx     = criticalTx;
         return block;
     }
 

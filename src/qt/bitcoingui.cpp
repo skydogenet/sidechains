@@ -16,6 +16,7 @@
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/rpcconsole.h>
+#include <qt/sidechainpage.h>
 #include <qt/utilitydialog.h>
 
 #ifdef ENABLE_WALLET
@@ -109,6 +110,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     openRPCConsoleAction(0),
     openAction(0),
     showHelpMessageAction(0),
+    sidechainAction(0),
     trayIcon(0),
     trayIconMenu(0),
     notificator(0),
@@ -401,6 +403,20 @@ void BitcoinGUI::createActions()
     }
 #endif // ENABLE_WALLET
 
+
+    sidechainAction = new QAction(platformStyle->SingleColorIcon(":/icons/tx_inout"), tr("&Sidechain"), this);
+    sidechainAction->setStatusTip(tr("View sidechain history / status & make withdraw requests"));
+    sidechainAction->setToolTip(sidechainAction->statusTip());
+    sidechainAction->setCheckable(true);
+    sidechainAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
+    tabGroup->addAction(sidechainAction);
+
+#ifdef ENABLE_WALLET
+    connect(sidechainAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(sidechainAction, SIGNAL(triggered()), this, SLOT(gotoSidechainPage()));
+#endif
+
+
     new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_C), this, SLOT(showDebugWindowActivateConsole()));
     new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_D), this, SLOT(showDebugWindow()));
 }
@@ -462,6 +478,9 @@ void BitcoinGUI::createToolBars()
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
         toolbar->addAction(historyAction);
+        toolbar->addSeparator();
+        toolbar->addAction(sidechainAction);
+        toolbar->addSeparator();
         overviewAction->setChecked(true);
     }
 }
@@ -498,13 +517,13 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
         }
 #endif // ENABLE_WALLET
         unitDisplayControl->setOptionsModel(_clientModel->getOptionsModel());
-        
+
         OptionsModel* optionsModel = _clientModel->getOptionsModel();
         if(optionsModel)
         {
             // be aware of the tray icon disable state change reported by the OptionsModel object.
             connect(optionsModel,SIGNAL(hideTrayIconChanged(bool)),this,SLOT(setTrayIconVisible(bool)));
-        
+
             // initialize the disable state of the tray icon with the current value in the model.
             setTrayIconVisible(optionsModel->getHideTrayIcon());
         }
@@ -568,6 +587,7 @@ void BitcoinGUI::setWalletActionsEnabled(bool enabled)
     verifyMessageAction->setEnabled(enabled);
     usedSendingAddressesAction->setEnabled(enabled);
     usedReceivingAddressesAction->setEnabled(enabled);
+    sidechainAction->setEnabled(enabled);
     openAction->setEnabled(enabled);
 }
 
@@ -711,6 +731,12 @@ void BitcoinGUI::gotoSignMessageTab(QString addr)
 void BitcoinGUI::gotoVerifyMessageTab(QString addr)
 {
     if (walletFrame) walletFrame->gotoVerifyMessageTab(addr);
+}
+
+void BitcoinGUI::gotoSidechainPage()
+{
+    sidechainAction->setChecked(true);
+    if (walletFrame) walletFrame->gotoSidechainPage();
 }
 #endif // ENABLE_WALLET
 
@@ -1046,7 +1072,7 @@ void BitcoinGUI::setHDStatus(int hdEnabled)
     labelWalletHDStatusIcon->setPixmap(platformStyle->SingleColorIcon(hdEnabled ? ":/icons/hd_enabled" : ":/icons/hd_disabled").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
     labelWalletHDStatusIcon->setToolTip(hdEnabled ? tr("HD key generation is <b>enabled</b>") : tr("HD key generation is <b>disabled</b>"));
 
-    // eventually disable the QLabel to set its opacity to 50% 
+    // eventually disable the QLabel to set its opacity to 50%
     labelWalletHDStatusIcon->setEnabled(hdEnabled);
 }
 

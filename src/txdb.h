@@ -17,6 +17,10 @@
 
 class CBlockIndex;
 class CCoinsViewDBCursor;
+class SidechainObj;
+class SidechainDeposit;
+class SidechainWT;
+class SidechainWTJoin;
 class uint256;
 
 //! No need to periodic flush if at least this much space still available.
@@ -124,6 +128,29 @@ public:
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
     bool LoadBlockIndexGuts(const Consensus::Params& consensusParams, std::function<CBlockIndex*(const uint256&)> insertBlockIndex);
+};
+
+/** Access to the sidechain database (blocks/sidechain/) */
+class CSidechainTreeDB : public CDBWrapper
+{
+public:
+    CSidechainTreeDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+    bool WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo);
+    bool ReadBlockFileInfo(int nFile, CBlockFileInfo &fileinfo);
+    bool ReadLastBlockFile(int &nFile);
+    bool WriteReindexing(bool fReindex);
+    bool ReadReindexing(bool &fReindex);
+    bool WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list);
+    bool WriteFlag(const std::string &name, bool fValue);
+    bool ReadFlag(const std::string &name, bool &fValue);
+
+    bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
+    bool GetWTJoin(const uint256 & /* WT^ ID */, SidechainWTJoin &wtJoin);
+    bool GetDeposit(const uint256 & /* Deposit ID */, SidechainDeposit &deposit);
+
+    std::vector<SidechainWT> GetWTs(const uint8_t & /* nSidechain */);
+    std::vector<SidechainWTJoin> GetWTJoins(const uint8_t & /* nSidechain */);
+    std::vector<SidechainDeposit> GetDeposits(const uint8_t & /* nSidechain */);
 };
 
 #endif // BITCOIN_TXDB_H

@@ -96,6 +96,19 @@ unsigned int CTransaction::GetTotalSize() const
     return ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION);
 }
 
+CAmount CMutableTransaction::GetValueBurnedForWT() const
+{
+    CAmount nValueOut = CAmount(0);
+    for (const CTxOut out : vout) {
+        if (out.scriptPubKey.IsUnspendable()) {
+            nValueOut += out.nValue;
+            if (!MoneyRange(out.nValue) || !MoneyRange(nValueOut))
+                throw std::runtime_error(std::string(__func__) + ": value out of range");
+        }
+    }
+    return nValueOut;
+}
+
 std::string CTransaction::ToString() const
 {
     std::string str;

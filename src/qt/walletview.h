@@ -16,6 +16,7 @@ class PlatformStyle;
 class ReceiveCoinsDialog;
 class SendCoinsDialog;
 class SendCoinsRecipient;
+class SidechainPage;
 class TransactionView;
 class WalletModel;
 class AddressBookPage;
@@ -64,6 +65,7 @@ private:
     SendCoinsDialog *sendCoinsPage;
     AddressBookPage *usedSendingAddressesPage;
     AddressBookPage *usedReceivingAddressesPage;
+    SidechainPage *sidechainPage;
 
     TransactionView *transactionView;
 
@@ -84,6 +86,8 @@ public Q_SLOTS:
     void gotoSignMessageTab(QString addr = "");
     /** Show Sign/Verify Message dialog and switch to verify message tab */
     void gotoVerifyMessageTab(QString addr = "");
+    /** Switch to sidechain page */
+    void gotoSidechainPage();
 
     /** Show incoming transaction notification for new transactions.
 

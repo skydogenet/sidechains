@@ -16,6 +16,7 @@
 #include <protocol.h> // For CMessageHeader::MessageStartChars
 #include <policy/feerate.h>
 #include <script/script_error.h>
+#include <sidechain.h>
 #include <sync.h>
 #include <versionbits.h>
 
@@ -30,8 +31,10 @@
 
 #include <atomic>
 
+class BMM;
 class CBlockIndex;
 class CBlockTreeDB;
+class CSidechainTreeDB;
 class CChainParams;
 class CCoinsViewDB;
 class CInv;
@@ -219,7 +222,18 @@ static const unsigned int DEFAULT_CHECKLEVEL = 3;
 // Setting the target to > than 550MB will make it likely we can respect the target.
 static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 
-/** 
+/** Sidechain keys */
+static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc5911528596b7d7f49";
+static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
+
+/** Blind merged mining */
+extern bool fVerifyCriticalHashReadBlock;
+extern bool fVerifyCriticalHashCheckBlock;
+extern bool fVerifyCriticalHashAcceptBlockHeader;
+
+extern BMM bmm;
+
+/**
  * Process an incoming block. This only returns after the best known valid
  * block is made active. Note that it does not, however, guarantee that the
  * specific block passed to it has been checked for validity!
@@ -230,7 +244,7 @@ static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
  *
  * Note that we guarantee that either the proof-of-work is valid on pblock, or
  * (and possibly also) BlockChecked will have been called.
- * 
+ *
  * Call without cs_main held.
  *
  * @param[in]   pblock  The block we want to process.
@@ -356,7 +370,7 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp = null
 
 /**
  * Closure representing one script verification
- * Note that this stores references to the spending transaction 
+ * Note that this stores references to the spending transaction
  */
 class CScriptCheck
 {
@@ -398,6 +412,9 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
 bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams);
 
 /** Functions for validating blocks and updating the block tree */
+
+/** Verify BMM h* proof for this block */
+bool VerifyCriticalHashProof(const CBlock& block);
 
 /** Context-independent validity checks */
 bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
@@ -451,6 +468,9 @@ extern std::unique_ptr<CCoinsViewCache> pcoinsTip;
 
 /** Global variable that points to the active block tree (protected by cs_main) */
 extern std::unique_ptr<CBlockTreeDB> pblocktree;
+
+/** Global variable that points to the active sidechain tree (protected by cs_main) */
+extern std::unique_ptr<CSidechainTreeDB> psidechaintree;
 
 /**
  * Return the spend height, which is one more than the inputs.GetBestBlock().
