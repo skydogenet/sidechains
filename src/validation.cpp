@@ -732,7 +732,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
 
         CAmount mempoolRejectFee = pool.GetMinFee(gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000).GetFee(nSize);
         if (!bypass_limits && mempoolRejectFee > 0 && nModifiedFees < mempoolRejectFee) {
-            return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool min fee not met", false, strprintf("%d < %d", nFees, mempoolRejectFee));
+            return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool min fee not met", false, strprintf("%d < %d", nModifiedFees, mempoolRejectFee));
         }
 
         // No transactions are allowed below minRelayTxFee except from disconnected blocks
@@ -1199,7 +1199,8 @@ static void AlertNotify(const std::string& strMessage)
     safeStatus = singleQuote+safeStatus+singleQuote;
     boost::replace_all(strCmd, "%s", safeStatus);
 
-    boost::thread t(runCommand, strCmd); // thread runs free
+    std::thread t(runCommand, strCmd);
+    t.detach(); // thread runs free
 }
 
 static void CheckForkWarningConditions()
@@ -2149,7 +2150,7 @@ bool static FlushStateToDisk(const CChainParams& chainparams, CValidationState &
             nLastWrite = nNow;
         }
         // Flush best chain related state. This can only be done if the blocks / block index write was also done.
-        if (fDoFullFlush) {
+        if (fDoFullFlush && !pcoinsTip->GetBestBlock().IsNull()) {
             // Typical Coin structures on disk are around 48 bytes in size.
             // Pushing a new one to the database can cause it to be written
             // twice (once in the log, and once in the tables). This is already
@@ -4787,6 +4788,7 @@ bool DumpMempool(void)
 }
 
 //! Guess how far we are in the verification process at the given block index
+//! require cs_main if pindex has not been validated yet (because nChainTx might be unset)
 double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex *pindex) {
     if (pindex == nullptr)
         return 0.0;

@@ -99,7 +99,9 @@ class BitcoinTestFramework():
 
         PortSeed.n = self.options.port_seed
 
-        os.environ['PATH'] = self.options.srcdir + ":" + self.options.srcdir + "/qt:" + os.environ['PATH']
+        os.environ['PATH'] = self.options.srcdir + os.pathsep + \
+                             self.options.srcdir + os.path.sep + "qt" + os.pathsep + \
+                             os.environ['PATH']
 
         check_json_precision()
 
@@ -148,10 +150,11 @@ class BitcoinTestFramework():
             self.log.info("Note: bitcoinds were not stopped and may still be running")
 
         if not self.options.nocleanup and not self.options.noshutdown and success != TestStatus.FAILED:
-            self.log.info("Cleaning up")
-            shutil.rmtree(self.options.tmpdir)
+            self.log.info("Cleaning up {} on exit".format(self.options.tmpdir))
+            cleanup_tree_on_exit = True
         else:
             self.log.warning("Not cleaning up dir %s" % self.options.tmpdir)
+            cleanup_tree_on_exit = False
 
         if success == TestStatus.PASSED:
             self.log.info("Tests successful")
@@ -164,6 +167,8 @@ class BitcoinTestFramework():
             self.log.error("Hint: Call {} '{}' to consolidate all logs".format(os.path.normpath(os.path.dirname(os.path.realpath(__file__)) + "/../combine_logs.py"), self.options.tmpdir))
             exit_code = TEST_EXIT_FAILED
         logging.shutdown()
+        if cleanup_tree_on_exit:
+            shutil.rmtree(self.options.tmpdir)
         sys.exit(exit_code)
 
     # Methods to override in subclass test scripts.
@@ -387,7 +392,7 @@ class BitcoinTestFramework():
             # Create cache directories, run bitcoinds:
             for i in range(MAX_NODES):
                 datadir = initialize_datadir(self.options.cachedir, i)
-                args = [os.getenv("BITCOIND", "bitcoind"), "-server", "-keypool=1", "-datadir=" + datadir, "-discover=0"]
+                args = [os.getenv("BITCOIND", "bitcoind"), "-datadir=" + datadir]
                 if i > 0:
                     args.append("-connect=127.0.0.1:" + str(p2p_port(0)))
                 self.nodes.append(TestNode(i, self.options.cachedir, extra_args=[], rpchost=None, timewait=None, binary=None, stderr=None, mocktime=self.mocktime, coverage_dir=None))
