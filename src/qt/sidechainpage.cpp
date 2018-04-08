@@ -327,11 +327,11 @@ void SidechainPage::generateAddress()
     if (vpwallets.empty())
         return;
 
-    // TODO don't generate address here
     LOCK2(cs_main, vpwallets[0]->cs_wallet);
 
     vpwallets[0]->TopUpKeyPool();
 
+    // TODO don't generate address here
     CPubKey newKey;
     if (vpwallets[0]->GetKeyFromPool(newKey)) {
         CKeyID keyID = newKey.GetID();
@@ -382,7 +382,7 @@ void SidechainPage::on_pushButtonCreateBlock_clicked()
     coinbaseScript->KeepScript();
 
     std::unique_ptr<CBlockTemplate> pblocktemplate(
-                BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true));
+                BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, false, true));
 
     if (!pblocktemplate.get()) {
         // No block template error message
@@ -410,20 +410,28 @@ void SidechainPage::on_pushButtonCreateBlock_clicked()
     }
 
     std::stringstream ss;
-    ss << "Block hash (h*):\n" << pblock->GetHash().ToString() << std::endl;
+    ss << "BMM blinded block hash (h*):\n" << pblock->GetHash().ToString();
     ss << std::endl;
-    ss << "Block:\n" << pblock->ToString() << std::endl;
+    ss << std::endl;
+    ss << "BMM Block:\n" << pblock->ToString() << std::endl;
 
     ui->textBrowser->setText(QString::fromStdString(ss.str()));
 }
 
 void SidechainPage::on_pushButtonSubmitBlock_clicked()
 {
+    // TODO improve error messages
+    QMessageBox messageBox;
+    messageBox.setDefaultButton(QMessageBox::Ok);
+
     uint256 hashBlock = uint256S(ui->lineEditBMMHash->text().toStdString());
     CBlock block;
 
     if (!bmm.GetBMMBlock(hashBlock, block)) {
-        // TODO display error message
+        // Block not stored message box
+        messageBox.setWindowTitle("Block not found!");
+        messageBox.setText("Your node does not have this BMM block stored.");
+        messageBox.exec();
         return;
     }
 
@@ -431,7 +439,10 @@ void SidechainPage::on_pushButtonSubmitBlock_clicked()
     std::string strProof = ui->lineEditProof->text().toStdString();
     CMutableTransaction mtx;
     if (!DecodeHexTx(mtx, ui->lineEditCoinbaseHex->text().toStdString())) {
-        // TODO display error message
+        // Invalid transaction hex input message box
+        messageBox.setWindowTitle("Invalid transaction hex!");
+        messageBox.setText("The transaction hex is invalid.");
+        messageBox.exec();
         return;
     }
 
@@ -442,7 +453,10 @@ void SidechainPage::on_pushButtonSubmitBlock_clicked()
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
 
     if (!ProcessNewBlock(Params(), shared_pblock, true, NULL)) {
-        // TODO display error message
+        // Failed to process block message box
+        messageBox.setWindowTitle("Failed to process block!");
+        messageBox.setText("The submitted block is invalid.");
+        messageBox.exec();
         return;
     }
 }
