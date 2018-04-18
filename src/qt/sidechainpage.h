@@ -56,6 +56,10 @@ private Q_SLOTS:
 
     void on_pushButtonCreateBlock_clicked();
 
+    void on_pushButtonSendCriticalRequest_clicked();
+
+    void on_checkBoxAutomateBMM_clicked(bool fChecked);
+
     void on_pushButtonSubmitBlock_clicked();
 
 private:

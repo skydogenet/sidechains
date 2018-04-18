@@ -418,6 +418,20 @@ void SidechainPage::on_pushButtonCreateBlock_clicked()
     ui->textBrowser->setText(QString::fromStdString(ss.str()));
 }
 
+void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
+{
+
+}
+
+void SidechainPage::on_checkBoxAutomateBMM_clicked(bool fChecked)
+{
+    if (fChecked) {
+        ui->frameManualBMM->setEnabled(false);
+    } else {
+        ui->frameManualBMM->setEnabled(true);
+    }
+}
+
 void SidechainPage::on_pushButtonSubmitBlock_clicked()
 {
     // TODO improve error messages

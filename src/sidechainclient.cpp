@@ -5,7 +5,10 @@
 #include "sidechainclient.h"
 
 #include "core_io.h"
+#include "sidechain.h"
 #include "streams.h"
+#include "uint256.h"
+#include "univalue.h"
 #include "utilmoneystr.h"
 #include "utilstrencodings.h"
 #include "util.h"
@@ -15,7 +18,6 @@
 #include <stdlib.h>
 #include <string>
 
-// TODO no boost
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include <boost/foreach.hpp>
@@ -187,6 +189,143 @@ bool SidechainClient::VerifyCriticalHashProof(const std::string& criticalProof, 
     return true;
 }
 
+SidechainBMMProof SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock)
+{
+    SidechainBMMProof bmmProof;
+    bmmProof.hashBMMBlock = hashBMMBlock;
+
+    // JSON for requesting BMM proof via mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"getbmmproof\", \"params\": ");
+    json.append("[\"");
+    json.append(hashMainBlock.ToString());
+    json.append("\",\"");
+    json.append(hashBMMBlock.ToString());
+    json.append("\"");
+    json.append("] }");
+
+    // Try to request BMM proof from mainchain
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request BMM proof\n");
+        return bmmProof; // TODO
+    }
+
+    // Process result
+    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
+        BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
+            // Looping through members
+            if (v.first == "coinbasehex") {
+                // Read coinbase hex
+                std::string data = v.second.data();
+                if (!data.length())
+                    continue;
+
+                bmmProof.coinbaseHex = data;
+            }
+            else
+            if (v.first == "proof") {
+                // Read TxOut proof
+                std::string data = v.second.data();
+                if (!data.length())
+                    continue;
+
+                bmmProof.txOutProof = data;
+            }
+        }
+    }
+    LogPrintf("Sidechain client received BMM proof for: %s\n", hashBMMBlock.ToString());
+
+    return bmmProof;
+}
+
+uint256 SidechainClient::SendCriticalDataRequest(const uint256& hashCritical, int nHeight)
+{
+    uint256 txid = uint256();
+
+    // JSON for sending critical data request to mainchain via mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"createbmmcriticaldatatx\", \"params\": ");
+    json.append("[\"");
+    json.append(ValueFromAmount(DEFAULT_CRITICAL_DATA_AMOUNT).write());
+    json.append("\",");
+    json.append(UniValue(nHeight).write());
+    json.append(",\"");
+    json.append(hashCritical.ToString());
+    json.append("\",");
+    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(",");
+    json.append(UniValue(0).write());
+    json.append("] }");
+
+    // Try to send critical data request to mainchain
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to send critical data request!\n");
+        return txid; // TODO
+    }
+
+    // Process result
+    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
+        BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
+            // Looping through members
+            if (v.first == "txid") {
+                // Read txid
+                std::string data = v.second.data();
+                if (!data.length())
+                    continue;
+
+                txid = uint256S(data);
+            }
+        }
+    }
+    if (!txid.IsNull())
+        LogPrintf("Sidechain client created critical data request. TXID: %s\n", txid.ToString());
+
+    return txid;
+}
+
+std::vector<uint256> SidechainClient::RequestMainBlockHashes()
+{
+    std::vector<uint256> vHash;
+
+    // JSON for sending critical data request to mainchain via mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"listpreviousblockhashes\", \"params\": ");
+    json.append("[]");
+    json.append("}");
+
+    // Try to request main:block hashes from mainchain
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request main:block hashes\n");
+        return vHash; // TODO
+    }
+
+    // Process result
+    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
+        BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
+            // Looping through members
+            if (v.first == "hash") {
+                // Read txid
+                std::string data = v.second.data();
+                if (!data.length())
+                    continue;
+
+                uint256 txid = uint256S(data);
+                if (!txid.IsNull())
+                    vHash.push_back(txid);
+            }
+        }
+    }
+    LogPrintf("Sidechain client received %d main:block hashes.\n", vHash.size());
+
+    return vHash;
+}
+
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)
 {
     // Format user:pass for authentication
@@ -194,11 +333,15 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
     if (auth == ":")
         return false;
 
+    // Mainnet RPC = 8332
+    // Testnet RPC = 18332
+    // Regtest RPC = 18443
+
     try {
         // Setup BOOST ASIO for a synchronus call to the mainchain
         boost::asio::io_service io_service;
         tcp::resolver resolver(io_service);
-        tcp::resolver::query query("127.0.0.1", "18332");
+        tcp::resolver::query query("127.0.0.1", "18443");
         tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
         tcp::resolver::iterator end;
 

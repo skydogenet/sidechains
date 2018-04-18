@@ -5,6 +5,7 @@
 #ifndef BITCOIN_PRIMITIVES_SIDECHAIN_H
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
+#include "amount.h"
 #include "merkleblock.h"
 #include "primitives/transaction.h"
 #include "pubkey.h"
@@ -15,8 +16,6 @@
 #include <limits.h>
 #include <string>
 #include <vector>
-
-using namespace std;
 
 struct Sidechain {
     uint8_t nSidechain;
@@ -30,6 +29,7 @@ struct Sidechain {
 };
 
 enum Sidechains {
+    // This sidechain
     SIDECHAIN_TEST = 0,
 };
 
@@ -50,6 +50,9 @@ static const int SIDECHAIN_MAX_WT = 3;
 //! State script version number
 static const int SIDECHAIN_STATE_VERSION = 0;
 
+//! The default payment amount to mainchain miner for critical data commitment
+static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 50 * CENT;
+
 /**
  * Base object for sidechain related database entries
  */
@@ -63,7 +66,7 @@ struct SidechainObj {
 
     uint256 GetHash(void) const;
     CScript GetScript(void) const;
-    virtual string ToString(void) const;
+    virtual std::string ToString(void) const;
 };
 
 /**
@@ -87,7 +90,7 @@ struct SidechainWT: public SidechainObj {
         READWRITE(wt);
     }
 
-    string ToString(void) const;
+    std::string ToString(void) const;
 };
 
 /**
@@ -109,7 +112,7 @@ struct SidechainWTJoin: public SidechainObj {
         READWRITE(wtJoin);
     }
 
-    string ToString(void) const;
+    std::string ToString(void) const;
 };
 
 /**
@@ -137,7 +140,7 @@ struct SidechainDeposit : public SidechainObj {
         READWRITE(mbProof);
     }
 
-    string ToString(void) const;
+    std::string ToString(void) const;
 };
 
 /**
