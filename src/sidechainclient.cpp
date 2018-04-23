@@ -75,7 +75,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
         SidechainDeposit deposit;
         BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
             // Looping through this deposit's members
-            if (v.first == "nSidechain") {
+            if (v.first == "nsidechain") {
                 // Read sidechain number
                 std::string data = v.second.data();
                 if (!data.length())
@@ -87,7 +87,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
                 deposit.nSidechain = nSidechain;
             }
             else
-            if (v.first == "keyID") {
+            if (v.first == "keyid") {
                 // Read keyID
                 std::string data = v.second.data();
                 if (!data.length())
@@ -96,7 +96,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
                 deposit.keyID.SetHex(data);
             }
             else
-            if (v.first == "amountUserPayout") {
+            if (v.first == "amountuserpayout") {
                 // Read user input amount
                 std::string data = v.second.data();
                 if (!data.length())
@@ -106,24 +106,27 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
                     continue;
             }
             else
-            if (v.first == "txHex") {
+            if (v.first == "txhex") {
                 // Read deposit transaction hex
                 std::string data = v.second.data();
                 if (!data.length())
                     continue;
-                CMutableTransaction dtx;
+                if (!IsHex(data))
+                    continue;
                 if (!DecodeHexTx(deposit.dtx, data))
                     continue;
             }
             else
-            if (v.first == "proofHex") {
+            if (v.first == "proofhex") {
                 // Read serialized merkleblock txout proof
                 std::string data = v.second.data();
                 if (!data.length())
                     continue;
+                if (!IsHex(data))
+                    continue;
 
                 CDataStream ssMB(ParseHex(data), SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS);
-                ssMB >> deposit.mbProof;
+                ssMB >> deposit.proof;
             }
         }
 
@@ -131,14 +134,17 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
         bool depositValid = false;
         for (const CTxOut& out : deposit.dtx.vout) {
             CScript scriptPubKey = out.scriptPubKey;
-            if (scriptPubKey.size() > 3) {
-                // Check sidechain number
-                uint8_t nSidechain = (unsigned int)scriptPubKey[1];
-                if (nSidechain != THIS_SIDECHAIN.nSidechain)
-                    continue;
-                if (nSidechain != deposit.nSidechain)
-                    continue;
-            }
+            if (scriptPubKey.size() < sizeof(uint160) + 2)
+                continue;
+            if (scriptPubKey.front() != OP_RETURN)
+                continue;
+
+            // Check sidechain number
+            uint8_t nSidechain = (unsigned int)scriptPubKey[1];
+            if (nSidechain != THIS_SIDECHAIN.nSidechain)
+                continue;
+            if (nSidechain != deposit.nSidechain)
+                continue;
 
             CScript::const_iterator pkey = scriptPubKey.begin() + 2;
             std::vector<unsigned char> vch;

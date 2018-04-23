@@ -73,7 +73,7 @@ public:
 
     bool IsNull() const
     {
-        return (criticalProof.empty() && criticalTx.IsEmpty());
+        return (nBits == 0 && criticalProof.empty() && criticalTx.IsEmpty());
     }
 
     uint256 GetHash() const;
@@ -135,6 +135,106 @@ public:
     }
 
     std::string ToString() const;
+};
+
+class CMainchainBlockHeader
+{
+public:
+    // header
+    int32_t nVersion;
+    uint256 hashPrevBlock;
+    uint256 hashMerkleRoot;
+    uint32_t nTime;
+    uint32_t nBits;
+    uint32_t nNonce;
+
+    CMainchainBlockHeader()
+    {
+        SetNull();
+    }
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(this->nVersion);
+        READWRITE(hashPrevBlock);
+        READWRITE(hashMerkleRoot);
+        READWRITE(nTime);
+        READWRITE(nBits);
+        READWRITE(nNonce);
+    }
+
+    void SetNull()
+    {
+        nVersion = 0;
+        hashPrevBlock.SetNull();
+        hashMerkleRoot.SetNull();
+        nTime = 0;
+        nBits = 0;
+        nNonce = 0;
+    }
+
+    bool IsNull() const
+    {
+        return (nBits == 0);
+    }
+
+    uint256 GetHash() const;
+
+    int64_t GetBlockTime() const
+    {
+        return (int64_t)nTime;
+    }
+};
+
+
+class CMainchainBlock : public CMainchainBlockHeader
+{
+public:
+    // network and disk
+    std::vector<CTransactionRef> vtx;
+
+    // memory only
+    mutable bool fChecked;
+
+    CMainchainBlock()
+    {
+        SetNull();
+    }
+
+    CMainchainBlock(const CMainchainBlockHeader &header)
+    {
+        SetNull();
+        *(static_cast<CMainchainBlockHeader*>(this)) = header;
+    }
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(*static_cast<CMainchainBlockHeader*>(this));
+        READWRITE(vtx);
+    }
+
+    void SetNull()
+    {
+        CMainchainBlockHeader::SetNull();
+        vtx.clear();
+        fChecked = false;
+    }
+
+    CMainchainBlockHeader GetBlockHeader() const
+    {
+        CMainchainBlockHeader block;
+        block.nVersion       = nVersion;
+        block.hashPrevBlock  = hashPrevBlock;
+        block.hashMerkleRoot = hashMerkleRoot;
+        block.nTime          = nTime;
+        block.nBits          = nBits;
+        block.nNonce         = nNonce;
+        return block;
+    }
 };
 
 /** Describes a place in the block chain to another node such that if the

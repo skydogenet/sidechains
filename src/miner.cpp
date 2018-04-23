@@ -498,15 +498,21 @@ CTransaction CreateDepositTx()
         for (const CTxOut& out : deposit.dtx.vout) {
             const CScript& scriptPubKey = out.scriptPubKey;
 
+            if (!scriptPubKey.IsUnspendable())
+                continue;
+
             if (scriptPubKey.size() < 2)
                 continue;
+
             // Double check nSidechain
             uint8_t nSidechain = (unsigned int)scriptPubKey[1];
             if (nSidechain != THIS_SIDECHAIN.nSidechain)
                 continue;
+
             // Double check that keyID is not null
             if (deposit.keyID.IsNull())
                 continue;
+
             // Is deposit greater than minimum fee?
             if (deposit.amtUserPayout < CENT)
                 continue;
