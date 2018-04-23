@@ -5,12 +5,21 @@
 #ifndef SIDECHAINCLIENT_H
 #define SIDECHAINCLIENT_H
 
-#include "sidechain.h"
+#include <uint256.h>
 
 #include <string>
 #include <vector>
 
 #include <boost/property_tree/json_parser.hpp>
+
+class SidechainDeposit;
+
+struct SidechainBMMProof
+{
+    uint256 hashBMMBlock;
+    std::string txOutProof;
+    std::string coinbaseHex;
+};
 
 class SidechainClient
 {
@@ -33,6 +42,21 @@ public:
      * must also be verified to match the txCritical hash.
      */
     bool VerifyCriticalHashProof(const std::string& criticalProof, uint256& txid);
+
+    /*
+     * Request BMM proof for a block
+     */
+    SidechainBMMProof RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock);
+
+    /*
+     * Send critical data request
+     */
+    uint256 SendCriticalDataRequest(const uint256& hashCritical, int nHeight = 0);
+
+    /*
+     * Request main:block hashes
+     */
+    std::vector<uint256> RequestMainBlockHashes();
 
 private:
     /*

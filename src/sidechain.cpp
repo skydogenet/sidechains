@@ -42,14 +42,14 @@ CScript SidechainObj::GetScript(void) const
         ((SidechainDeposit *) this)->Serialize(ds);
 
     CScript script;
-    script << vector<unsigned char>(ds.begin(), ds.end()) << OP_SIDECHAIN;
+    script << std::vector<unsigned char>(ds.begin(), ds.end()) << OP_SIDECHAIN;
     return script;
 }
 
 SidechainObj *SidechainObjCtr(const CScript &script)
 {
     CScript::const_iterator pc = script.begin();
-    vector<unsigned char> vch;
+    std::vector<unsigned char> vch;
     opcodetype opcode;
 
     if (!script.GetOp(pc, opcode, vch))
@@ -79,38 +79,38 @@ SidechainObj *SidechainObjCtr(const CScript &script)
     return NULL;
 }
 
-string SidechainObj::ToString(void) const
+std::string SidechainObj::ToString(void) const
 {
-    stringstream str;
-    str << "sidechainop=" << sidechainop << endl;
-    str << "nHeight=" << nHeight << endl;
-    str << "txid=" << txid.GetHex() << endl;
+    std::stringstream str;
+    str << "sidechainop=" << sidechainop << std::endl;
+    str << "nHeight=" << nHeight << std::endl;
+    str << "txid=" << txid.GetHex() << std::endl;
     return str.str();
 }
 
-string SidechainWT::ToString() const
+std::string SidechainWT::ToString() const
 {
-    stringstream str;
-    str << "sidechainop=" << sidechainop << endl;
-    str << "nHeight=" << nHeight << endl;
-    str << "txid=" << txid.GetHex() << endl;
+    std::stringstream str;
+    str << "sidechainop=" << sidechainop << std::endl;
+    str << "nHeight=" << nHeight << std::endl;
+    str << "txid=" << txid.GetHex() << std::endl;
     return str.str();
 }
 
-string SidechainWTJoin::ToString() const
+std::string SidechainWTJoin::ToString() const
 {
-    stringstream str;
-    str << "sidechainop=" << sidechainop << endl;
-    str << "nHeight=" << nHeight << endl;
-    str << "txid=" << txid.GetHex() << endl;
+    std::stringstream str;
+    str << "sidechainop=" << sidechainop << std::endl;
+    str << "nHeight=" << nHeight << std::endl;
+    str << "txid=" << txid.GetHex() << std::endl;
     return str.str();
 }
 
-string SidechainDeposit::ToString() const
+std::string SidechainDeposit::ToString() const
 {
-    stringstream str;
-    str << "sidechainop=" << sidechainop << endl;
-    str << "nHeight=" << nHeight << endl;
-    str << "txid=" << txid.GetHex() << endl;
+    std::stringstream str;
+    str << "sidechainop=" << sidechainop << std::endl;
+    str << "nHeight=" << nHeight << std::endl;
+    str << "txid=" << txid.GetHex() << std::endl;
     return str.str();
 }

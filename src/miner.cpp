@@ -112,7 +112,7 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool fSkipBMMChecks)
 {
     int64_t nTimeStart = GetTimeMicros();
 
@@ -197,7 +197,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
 
     CValidationState state;
-    if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
+    if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false, fSkipBMMChecks)) {
         throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
     }
     int64_t nTime2 = GetTimeMicros();
@@ -498,15 +498,21 @@ CTransaction CreateDepositTx()
         for (const CTxOut& out : deposit.dtx.vout) {
             const CScript& scriptPubKey = out.scriptPubKey;
 
+            if (!scriptPubKey.IsUnspendable())
+                continue;
+
             if (scriptPubKey.size() < 2)
                 continue;
+
             // Double check nSidechain
             uint8_t nSidechain = (unsigned int)scriptPubKey[1];
             if (nSidechain != THIS_SIDECHAIN.nSidechain)
                 continue;
+
             // Double check that keyID is not null
             if (deposit.keyID.IsNull())
                 continue;
+
             // Is deposit greater than minimum fee?
             if (deposit.amtUserPayout < CENT)
                 continue;

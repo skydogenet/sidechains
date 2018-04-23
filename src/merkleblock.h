@@ -164,4 +164,45 @@ private:
     CMerkleBlock(const CBlock& block, CBloomFilter* filter, const std::set<uint256>* txids);
 };
 
+/* The mainchain version of a CMerkleBlock */
+class CMainchainMerkleBlock
+{
+public:
+    /** Public only for unit testing */
+    CMainchainBlockHeader header;
+    CPartialMerkleTree txn;
+
+    /**
+     * Public only for unit testing and relay testing (not relayed).
+     *
+     * Used only when a bloom filter is specified to allow
+     * testing the transactions which matched the bloom filter.
+     */
+    std::vector<std::pair<unsigned int, uint256> > vMatchedTxn;
+
+    /**
+     * Create from a CBlock, filtering transactions according to filter
+     * Note that this will call IsRelevantAndUpdate on the filter for each transaction,
+     * thus the filter will likely be modified.
+     */
+    CMainchainMerkleBlock(const CMainchainBlock& block, CBloomFilter& filter) : CMainchainMerkleBlock(block, &filter, nullptr) {}
+
+    // Create from a CBlock, matching the txids in the set
+    CMainchainMerkleBlock(const CMainchainBlock& block, const std::set<uint256>& txids) : CMainchainMerkleBlock(block, nullptr, &txids) {}
+
+    CMainchainMerkleBlock() {}
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(header);
+        READWRITE(txn);
+    }
+
+private:
+    // Combined constructor to consolidate code
+    CMainchainMerkleBlock(const CMainchainBlock& block, CBloomFilter* filter, const std::set<uint256>* txids);
+};
+
 #endif // BITCOIN_MERKLEBLOCK_H

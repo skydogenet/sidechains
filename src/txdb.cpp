@@ -310,7 +310,7 @@ CSidechainTreeDB::CSidechainTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
 
 bool CSidechainTreeDB::ReadBlockFileInfo(int nFile, CBlockFileInfo& fileinfo)
 {
-    return Read(make_pair(DB_BLOCK_FILES, nFile), fileinfo);
+    return Read(std::make_pair(DB_BLOCK_FILES, nFile), fileinfo);
 }
 
 bool CSidechainTreeDB::WriteReindexing(bool fReindex)
@@ -336,11 +336,11 @@ bool CSidechainTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBl
 {
     CDBBatch batch(*this);
     for (std::vector<std::pair<int, const CBlockFileInfo*> >::const_iterator it=fileInfo.begin(); it != fileInfo.end(); it++) {
-        batch.Write(make_pair(DB_BLOCK_FILES, it->first), *it->second);
+        batch.Write(std::make_pair(DB_BLOCK_FILES, it->first), *it->second);
     }
     batch.Write(DB_LAST_BLOCK, nLastFile);
     for (std::vector<const CBlockIndex*>::const_iterator it=blockinfo.begin(); it != blockinfo.end(); it++) {
-        batch.Write(make_pair(DB_BLOCK_INDEX, (*it)->GetBlockHash()), CDiskBlockIndex(*it));
+        batch.Write(std::make_pair(DB_BLOCK_INDEX, (*it)->GetBlockHash()), CDiskBlockIndex(*it));
     }
     return WriteBatch(batch, true);
 }
@@ -351,27 +351,27 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
     for (std::vector<std::pair<uint256, const SidechainObj *> >::const_iterator it=list.begin(); it!=list.end(); it++) {
         const uint256 &objid = it->first;
         const SidechainObj *obj = it->second;
-        pair<char, uint256> key = make_pair(obj->sidechainop, objid);
+        std::pair<char, uint256> key = std::make_pair(obj->sidechainop, objid);
 
         if (obj->sidechainop == 'W') {
             const SidechainWT *ptr = (const SidechainWT *) obj;
-            pair<SidechainWT, uint256> value = make_pair(*ptr, obj->txid);
+            std::pair<SidechainWT, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
-            batch.Write(make_pair(make_pair(make_pair('w', ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(std::make_pair(std::make_pair(std::make_pair('w', ptr->nSidechain), ptr->nHeight), objid), value);
         }
         else
         if (obj->sidechainop == 'J') {
             const SidechainWTJoin *ptr = (const SidechainWTJoin *) obj;
-            pair<SidechainWTJoin, uint256> value = make_pair(*ptr, obj->txid);
+            std::pair<SidechainWTJoin, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
-            batch.Write(make_pair(make_pair(make_pair('j', ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(std::make_pair(std::make_pair(std::make_pair('j', ptr->nSidechain), ptr->nHeight), objid), value);
         }
         else
         if (obj->sidechainop == 'D') {
             const SidechainDeposit *ptr = (const SidechainDeposit *) obj;
-            pair<SidechainDeposit, uint256> value = make_pair(*ptr, obj->txid);
+            std::pair<SidechainDeposit, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
-            batch.Write(make_pair(make_pair(make_pair('d', ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(std::make_pair(std::make_pair(std::make_pair('d', ptr->nSidechain), ptr->nHeight), objid), value);
         }
     }
 
@@ -380,13 +380,13 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
 
 bool CSidechainTreeDB::WriteFlag(const std::string& name, bool fValue)
 {
-    return Write(make_pair(DB_FLAG, name), fValue ? '1' : '0');
+    return Write(std::make_pair(DB_FLAG, name), fValue ? '1' : '0');
 }
 
-bool CSidechainTreeDB::ReadFlag(const string& name, bool &fValue)
+bool CSidechainTreeDB::ReadFlag(const std::string& name, bool &fValue)
 {
     char ch;
-    if (!Read(make_pair(DB_FLAG, name), ch))
+    if (!Read(std::make_pair(DB_FLAG, name), ch))
         return false;
     fValue = ch == '1';
     return true;
@@ -394,7 +394,7 @@ bool CSidechainTreeDB::ReadFlag(const string& name, bool &fValue)
 
 bool CSidechainTreeDB::GetWTJoin(const uint256& objid, SidechainWTJoin& wtJoin)
 {
-    if (ReadSidechain(make_pair('W', objid), wtJoin))
+    if (ReadSidechain(std::make_pair('W', objid), wtJoin))
         return true;
 
     return false;
@@ -402,19 +402,19 @@ bool CSidechainTreeDB::GetWTJoin(const uint256& objid, SidechainWTJoin& wtJoin)
 
 bool CSidechainTreeDB::GetDeposit(const uint256& objid, SidechainDeposit& deposit)
 {
-    if (ReadSidechain(make_pair('D', objid), deposit))
+    if (ReadSidechain(std::make_pair('D', objid), deposit))
         return true;
 
     return false;
 }
 
-vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
+std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
 {
     const char sidechainop = 'W';
-    ostringstream ss;
-    ::Serialize(ss, make_pair(make_pair(sidechainop, nSidechain), uint256()));
+    std::ostringstream ss;
+    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
-    vector<SidechainWT> vWT;
+    std::vector<SidechainWT> vWT;
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
     for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
         boost::this_thread::interruption_point();
@@ -429,13 +429,13 @@ vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
     return vWT;
 }
 
-vector<SidechainWTJoin> CSidechainTreeDB::GetWTJoins(const uint8_t& nSidechain)
+std::vector<SidechainWTJoin> CSidechainTreeDB::GetWTJoins(const uint8_t& nSidechain)
 {
     const char sidechainop = 'J';
-    ostringstream ss;
-    ::Serialize(ss, make_pair(make_pair(sidechainop, nSidechain), uint256()));
+    std::ostringstream ss;
+    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
-    vector<SidechainWTJoin> vWTJoin;
+    std::vector<SidechainWTJoin> vWTJoin;
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
     for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
         boost::this_thread::interruption_point();
@@ -450,14 +450,14 @@ vector<SidechainWTJoin> CSidechainTreeDB::GetWTJoins(const uint8_t& nSidechain)
     return vWTJoin;
 }
 
-vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSidechain)
+std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSidechain)
 {
     // TODO filter by height
     const char sidechainop = 'D';
-    ostringstream ss;
-    ::Serialize(ss, make_pair(make_pair(sidechainop, nSidechain), uint256()));
+    std::ostringstream ss;
+    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
-    vector<SidechainDeposit> vDeposit;
+    std::vector<SidechainDeposit> vDeposit;
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
     for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
         boost::this_thread::interruption_point();
