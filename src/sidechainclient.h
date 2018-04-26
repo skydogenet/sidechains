@@ -5,6 +5,7 @@
 #ifndef SIDECHAINCLIENT_H
 #define SIDECHAINCLIENT_H
 
+#include <amount.h>
 #include <uint256.h>
 
 #include <string>
@@ -13,13 +14,7 @@
 #include <boost/property_tree/json_parser.hpp>
 
 class SidechainDeposit;
-
-struct SidechainBMMProof
-{
-    uint256 hashBMMBlock;
-    std::string txOutProof;
-    std::string coinbaseHex;
-};
+class SidechainBMMProof;
 
 class SidechainClient
 {
@@ -46,12 +41,12 @@ public:
     /*
      * Request BMM proof for a block
      */
-    SidechainBMMProof RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock);
+    bool RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock, SidechainBMMProof& proof);
 
     /*
      * Send critical data request
      */
-    uint256 SendCriticalDataRequest(const uint256& hashCritical, int nHeight = 0);
+    uint256 SendCriticalDataRequest(const uint256& hashCritical, int nHeight = 0, const CAmount& amount = CAmount(0));
 
     /*
      * Request main:block hashes

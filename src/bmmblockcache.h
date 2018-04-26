@@ -1,5 +1,5 @@
-#ifndef BITCOIN_BMM_H
-#define BITCOIN_BMM_H
+#ifndef BITCOIN_BMMBLOCKCACHE_H
+#define BITCOIN_BMMBLOCKCACHE_H
 
 #include "uint256.h"
 
@@ -7,17 +7,21 @@
 
 class CBlock;
 
-class BMM
+class BMMBlockCache
 {
 public:
-    BMM();
+    BMMBlockCache();
 
     bool StoreBMMBlock(const CBlock& block);
 
     bool GetBMMBlock(const uint256& hashBlock, CBlock& block);
 
+    std::vector<CBlock> GetBMMBlockCache();
+
+    void Clear();
+
 private:
     std::map<uint256, CBlock> mapBMMBlocks;
 };
 
-#endif // BITCOIN_BMM_H
+#endif // BITCOIN_BMMBLOCKCACHE_H

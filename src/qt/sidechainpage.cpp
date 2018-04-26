@@ -5,24 +5,27 @@
 #include <qt/sidechainpage.h>
 #include <qt/forms/ui_sidechainpage.h>
 
-#include "base58.h"
-#include "bitcoinunits.h"
-#include "bmm.h"
-#include "coins.h"
-#include "consensus/validation.h"
-#include "core_io.h"
-#include "guiconstants.h"
-#include "guiutil.h"
-#include "init.h"
-#include "miner.h"
-#include "net.h"
-#include "optionsmodel.h"
-#include "sidechain.h"
-#include "txdb.h"
-#include "validation.h"
-#include "wallet/coincontrol.h"
-#include "wallet/wallet.h"
-#include "walletmodel.h"
+#include <qt/bitcoinunits.h>
+#include <qt/guiconstants.h>
+#include <qt/guiutil.h>
+#include <qt/optionsmodel.h>
+#include <qt/walletmodel.h>
+
+#include <base58.h>
+#include <bmmblockcache.h>
+#include <coins.h>
+#include <consensus/validation.h>
+#include <core_io.h>
+#include <init.h>
+#include <miner.h>
+#include <net.h>
+#include <primitives/block.h>
+#include <sidechain.h>
+#include <sidechainclient.h>
+#include <txdb.h>
+#include <validation.h>
+#include <wallet/coincontrol.h>
+#include <wallet/wallet.h>
 
 #include <QApplication>
 #include <QClipboard>
@@ -32,7 +35,7 @@
 #include <sstream>
 
 #if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h" /* for USE_QRCODE */
+#include <config/bitcoin-config.h> /* for USE_QRCODE */
 #endif
 
 #ifdef USE_QRCODE
@@ -44,6 +47,15 @@ SidechainPage::SidechainPage(QWidget *parent) :
     ui(new Ui::SidechainPage)
 {
     ui->setupUi(this);
+
+    // Initialize the BMM Automation refresh timer
+    bmmTimer = new QTimer(this);
+    connect(bmmTimer, SIGNAL(timeout()), this, SLOT(RefreshBMM()));
+
+    // TODO save & load the checkbox state
+    // TODO save & load timer setting
+    if (ui->checkBoxEnableAutomation->isChecked())
+        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
 
     // Initialize models and table views
     incomingTableView = new QTableView(this);
@@ -351,84 +363,68 @@ void SidechainPage::on_pushButtonCreateBlock_clicked()
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
-    if (vpwallets.empty()) {
-        // No active wallet message box
-        messageBox.setWindowTitle("No active wallet found!");
-        messageBox.setText("You must have an active wallet to create blocks.");
-        messageBox.exec();
-        return;
-    }
-
-    if (vpwallets[0]->IsLocked()) {
-        // Locked wallet message box
-        messageBox.setWindowTitle("Wallet locked!");
-        messageBox.setText("Wallet must be unlocked to create blocks.");
-        messageBox.exec();
-        return;
-    }
-
-    std::shared_ptr<CReserveScript> coinbaseScript;
-    vpwallets[0]->GetScriptForMining(coinbaseScript);
-
-    // If the keypool is exhausted, no script is returned at all.  Catch this.
-    if (!coinbaseScript || coinbaseScript->reserveScript.empty()) {
-        // No script for mining error message
-        messageBox.setWindowTitle("Keypool exhausted!");
-        messageBox.setText("The keypool has been exhausted, cannot create blocks.");
-        messageBox.exec();
-        return;
-    }
-
-    coinbaseScript->KeepScript();
-
-    std::unique_ptr<CBlockTemplate> pblocktemplate(
-                BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, false, true));
-
-    if (!pblocktemplate.get()) {
-        // No block template error message
-        messageBox.setWindowTitle("Failed to get block template!");
-        messageBox.setText("Cannot create blocks without template.");
-        messageBox.exec();
-        return;
-    }
-
-    unsigned int nExtraNonce = 0;
-    CBlock *pblock = &pblocktemplate->block;
-    {
-        LOCK(cs_main);
-        IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
-    }
-
-    ++pblock->nNonce;
-
-    if (!bmm.StoreBMMBlock(*pblock)) {
-        // Failed to store BMM DAG candidate block
-        messageBox.setWindowTitle("Failed to store BMM block!");
-        messageBox.setText("Couldn't store BMM block candidate.");
+    CBlock block;
+    QString error = "";
+    if (!CreateBMMBlock(block, error)) {
+        messageBox.setWindowTitle("Error creating BMM block!");
+        messageBox.setText(error);
         messageBox.exec();
         return;
     }
 
     std::stringstream ss;
-    ss << "BMM blinded block hash (h*):\n" << pblock->GetHash().ToString();
+    ss << "BMM blinded block hash (h*):\n" << block.GetBlindHash().ToString();
     ss << std::endl;
     ss << std::endl;
-    ss << "BMM Block:\n" << pblock->ToString() << std::endl;
+    ss << "BMM Block:\n" << block.ToString() << std::endl;
 
     ui->textBrowser->setText(QString::fromStdString(ss.str()));
+    ui->lineEditManualBMMHash->setText(QString::fromStdString(block.GetBlindHash().ToString()));
 }
 
 void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
 {
+    QMessageBox messageBox;
+    messageBox.setDefaultButton(QMessageBox::Ok);
+    messageBox.setWindowTitle("Error sending BMM request to mainchain!");
+
+    if (ui->lineEditManualBMMHash->text().isEmpty()) {
+        messageBox.setText("You must click \"Generate BMM Block\" first!");
+        messageBox.exec();
+        return;
+    }
+
+    uint256 hashBMM = uint256S(ui->lineEditManualBMMHash->text().toStdString());
+    if (hashBMM.IsNull()) {
+        messageBox.setText("Invalid BMM block hash (h*)!");
+        messageBox.exec();
+        return;
+    }
+    uint256 hashTXID = SendBMMRequest(hashBMM);
+
+    if (hashTXID.IsNull()) {
+        messageBox.setText("Failed to create BMM request on mainchain!");
+        messageBox.exec();
+        return;
+    }
+
+    // Show result
+    messageBox.setWindowTitle("BMM request created on mainchain!");
+    QString result = "txid: ";
+    result += QString::fromStdString(hashTXID.ToString());
+    messageBox.setText(result);
+    messageBox.exec();
+    return;
 
 }
 
-void SidechainPage::on_checkBoxAutomateBMM_clicked(bool fChecked)
+void SidechainPage::on_checkBoxEnableAutomation_clicked(bool fChecked)
 {
+    // Start or stop timer
     if (fChecked) {
-        ui->frameManualBMM->setEnabled(false);
+        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
     } else {
-        ui->frameManualBMM->setEnabled(true);
+        bmmTimer->stop();
     }
 }
 
@@ -441,10 +437,10 @@ void SidechainPage::on_pushButtonSubmitBlock_clicked()
     uint256 hashBlock = uint256S(ui->lineEditBMMHash->text().toStdString());
     CBlock block;
 
-    if (!bmm.GetBMMBlock(hashBlock, block)) {
+    if (!bmmBlockCache.GetBMMBlock(hashBlock, block)) {
         // Block not stored message box
         messageBox.setWindowTitle("Block not found!");
-        messageBox.setText("Your node does not have this BMM block stored.");
+        messageBox.setText("You do not have this BMM block cached.");
         messageBox.exec();
         return;
     }
@@ -464,13 +460,198 @@ void SidechainPage::on_pushButtonSubmitBlock_clicked()
     block.criticalProof = strProof;
     block.criticalTx = criticalTx;
 
-    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-
-    if (!ProcessNewBlock(Params(), shared_pblock, true, NULL)) {
-        // Failed to process block message box
-        messageBox.setWindowTitle("Failed to process block!");
-        messageBox.setText("The submitted block is invalid.");
+    if (SubmitBMMBlock(block)) {
+        // Block submitted message box
+        messageBox.setWindowTitle("Block Submitted!");
+        QString result = "BMM Block hash:\n";
+        result += QString::fromStdString(block.GetHash().ToString());
+        result += "\n\n";
+        result += "BMM (Blinded) hash: \n";
+        result += QString::fromStdString(block.GetBlindHash().ToString());
+        result += "\n";
+        messageBox.setText(result);
         messageBox.exec();
         return;
+    } else {
+        // Failed to submit block submitted message box
+        messageBox.setWindowTitle("Failed to submit block!");
+        messageBox.setText("The submitted block is invalid.");
+        messageBox.exec();
+    }
+}
+
+void SidechainPage::on_pushButtonHashBlockLastSeen_clicked()
+{
+    GUIUtil::setClipboard(QString::fromStdString(hashMainBlockLastSeen.ToString()));
+}
+
+bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
+{
+    // Create a new BMM block
+    if (vpwallets.empty()) {
+        error = "No active wallet found!\n";
+        return false;
+    }
+    if (vpwallets[0]->IsLocked()) {
+        error = "Wallet locked!\n";
+        return false;
+    }
+
+    std::shared_ptr<CReserveScript> coinbaseScript;
+    vpwallets[0]->GetScriptForMining(coinbaseScript);
+
+    // If the keypool is exhausted, no script is returned at all.  Catch this.
+    if (!coinbaseScript || coinbaseScript->reserveScript.empty()) {
+        // No script for mining error message
+        error = "Keypool exhausted!\n";
+        return false;
+    }
+
+    coinbaseScript->KeepScript();
+
+    std::unique_ptr<CBlockTemplate> pblocktemplate(
+                BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, false, true));
+
+    if (!pblocktemplate.get()) {
+        // No block template error message
+        error = "Failed to get block template!\n";
+        return false;
+    }
+
+    unsigned int nExtraNonce = 0;
+    CBlock *pblock = &pblocktemplate->block;
+    {
+        LOCK(cs_main);
+        IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
+    }
+
+    int nMaxTries = 1000;
+    while (true) {
+        if (pblock->nNonce == 0)
+            pblock->nTime++;
+
+        if (CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
+            break;
+        }
+
+        if (nMaxTries == 0) {
+            error = "Couldn't generate PoW, try again!\n";
+            break;
+        }
+
+        pblock->nNonce++;
+        nMaxTries--;
+    }
+
+    if (!bmmBlockCache.StoreBMMBlock(*pblock)) {
+        // Failed to store BMM candidate block
+        error = "Failed to store BMM block!\n";
+        return false;
+    }
+
+    block = *pblock;
+
+    return true;
+}
+
+uint256 SidechainPage::SendBMMRequest(const uint256& hashBMM)
+{
+    // TODO use user input bmm amount
+    SidechainClient client;
+    uint256 hashTXID = client.SendCriticalDataRequest(hashBMM, 0, 0);
+    if (!hashTXID.IsNull()) {
+        // Add to list widget
+        QString str = "txid: ";
+        str += QString::fromStdString(hashTXID.ToString());
+        new QListWidgetItem(str, ui->listWidgetBMMCreated);
+    }
+    return hashTXID;
+}
+
+bool SidechainPage::SubmitBMMBlock(const CBlock& block)
+{
+    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
+    if (!ProcessNewBlock(Params(), shared_pblock, true, NULL)) {
+        return false;
+    }
+
+    // Add to list widget
+    new QListWidgetItem(QString::fromStdString(block.GetBlindHash().ToString()), ui->listWidgetBMMConnected);
+
+    return true;
+}
+
+void SidechainPage::RefreshBMM()
+{
+    // TODO load / save bmm amount
+
+    // Get updated list of recent main:blocks
+    SidechainClient client;
+    std::vector<uint256> vNewHash = client.RequestMainBlockHashes();
+
+    if (vNewHash.empty())
+        return;
+
+    // Replace local cache
+    vMainBlockHash = vNewHash;
+
+    // Update hashBlockLastSeen and keep a backup for later
+    uint256 hashMainBlockLastSeenOld = hashMainBlockLastSeen;
+    hashMainBlockLastSeen = vNewHash.back();
+    ui->pushButtonHashBlockLastSeen->setText(QString::fromStdString(hashMainBlockLastSeen.ToString()));
+
+    // Get our cached BMM blocks
+    std::vector<CBlock> vBMMCache = bmmBlockCache.GetBMMBlockCache();
+    if (vBMMCache.empty()) {
+        CBlock block;
+        if (CreateBMMBlock(block)) {
+            SendBMMRequest(block.GetBlindHash());
+            return;
+        }
+    }
+
+    // TODO this could be more efficient
+    // Check new main:blocks for our bmm requests
+    for (const uint256& u : vNewHash) {
+        // Check main:block for any of our current BMM requests
+        for (const CBlock& b : vBMMCache) {
+            const uint256& hashBMMBlock = b.GetBlindHash();
+            // Send 'getbmmproof' rpc request to mainchain
+            SidechainBMMProof proof;
+            proof.hashBMMBlock = hashBMMBlock;
+            if (client.RequestBMMProof(u, hashBMMBlock, proof)) {
+                CBlock block = b;
+
+                block.criticalProof = proof.txOutProof;
+
+                if (!DecodeHexTx(block.criticalTx, proof.coinbaseHex))
+                    continue;
+
+                // Submit BMM block
+                if (!SubmitBMMBlock(block))
+                    continue;
+            }
+        }
+    }
+
+    // Was there a new mainchain block?
+    if (hashMainBlockLastSeenOld != hashMainBlockLastSeen) {
+        // Clear out the bmm cache, the old requests are invalid now
+        bmmBlockCache.Clear();
+
+        // Create a new BMM request (old ones have expired)
+        CBlock block;
+        if (CreateBMMBlock(block)) {
+            // Create BMM critical data request
+            SendBMMRequest(block.GetBlindHash());
+        }
+    }
+}
+
+void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
+{
+    if (ui->checkBoxEnableAutomation->isChecked()) {
+        bmmTimer->stop();
+        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
     }
 }

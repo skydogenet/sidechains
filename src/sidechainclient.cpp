@@ -2,16 +2,16 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "sidechainclient.h"
+#include <sidechainclient.h>
 
-#include "core_io.h"
-#include "sidechain.h"
-#include "streams.h"
-#include "uint256.h"
-#include "univalue.h"
-#include "utilmoneystr.h"
-#include "utilstrencodings.h"
-#include "util.h"
+#include <core_io.h>
+#include <sidechain.h>
+#include <streams.h>
+#include <uint256.h>
+#include <univalue.h>
+#include <utilmoneystr.h>
+#include <utilstrencodings.h>
+#include <util.h>
 
 #include <iostream>
 #include <sstream>
@@ -195,11 +195,8 @@ bool SidechainClient::VerifyCriticalHashProof(const std::string& criticalProof, 
     return true;
 }
 
-SidechainBMMProof SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock)
+bool SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock, SidechainBMMProof& proof)
 {
-    SidechainBMMProof bmmProof;
-    bmmProof.hashBMMBlock = hashBMMBlock;
-
     // JSON for requesting BMM proof via mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
@@ -215,7 +212,7 @@ SidechainBMMProof SidechainClient::RequestBMMProof(const uint256& hashMainBlock,
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
         LogPrintf("ERROR Sidechain client failed to request BMM proof\n");
-        return bmmProof; // TODO
+        return false;
     }
 
     // Process result
@@ -228,7 +225,7 @@ SidechainBMMProof SidechainClient::RequestBMMProof(const uint256& hashMainBlock,
                 if (!data.length())
                     continue;
 
-                bmmProof.coinbaseHex = data;
+                proof.coinbaseHex = data;
             }
             else
             if (v.first == "proof") {
@@ -237,16 +234,22 @@ SidechainBMMProof SidechainClient::RequestBMMProof(const uint256& hashMainBlock,
                 if (!data.length())
                     continue;
 
-                bmmProof.txOutProof = data;
+                proof.txOutProof = data;
             }
         }
     }
-    LogPrintf("Sidechain client received BMM proof for: %s\n", hashBMMBlock.ToString());
 
-    return bmmProof;
+    if (proof.HasProof()) {
+        LogPrintf("Sidechain client received BMM proof for: %s\n", hashBMMBlock.ToString());
+        return true;
+    } else {
+        LogPrintf("Sidechain client received no BMM proof.\n");
+        return false;
+    }
 }
 
-uint256 SidechainClient::SendCriticalDataRequest(const uint256& hashCritical, int nHeight)
+// TODO rename
+uint256 SidechainClient::SendCriticalDataRequest(const uint256& hashCritical, int nHeight, const CAmount& amount)
 {
     uint256 txid = uint256();
 
@@ -255,6 +258,7 @@ uint256 SidechainClient::SendCriticalDataRequest(const uint256& hashCritical, in
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"createbmmcriticaldatatx\", \"params\": ");
     json.append("[\"");
+    // TODO use amount
     json.append(ValueFromAmount(DEFAULT_CRITICAL_DATA_AMOUNT).write());
     json.append("\",");
     json.append(UniValue(nHeight).write());

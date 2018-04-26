@@ -51,7 +51,7 @@ static const int SIDECHAIN_MAX_WT = 3;
 static const int SIDECHAIN_STATE_VERSION = 0;
 
 //! The default payment amount to mainchain miner for critical data commitment
-static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 50 * CENT;
+static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
 
 /**
  * Base object for sidechain related database entries
@@ -141,6 +141,18 @@ struct SidechainDeposit : public SidechainObj {
     }
 
     std::string ToString(void) const;
+};
+
+struct SidechainBMMProof
+{
+    uint256 hashBMMBlock; // TODO remove
+    std::string txOutProof;
+    std::string coinbaseHex;
+
+    bool HasProof()
+    {
+        return (txOutProof.size() && coinbaseHex.size());
+    }
 };
 
 /**
