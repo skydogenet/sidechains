@@ -34,10 +34,10 @@ bool SidechainClient::BroadcastWTJoin(const std::string& hex)
     // JSON for sending the WT^ to mainchain via HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"receivesidechainwtjoin\", \"params\": ");
-    json.append("[\"");
-    json.append(std::to_string(THIS_SIDECHAIN.nSidechain));
-    json.append("\",\"");
+    json.append("\"method\": \"receivewtprime\", \"params\": ");
+    json.append("[");
+    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(",\"");
     json.append(hex);
     json.append("\"] }");
 

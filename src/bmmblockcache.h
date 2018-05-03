@@ -4,6 +4,7 @@
 #include "uint256.h"
 
 #include <map>
+#include <set>
 
 class CBlock;
 
@@ -18,10 +19,15 @@ public:
 
     std::vector<CBlock> GetBMMBlockCache();
 
-    void Clear();
+    void ClearBMMBlocks();
+
+    void StoreBroadcastedWTPrime(const uint256& hashWTPrime); // TODO move
+
+    bool HaveBroadcastedWTPrime(const uint256& hashWTPrime); // TODO move
 
 private:
     std::map<uint256, CBlock> mapBMMBlocks;
+    std::set<uint256> setWTPrimeBroadcasted; // TODO move
 };
 
 #endif // BITCOIN_BMMBLOCKCACHE_H

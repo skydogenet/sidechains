@@ -637,7 +637,7 @@ void SidechainPage::RefreshBMM()
     // Was there a new mainchain block?
     if (hashMainBlockLastSeenOld != hashMainBlockLastSeen) {
         // Clear out the bmm cache, the old requests are invalid now
-        bmmBlockCache.Clear();
+        bmmBlockCache.ClearBMMBlocks();
 
         // Create a new BMM request (old ones have expired)
         CBlock block;

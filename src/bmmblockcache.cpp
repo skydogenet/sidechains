@@ -42,7 +42,23 @@ std::vector<CBlock> BMMBlockCache::GetBMMBlockCache()
     return vBlock;
 }
 
-void BMMBlockCache::Clear()
+void BMMBlockCache::ClearBMMBlocks()
 {
     mapBMMBlocks.clear();
+}
+
+void BMMBlockCache::StoreBroadcastedWTPrime(const uint256& hashWTPrime)
+{
+    setWTPrimeBroadcasted.insert(hashWTPrime);
+}
+
+bool BMMBlockCache::HaveBroadcastedWTPrime(const uint256& hashWTPrime)
+{
+    if (hashWTPrime.IsNull())
+        return false;
+
+    if (setWTPrimeBroadcasted.count(hashWTPrime))
+        return true;
+
+    return false;
 }

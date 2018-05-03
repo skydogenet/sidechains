@@ -19,9 +19,7 @@
 
 struct Sidechain {
     uint8_t nSidechain;
-    uint16_t nWaitPeriod;
-    uint16_t nVerificationPeriod;
-    uint16_t nMinWorkScore;
+    uint16_t nWTPrimeBroadcastInterval;
     CScript depositScript;
 
     std::string ToString() const;
@@ -40,7 +38,7 @@ static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
 
 //! This sidechain as it has been described to the mainchain
 static const Sidechain THIS_SIDECHAIN = {
-    SIDECHAIN_TEST, 100, 200, 100, CScript() << THIS_SIDECHAIN.nSidechain << ToByteVector(testkey) << OP_NOP4
+    SIDECHAIN_TEST, 10, CScript() << THIS_SIDECHAIN.nSidechain << ToByteVector(testkey) << OP_NOP4
 };
 
 //! This sidechain's fee script

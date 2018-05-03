@@ -230,7 +230,7 @@ bool fSidechainIndex = true;
 
 // TODO make configurable
 //! BMM h* verification options
-bool fVerifyCriticalHashReadBlock = true;
+bool fVerifyCriticalHashReadBlock = false;
 bool fVerifyCriticalHashCheckBlock = true;
 bool fVerifyCriticalHashAcceptBlockHeader = true;
 
@@ -2015,7 +2015,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             std::vector<SidechainWTJoin> vWTJoin = psidechaintree->GetWTJoins(THIS_SIDECHAIN.nSidechain);
             if (vWTJoin.size()) {
                 SidechainClient client;
-                client.BroadcastWTJoin(EncodeHexTx(vWTJoin.back().wtJoin));
+                std::string strHex = EncodeHexTx(vWTJoin.back().wtJoin);
+                uint256 hashWTPrimeToBroadcast = vWTJoin.back().wtJoin.GetHash();
+                if (!bmmBlockCache.HaveBroadcastedWTPrime(hashWTPrimeToBroadcast)) {
+                    if (client.BroadcastWTJoin(EncodeHexTx(vWTJoin.back().wtJoin)))
+                        bmmBlockCache.StoreBroadcastedWTPrime(vWTJoin.back().wtJoin.GetHash());
+                }
             }
         }
 

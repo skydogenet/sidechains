@@ -2670,25 +2670,7 @@ OutputType CWallet::TransactionChangeType(OutputType change_type, const std::vec
         return change_type;
     }
 
-    // if g_address_type is legacy, use legacy address as change (even
-    // if some of the outputs are P2WPKH or P2WSH).
-    if (g_address_type == OUTPUT_TYPE_LEGACY) {
-        return OUTPUT_TYPE_LEGACY;
-    }
-
-    // if any destination is P2WPKH or P2WSH, use P2WPKH for the change
-    // output.
-    for (const auto& recipient : vecSend) {
-        // Check if any destination contains a witness program:
-        int witnessversion = 0;
-        std::vector<unsigned char> witnessprogram;
-        if (recipient.scriptPubKey.IsWitnessProgram(witnessversion, witnessprogram)) {
-            return OUTPUT_TYPE_BECH32;
-        }
-    }
-
-    // else use g_address_type for change
-    return g_address_type;
+    return OUTPUT_TYPE_LEGACY;
 }
 
 bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet,
