@@ -6,7 +6,7 @@
 #include <validation.h>
 
 #include <arith_uint256.h>
-#include <bmm.h>
+#include <bmmblockcache.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <checkpoints.h>
@@ -205,7 +205,7 @@ private:
 
 CCriticalSection cs_main;
 
-BMM bmm;
+BMMBlockCache bmmBlockCache;
 
 BlockMap& mapBlockIndex = g_chainstate.mapBlockIndex;
 CChain& chainActive = g_chainstate.chainActive;
@@ -230,7 +230,7 @@ bool fSidechainIndex = true;
 
 // TODO make configurable
 //! BMM h* verification options
-bool fVerifyCriticalHashReadBlock = true;
+bool fVerifyCriticalHashReadBlock = false;
 bool fVerifyCriticalHashCheckBlock = true;
 bool fVerifyCriticalHashAcceptBlockHeader = true;
 
@@ -2015,7 +2015,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             std::vector<SidechainWTJoin> vWTJoin = psidechaintree->GetWTJoins(THIS_SIDECHAIN.nSidechain);
             if (vWTJoin.size()) {
                 SidechainClient client;
-                client.BroadcastWTJoin(EncodeHexTx(vWTJoin.back().wtJoin));
+                std::string strHex = EncodeHexTx(vWTJoin.back().wtJoin);
+                uint256 hashWTPrimeToBroadcast = vWTJoin.back().wtJoin.GetHash();
+                if (!bmmBlockCache.HaveBroadcastedWTPrime(hashWTPrimeToBroadcast)) {
+                    if (client.BroadcastWTJoin(EncodeHexTx(vWTJoin.back().wtJoin)))
+                        bmmBlockCache.StoreBroadcastedWTPrime(vWTJoin.back().wtJoin.GetHash());
+                }
             }
         }
 
@@ -3015,7 +3020,8 @@ static bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, 
 static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
 {
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    bool fCoinbase = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
+    if (fCheckPOW && !CheckProofOfWork((fCoinbase ? block.GetHash() : block.GetBlindHash()), block.nBits, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     return true;
@@ -3100,38 +3106,34 @@ bool VerifyCriticalHashProof(const CBlock& block)
     if (block.criticalProof.empty())
         return false;
 
-    // Copy of block - BMM header data to compute h*
-    CBlock strippedBlock(block);
-    strippedBlock.Blind();
-
     // h*
-    uint256 hashStrippedBlock = strippedBlock.GetHash();
+    const uint256 hashBlindBlock = block.GetBlindHash();
 
     // Loop through the coinbase and look for h*
-    uint256 hashCritical;
+    uint256 hashCommitted;
     for (const CTxOut& out : criticalTx.vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
 
-        if (scriptPubKey.size() < sizeof(uint256) + 2)
-            continue;
-        if (scriptPubKey[0] != OP_RETURN)
+        if (scriptPubKey.size() < sizeof(uint256) + 6)
             continue;
 
-        CScript::const_iterator phash = scriptPubKey.begin() + 1;
-        std::vector<unsigned char> vch;
-        opcodetype opcode;
-        if (!scriptPubKey.GetOp2(phash, opcode, &vch))
-            continue;
-        if (vch.size() != sizeof(uint256))
+        // Check h* commit header
+        if (scriptPubKey[0] != OP_RETURN || scriptPubKey[1] != 0x24 ||
+                scriptPubKey[2] != 0xD1 ||
+                scriptPubKey[3] != 0x61 ||
+                scriptPubKey[4] != 0x73 ||
+                scriptPubKey[5] != 0x68)
             continue;
 
-        const uint256& hashPossible = uint256(vch);
-        if (hashPossible == hashStrippedBlock)
-            hashCritical = hashPossible;
+        std::vector<unsigned char> vch(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38);
+        uint256 hashFound(vch);
+
+        if (hashFound == hashBlindBlock)
+            hashCommitted = hashFound;
     }
 
-    // Check that h* is a valid hash of this block - BMM header data (blinded)
-    if (hashStrippedBlock != hashCritical)
+    // Check that we found the h* commit
+    if (hashBlindBlock != hashCommitted)
         return false;
 
     // TODO

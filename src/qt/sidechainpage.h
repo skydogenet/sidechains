@@ -5,15 +5,20 @@
 #ifndef SIDECHAINPAGE_H
 #define SIDECHAINPAGE_H
 
-#include "sidechainhistorytablemodel.h"
+#include <qt/sidechainhistorytablemodel.h>
 
-#include "amount.h"
+#include <amount.h>
 
 #include <string>
+#include <uint256.h>
 
+QT_BEGIN_NAMESPACE
 #include <QTableView>
+#include <QTimer>
 #include <QWidget>
+QT_END_NAMESPACE
 
+class CBlock;
 class WalletModel;
 
 namespace Ui {
@@ -58,9 +63,15 @@ private Q_SLOTS:
 
     void on_pushButtonSendCriticalRequest_clicked();
 
-    void on_checkBoxAutomateBMM_clicked(bool fChecked);
+    void on_checkBoxEnableAutomation_clicked(bool fChecked);
 
     void on_pushButtonSubmitBlock_clicked();
+
+    void on_pushButtonHashBlockLastSeen_clicked();
+
+    void on_spinBoxRefreshInterval_valueChanged(int n);
+
+    void RefreshBMM();
 
 private:
     Ui::SidechainPage *ui;
@@ -73,9 +84,22 @@ private:
     SidechainHistoryTableModel *incomingTableModel;
     SidechainHistoryTableModel *outgoingTableModel;
 
+    QTimer *bmmTimer;
+
+    std::vector<uint256> vMainBlockHash;
+
+    uint256 hashMainBlockLastSeen;
+
     bool validateWTAmount();
 
     void generateAddress();
+
+    bool CreateBMMBlock(CBlock& block, QString error = "");
+
+    uint256 SendBMMRequest(const uint256& hashBMM);
+
+    bool SubmitBMMBlock(const CBlock& block);
+
 };
 
 #endif // SIDECHAINPAGE_H

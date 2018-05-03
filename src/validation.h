@@ -31,7 +31,7 @@
 
 #include <atomic>
 
-class BMM;
+class BMMBlockCache;
 class CBlockIndex;
 class CBlockTreeDB;
 class CSidechainTreeDB;
@@ -231,7 +231,7 @@ extern bool fVerifyCriticalHashReadBlock;
 extern bool fVerifyCriticalHashCheckBlock;
 extern bool fVerifyCriticalHashAcceptBlockHeader;
 
-extern BMM bmm;
+extern BMMBlockCache bmmBlockCache;
 
 /**
  * Process an incoming block. This only returns after the best known valid

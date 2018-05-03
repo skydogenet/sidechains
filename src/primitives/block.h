@@ -78,6 +78,8 @@ public:
 
     uint256 GetHash() const;
 
+    uint256 GetBlindHash() const;
+
     int64_t GetBlockTime() const
     {
         return (int64_t)nTime;

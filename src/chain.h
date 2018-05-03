@@ -306,6 +306,13 @@ public:
         return *phashBlock;
     }
 
+    uint256 GetBlindBlockHash() const
+    {
+        CBlockHeader header =  GetBlockHeader();
+        header.Blind();
+        return header.GetHash();
+    }
+
     int64_t GetBlockTime() const
     {
         return (int64_t)nTime;
