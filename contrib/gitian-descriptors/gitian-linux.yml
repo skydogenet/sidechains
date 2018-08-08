@@ -28,7 +28,7 @@ packages:
 - "ca-certificates"
 - "python"
 remotes:
-- "url": "https://github.com/bitcoin/bitcoin.git"
+- "url": "https://github.com/drivechain-project/bitcoin.git"
   "dir": "bitcoin"
 files: []
 script: |
