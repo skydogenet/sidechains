@@ -106,7 +106,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1510704000; // November 15th, 2017.
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x653660c481b62cf68dac5ff57a5b0fa46baaaa48b61ea73f6c5670dc70ec174e");
+        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000002");
 
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x653660c481b62cf68dac5ff57a5b0fa46baaaa48b61ea73f6c5670dc70ec174e");
@@ -140,7 +140,6 @@ public:
         assert(consensus.hashGenesisBlock == uint256S("0x653660c481b62cf68dac5ff57a5b0fa46baaaa48b61ea73f6c5670dc70ec174e"));
         assert(genesis.hashMerkleRoot == uint256S("0x8eb1364f43885edf1322b2d32095e57abb03c32a61a80ac25c8db3de58e16b8a"));
 
-        vFixedSeeds.clear();
         vSeeds.clear();
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,0);
@@ -152,7 +151,7 @@ public:
         bech32_hrp = "sc";
 
         // TODO more seed nodes
-        //vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
+        vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
 
         fDefaultConsistencyChecks = false;
         fRequireStandard = true;

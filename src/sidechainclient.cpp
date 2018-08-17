@@ -351,7 +351,7 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
         // Setup BOOST ASIO for a synchronus call to the mainchain
         boost::asio::io_service io_service;
         tcp::resolver resolver(io_service);
-        tcp::resolver::query query("127.0.0.1", "18443");
+        tcp::resolver::query query("127.0.0.1", "8332");
         tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
         tcp::resolver::iterator end;
 
