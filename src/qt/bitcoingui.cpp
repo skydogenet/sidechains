@@ -279,18 +279,25 @@ void BitcoinGUI::createActions()
 {
     QActionGroup *tabGroup = new QActionGroup(this);
 
+    sidechainAction = new QAction(platformStyle->SingleColorIcon(":/icons/tx_inout"), tr("&Parent Chain"), this);
+    sidechainAction->setStatusTip(tr("View sidechain status, get deposit addresses & make withdraw requests"));
+    sidechainAction->setToolTip(sidechainAction->statusTip());
+    sidechainAction->setCheckable(true);
+    sidechainAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
+    tabGroup->addAction(sidechainAction);
+
     overviewAction = new QAction(platformStyle->SingleColorIcon(":/icons/overview"), tr("&Overview"), this);
     overviewAction->setStatusTip(tr("Show general overview of wallet"));
     overviewAction->setToolTip(overviewAction->statusTip());
     overviewAction->setCheckable(true);
-    overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
+    overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
     tabGroup->addAction(overviewAction);
 
     sendCoinsAction = new QAction(platformStyle->SingleColorIcon(":/icons/send"), tr("&Send"), this);
     sendCoinsAction->setStatusTip(tr("Send coins to a Bitcoin address"));
     sendCoinsAction->setToolTip(sendCoinsAction->statusTip());
     sendCoinsAction->setCheckable(true);
-    sendCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
+    sendCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
     tabGroup->addAction(sendCoinsAction);
 
     sendCoinsMenuAction = new QAction(platformStyle->TextColorIcon(":/icons/send"), sendCoinsAction->text(), this);
@@ -301,7 +308,7 @@ void BitcoinGUI::createActions()
     receiveCoinsAction->setStatusTip(tr("Request payments (generates QR codes and bitcoin: URIs)"));
     receiveCoinsAction->setToolTip(receiveCoinsAction->statusTip());
     receiveCoinsAction->setCheckable(true);
-    receiveCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
+    receiveCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_4));
     tabGroup->addAction(receiveCoinsAction);
 
     receiveCoinsMenuAction = new QAction(platformStyle->TextColorIcon(":/icons/receiving_addresses"), receiveCoinsAction->text(), this);
@@ -312,10 +319,13 @@ void BitcoinGUI::createActions()
     historyAction->setStatusTip(tr("Browse transaction history"));
     historyAction->setToolTip(historyAction->statusTip());
     historyAction->setCheckable(true);
-    historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_4));
+    historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(historyAction);
 
 #ifdef ENABLE_WALLET
+    connect(sidechainAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(sidechainAction, SIGNAL(triggered()), this, SLOT(gotoSidechainPage()));
+
     // These showNormalIfMinimized are needed because Send Coins and Receive Coins
     // can be triggered from the tray menu, and need to show the GUI to be useful.
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -403,20 +413,6 @@ void BitcoinGUI::createActions()
     }
 #endif // ENABLE_WALLET
 
-
-    sidechainAction = new QAction(platformStyle->SingleColorIcon(":/icons/tx_inout"), tr("&Sidechain"), this);
-    sidechainAction->setStatusTip(tr("View sidechain history / status & make withdraw requests"));
-    sidechainAction->setToolTip(sidechainAction->statusTip());
-    sidechainAction->setCheckable(true);
-    sidechainAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
-    tabGroup->addAction(sidechainAction);
-
-#ifdef ENABLE_WALLET
-    connect(sidechainAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
-    connect(sidechainAction, SIGNAL(triggered()), this, SLOT(gotoSidechainPage()));
-#endif
-
-
     new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_C), this, SLOT(showDebugWindowActivateConsole()));
     new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_D), this, SLOT(showDebugWindow()));
 }
@@ -474,13 +470,13 @@ void BitcoinGUI::createToolBars()
         toolbar->setContextMenuPolicy(Qt::PreventContextMenu);
         toolbar->setMovable(false);
         toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        toolbar->addSeparator();
+        toolbar->addAction(sidechainAction);
+        toolbar->addSeparator();
         toolbar->addAction(overviewAction);
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
         toolbar->addAction(historyAction);
-        toolbar->addSeparator();
-        toolbar->addAction(sidechainAction);
-        toolbar->addSeparator();
         overviewAction->setChecked(true);
     }
 }

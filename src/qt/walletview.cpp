@@ -62,11 +62,11 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
 
     sidechainPage = new SidechainPage(this); // TODO change to platformStyle?
 
+    addWidget(sidechainPage);
     addWidget(overviewPage);
     addWidget(transactionsPage);
     addWidget(receiveCoinsPage);
     addWidget(sendCoinsPage);
-    addWidget(sidechainPage);
 
     // Clicking on a transaction on the overview pre-selects the transaction on the transaction history page
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), transactionView, SLOT(focusTransaction(QModelIndex)));
