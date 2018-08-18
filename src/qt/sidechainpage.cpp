@@ -156,6 +156,18 @@ void SidechainPage::on_pushButtonDeposit_clicked()
     ui->stackedWidget->setCurrentWidget(ui->pageDeposit);
 }
 
+void SidechainPage::on_pushButtonMainchain_clicked()
+{
+    ui->pushButtonWithdraw->setChecked(true);
+    ui->stackedWidget->setCurrentWidget(ui->pageWithdraw);
+}
+
+void SidechainPage::on_pushButtonSidechain_clicked()
+{
+    ui->pushButtonDeposit->setChecked(true);
+    ui->stackedWidget->setCurrentWidget(ui->pageDeposit);
+}
+
 void SidechainPage::on_pushButtonCopy_clicked()
 {
     GUIUtil::setClipboard(ui->lineEditDepositAddress->text());

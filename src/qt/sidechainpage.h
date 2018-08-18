@@ -47,6 +47,10 @@ private Q_SLOTS:
 
     void on_pushButtonDeposit_clicked();
 
+    void on_pushButtonMainchain_clicked();
+
+    void on_pushButtonSidechain_clicked();
+
     void on_pushButtonCopy_clicked();
 
     void on_pushButtonNew_clicked();
