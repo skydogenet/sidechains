@@ -16,6 +16,9 @@
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -525,6 +528,9 @@
       </layout>
      </widget>
      <widget class="QWidget" name="tabHistory">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <attribute name="icon">
        <iconset resource="../bitcoin.qrc">
         <normaloff>:/icons/history</normaloff>:/icons/history</iconset>
