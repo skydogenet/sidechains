@@ -141,31 +141,17 @@ void SidechainPage::setBalance(const CAmount& balance, const CAmount& unconfirme
                                const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance)
 {
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
-    const CAmount& pending = immatureBalance + unconfirmedBalance;
     ui->available->setText(BitcoinUnits::formatWithUnit(unit, balance, false, BitcoinUnits::separatorAlways));
-    ui->pending->setText(BitcoinUnits::formatWithUnit(unit, pending, false, BitcoinUnits::separatorAlways));
-}
-
-void SidechainPage::on_pushButtonWithdraw_clicked()
-{
-    ui->stackedWidget->setCurrentWidget(ui->pageWithdraw);
-}
-
-void SidechainPage::on_pushButtonDeposit_clicked()
-{
-    ui->stackedWidget->setCurrentWidget(ui->pageDeposit);
 }
 
 void SidechainPage::on_pushButtonMainchain_clicked()
 {
-    ui->pushButtonWithdraw->setChecked(true);
-    ui->stackedWidget->setCurrentWidget(ui->pageWithdraw);
+    ui->tabWidgetTransfer->setCurrentIndex(0);
 }
 
 void SidechainPage::on_pushButtonSidechain_clicked()
 {
-    ui->pushButtonDeposit->setChecked(true);
-    ui->stackedWidget->setCurrentWidget(ui->pageDeposit);
+    ui->tabWidgetTransfer->setCurrentIndex(1);
 }
 
 void SidechainPage::on_pushButtonCopy_clicked()
@@ -553,6 +539,11 @@ bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
 
         pblock->nNonce++;
         nMaxTries--;
+    }
+
+    if (!CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
+        error = "Invalid PoW!\n";
+        return false;
     }
 
     if (!bmmBlockCache.StoreBMMBlock(*pblock)) {

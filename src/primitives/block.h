@@ -61,8 +61,7 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
-        criticalProof = "";
-        criticalTx = CMutableTransaction();
+        Blind();
     }
 
     void Blind()

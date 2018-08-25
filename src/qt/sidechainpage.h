@@ -43,10 +43,6 @@ public Q_SLOTS:
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
 
 private Q_SLOTS:
-    void on_pushButtonWithdraw_clicked();
-
-    void on_pushButtonDeposit_clicked();
-
     void on_pushButtonMainchain_clicked();
 
     void on_pushButtonSidechain_clicked();

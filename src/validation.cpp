@@ -229,10 +229,12 @@ bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 bool fSidechainIndex = true;
 
 // TODO make configurable
+// False by default because of all of the issues a improper configuration will
+// cause. Should be enable by sidechain miners.
 //! BMM h* verification options
 bool fVerifyCriticalHashReadBlock = false;
-bool fVerifyCriticalHashCheckBlock = true;
-bool fVerifyCriticalHashAcceptBlockHeader = true;
+bool fVerifyCriticalHashCheckBlock = false;
+bool fVerifyCriticalHashAcceptBlockHeader = false;
 
 uint256 hashAssumeValid;
 arith_uint256 nMinimumChainWork;
@@ -1127,7 +1129,8 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
-    if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    bool fCoinbase = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
+    if (!CheckProofOfWork((fCoinbase ? block.GetHash() : block.GetBlindHash()), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
     // Optionally verify that block has a valid h* proof

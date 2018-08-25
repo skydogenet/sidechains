@@ -75,22 +75,22 @@ PlatformStyle::PlatformStyle(const QString &_name, bool _imagesOnButtons, bool _
     imagesOnButtons(_imagesOnButtons),
     colorizeIcons(_colorizeIcons),
     useExtraSpacing(_useExtraSpacing),
-    singleColor(0,0,0),
+    singleColor(200,10,50),
     textColor(0,0,0)
 {
     // Determine icon highlighting color
-    if (colorizeIcons) {
-        const QColor colorHighlightBg(QApplication::palette().color(QPalette::Highlight));
-        const QColor colorHighlightFg(QApplication::palette().color(QPalette::HighlightedText));
-        const QColor colorText(QApplication::palette().color(QPalette::WindowText));
-        const int colorTextLightness = colorText.lightness();
-        QColor colorbase;
-        if (abs(colorHighlightBg.lightness() - colorTextLightness) < abs(colorHighlightFg.lightness() - colorTextLightness))
-            colorbase = colorHighlightBg;
-        else
-            colorbase = colorHighlightFg;
-        singleColor = colorbase;
-    }
+    //if (colorizeIcons) {
+    //    const QColor colorHighlightBg(QApplication::palette().color(QPalette::Highlight));
+    //    const QColor colorHighlightFg(QApplication::palette().color(QPalette::HighlightedText));
+    //    const QColor colorText(QApplication::palette().color(QPalette::WindowText));
+    //    const int colorTextLightness = colorText.lightness();
+    //    QColor colorbase;
+    //    if (abs(colorHighlightBg.lightness() - colorTextLightness) < abs(colorHighlightFg.lightness() - colorTextLightness))
+    //        colorbase = colorHighlightBg;
+    //    else
+    //        colorbase = colorHighlightFg;
+    //    singleColor = colorbase;
+    //}
     // Determine text color
     textColor = QColor(QApplication::palette().color(QPalette::WindowText));
 }
