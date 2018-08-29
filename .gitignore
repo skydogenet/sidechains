@@ -1,7 +1,7 @@
 *.tar.gz
 
 *.exe
-src/bitcoin
+src/sidechain
 src/bitcoind
 src/bitcoin-cli
 src/bitcoin-tx
@@ -80,13 +80,13 @@ src/qt/bitcoin-qt.includes
 # Compilation and Qt preprocessor part
 *.qm
 Makefile
-bitcoin-qt
-Bitcoin-Qt.app
+sidechain-qt
+Sidechain-Qt.app
 background.tiff*
 
 # Unit-tests
 Makefile.test
-bitcoin-qt_test
+sidechain-qt_test
 
 # Resources cpp
 qrc_*.cpp
