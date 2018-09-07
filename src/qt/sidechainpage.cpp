@@ -508,7 +508,7 @@ bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
     coinbaseScript->KeepScript();
 
     std::unique_ptr<CBlockTemplate> pblocktemplate(
-                BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, false, true));
+                BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, true));
 
     if (!pblocktemplate.get()) {
         // No block template error message
