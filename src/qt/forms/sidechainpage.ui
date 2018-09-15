@@ -391,7 +391,7 @@
             </property>
             <property name="icon">
              <iconset resource="../bitcoin.qrc">
-              <normaloff>:/icons/about</normaloff>:/icons/about</iconset>
+              <normaloff>:/icons/bitcoin</normaloff>:/icons/bitcoin</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -446,7 +446,7 @@
             </property>
             <property name="icon">
              <iconset resource="../bitcoin.qrc">
-              <normaloff>:/icons/bitcoin</normaloff>:/icons/bitcoin</iconset>
+              <normaloff>:/icons/drivenet</normaloff>:/icons/drivenet</iconset>
             </property>
             <property name="iconSize">
              <size>
