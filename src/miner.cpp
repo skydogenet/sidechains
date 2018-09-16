@@ -514,13 +514,15 @@ CTransaction CreateDepositTx()
                 continue;
 
             // Is deposit greater than minimum fee?
-            if (deposit.amtUserPayout < CENT)
+            if (deposit.amtUserPayout < SIDECHAIN_DEPOSIT_FEE)
                 continue;
 
-            // Pay keyID the deposit
+            // Pay keyID the deposit if it isn't dust after paying fee
             CScript script;
             script << OP_DUP << OP_HASH160 << ToByteVector(deposit.keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
-            mtx.vout.push_back(CTxOut(deposit.amtUserPayout - CENT, script));
+            CTxOut depositOut(deposit.amtUserPayout - SIDECHAIN_DEPOSIT_FEE, script);
+            if (!IsDust(depositOut, ::dustRelayFee))
+                mtx.vout.push_back(depositOut);
 
             // Depositor pays fee to sidechain
             CKeyID sidechainKey;

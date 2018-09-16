@@ -51,6 +51,9 @@ static const int SIDECHAIN_STATE_VERSION = 0;
 //! The default payment amount to mainchain miner for critical data commitment
 static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
 
+//! The fee for sidechain deposits on this sidechain
+static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
+
 /**
  * Base object for sidechain related database entries
  */
