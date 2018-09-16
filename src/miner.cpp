@@ -557,6 +557,7 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
 
     CAmount joinAmount = 0;  // Total output
     CMutableTransaction wjtx; // WT^
+    wjtx.nVersion = 2; // Use version 2 so that the mainchain can deserialize
     for (const SidechainWT& wt : vWTFiltered) {
         CAmount amountWT = wt.wt.GetValueBurnedForWT();
         joinAmount += amountWT;
