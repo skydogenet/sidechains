@@ -543,12 +543,13 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
 {
     const Sidechain& s = THIS_SIDECHAIN;
 
-    if (nHeight % s.nWTPrimeBroadcastInterval != 0)
-        return CTransaction();
-
     // Get WT(s) from psidechaintree
     const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(s.nSidechain);
     if (vWT.empty())
+        return CTransaction();
+
+    int nThreshold = gArgs.GetArg("-wtprimethreshold", DEFAULT_WTPRIME_THRESHOLD);
+    if (nThreshold > vWT.size())
         return CTransaction();
 
     // TODO filter vWT (by height & used)
@@ -557,7 +558,7 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
 
     CAmount joinAmount = 0;  // Total output
     CMutableTransaction wjtx; // WT^
-    wjtx.nVersion = 2; // Use version 2 so that the mainchain can deserialize
+    wjtx.nVersion = 2;
     for (const SidechainWT& wt : vWTFiltered) {
         CAmount amountWT = wt.wt.GetValueBurnedForWT();
         joinAmount += amountWT;

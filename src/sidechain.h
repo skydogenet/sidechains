@@ -46,13 +46,16 @@ static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << 
 //! Max number of WT^(s) per sidechain per period
 static const int SIDECHAIN_MAX_WT = 3;
 //! State script version number
-static const int SIDECHAIN_STATE_VERSION = 0;
+static const int SIDECHAIN_STATE_VERSION = 0; // TODO remove
 
 //! The default payment amount to mainchain miner for critical data commitment
 static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
 
 //! The fee for sidechain deposits on this sidechain
 static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
+
+//! How many wt(s) should we wait for before creating a WT^
+static const unsigned int DEFAULT_WTPRIME_THRESHOLD = 256;
 
 /**
  * Base object for sidechain related database entries
