@@ -173,7 +173,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
 
     // Create WT^
-    CTransaction wtJoinTx = CreateWTJoinTx(chainActive.Height() + 1);
+    CTransaction wtJoinTx = CreateWTPrimeTx(chainActive.Height() + 1);
     for (const CTxOut& out : wtJoinTx.vout)
         coinbaseTx.vout.push_back(out);
 
@@ -539,8 +539,10 @@ CTransaction CreateDepositTx()
 }
 
 /** Create joined WT^ to be sent to the mainchain */
-CTransaction CreateWTJoinTx(uint32_t nHeight)
+CTransaction CreateWTPrimeTx(uint32_t nHeight)
 {
+    SidechainClient client;
+
     const Sidechain& s = THIS_SIDECHAIN;
 
     // Get WT(s) from psidechaintree
@@ -548,7 +550,7 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
     if (vWT.empty())
         return CTransaction();
 
-    int nThreshold = gArgs.GetArg("-wtprimethreshold", DEFAULT_WTPRIME_THRESHOLD);
+    unsigned int nThreshold = gArgs.GetArg("-wtprimethreshold", DEFAULT_WTPRIME_THRESHOLD);
     if (nThreshold > vWT.size())
         return CTransaction();
 
@@ -572,6 +574,15 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
     if (!wjtx.vout.size())
         return CTransaction();
 
+    // Lookup the mainchain CTIP
+    std::pair<uint256, uint32_t> ctip;
+    if (!client.GetCTIP(ctip))
+        return CTransaction();
+
+    // Add this sidechain's current CTIP to the WT^
+    // Note that the real scriptSig will be provided by the mainchain
+    wjtx.vin.push_back(CTxIn(COutPoint(ctip.first, ctip.second), CScript() << OP_0));
+
     // TODO improve fee calculation
     CAmount nBaseFee = CENT;
     // Calculate total group fee to be split evenly between sidechain & mainchain
@@ -592,9 +603,6 @@ CTransaction CreateWTJoinTx(uint32_t nHeight)
     // leaving the rest for the mainchain miners
     if (nJoinFee > 0)
         wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
-
-    wjtx.vin.resize(1);
-    wjtx.vin[0].scriptSig = CScript() << OP_0;
 
     // Create WT^ object
     SidechainWTJoin wtJoin;

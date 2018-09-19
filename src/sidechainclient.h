@@ -53,6 +53,11 @@ public:
      */
     std::vector<uint256> RequestMainBlockHashes();
 
+    /*
+     * Request the CTIP - Critical Transaction Index Pair for this sidechain
+     */
+    bool GetCTIP(std::pair<uint256, uint32_t>& ctip);
+
 private:
     /*
      * Send json request to local node

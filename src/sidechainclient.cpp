@@ -318,7 +318,7 @@ std::vector<uint256> SidechainClient::RequestMainBlockHashes()
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
         LogPrintf("ERROR Sidechain client failed to request main:block hashes\n");
-        return vHash; // TODO
+        return vHash; // TODO boolean
     }
 
     // Process result
@@ -331,15 +331,63 @@ std::vector<uint256> SidechainClient::RequestMainBlockHashes()
                 if (!data.length())
                     continue;
 
-                uint256 txid = uint256S(data);
-                if (!txid.IsNull())
-                    vHash.push_back(txid);
+                uint256 hashBlock = uint256S(data);
+                if (!hashBlock.IsNull())
+                    vHash.push_back(hashBlock);
             }
         }
     }
     LogPrintf("Sidechain client received %d main:block hashes.\n", vHash.size());
 
     return vHash;
+}
+
+bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
+{
+    // JSON for requesting sidechain deposits via mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"listsidechainctip\", \"params\": ");
+    json.append("[\"");
+    json.append(std::to_string(THIS_SIDECHAIN.nSidechain));
+    json.append("\"");
+    json.append("] }");
+
+    // Try to request deposits from mainchain
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        // TODO LogPrintf("ERROR Sidechain client failed to request CTIP\n");
+        return false;
+    }
+
+    // Process CTIP
+    uint256 txid;
+    uint32_t n;
+    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
+        // Looping through this deposit's members
+        if (value.first == "n") {
+            // Read sidechain number
+            std::string data = value.second.data();
+            if (!data.length())
+                continue;
+            n = std::stoi(data);
+        }
+        else
+        if (value.first == "txid") {
+            // Read keyID
+            std::string data = value.second.data();
+            if (!data.length())
+                continue;
+
+            txid = uint256S(data);
+        }
+    }
+    // TODO LogPrintf("Sidechain client received CTIP\n");
+
+    ctip = std::make_pair(txid, n);
+
+    // return valid deposits in sidechain format
+    return true;
 }
 
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)
