@@ -8,6 +8,7 @@
 #include "core_io.h"
 #include "hash.h"
 #include "streams.h"
+#include "utilmoneystr.h"
 
 #include <sstream>
 
@@ -110,7 +111,9 @@ std::string SidechainDeposit::ToString() const
 {
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;
-    str << "nHeight=" << nHeight << std::endl;
+    str << "nSidechain=" << (unsigned int)nSidechain << std::endl;
     str << "txid=" << txid.GetHex() << std::endl;
+    str << "payout=" << FormatMoney(amtUserPayout) << std::endl;
+    str << "dtxid=" << dtx.GetHash().ToString() << std::endl;
     return str.str();
 }

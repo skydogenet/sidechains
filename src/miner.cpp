@@ -485,13 +485,61 @@ CTransaction CreateDepositTx()
     std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(THIS_SIDECHAIN.nSidechain);
     std::vector<SidechainDeposit> vDepositUniq;
     for (const SidechainDeposit& d: vDeposit) {
-        SidechainDeposit temp;
-        if (!psidechaintree->GetDeposit(d.GetHash(), temp)) {
+        if (!psidechaintree->HaveDepositNonAmount(d.GetNonAmountHash())) {
             vDepositUniq.push_back(d);
         }
     }
     if (!vDepositUniq.size())
         return CTransaction();
+
+    bool fInitialDeposit = !psidechaintree->HaveDeposits();
+
+    // If there isn't a deposit yet, make sure there is only 1 initial deposit
+    // which does not spend a CTIP. This check only needs to happen one time.
+    if (fInitialDeposit) {
+        int nMissingCTIP = 0;
+
+        for (const SidechainDeposit& deposit : vDepositUniq) {
+            bool fFound = false;
+            CAmount amtRet;
+            for (const CTxIn& in : deposit.dtx.vin) {
+                if (psidechaintree->GetCTIPAmount(in.prevout.hash, in.prevout.n, amtRet)) {
+                    fFound = true;
+                    break;
+                }
+            }
+            if (!fFound)
+                nMissingCTIP++;
+        }
+
+        if (nMissingCTIP != 1)
+            return CTransaction(); // TODO log
+    }
+
+    // Subtract CTIP input from user payout(s) and reject deposits (besides the
+    // initial deposit) for which we cannot look up the CTIP.
+    for (size_t i = 0; i < vDepositUniq.size(); i++) {
+        bool fFound = false;
+        CAmount amtRet = CAmount(0);
+        for (const CTxIn& in : vDepositUniq[i].dtx.vin) {
+            if (psidechaintree->GetCTIPAmount(in.prevout.hash, in.prevout.n, amtRet)) {
+                fFound = true;
+                break;
+            }
+        }
+        if (!fFound && fInitialDeposit) {
+            fInitialDeposit = false;
+            continue;
+        }
+        if (!fFound)
+            return CTransaction(); // TODO log
+
+        // Subtract the CTIP input
+        if (vDepositUniq[i].amtUserPayout > amtRet)
+            vDepositUniq[i].amtUserPayout -= amtRet;
+        else
+            vDepositUniq[i].amtUserPayout = CAmount(0);
+    }
 
     CMutableTransaction mtx;
     for (const SidechainDeposit& deposit : vDepositUniq) {

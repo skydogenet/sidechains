@@ -145,6 +145,12 @@ struct SidechainDeposit : public SidechainObj {
     }
 
     std::string ToString(void) const;
+    uint256 GetNonAmountHash() const
+    {
+        SidechainDeposit deposit(*this);
+        deposit.amtUserPayout = CAmount(0);
+        return deposit.GetHash();
+    }
 };
 
 struct SidechainBMMProof

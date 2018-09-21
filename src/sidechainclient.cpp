@@ -133,10 +133,10 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
         // Get the user payout amount from the deposit output
         if (n >= deposit.dtx.vout.size())
             continue;
-        // TODO check the scriptPubKey (compare to THIS_SIDECHAIN)
+        // TODO check the deposit output 'N' scriptPubKey (compare to THIS_SIDECHAIN)
         deposit.amtUserPayout = deposit.dtx.vout[n].nValue;
 
-        // Verify that the deposit represented exits as an output
+        // Verify that the deposit represented exists as an output
         bool depositValid = false;
         for (const CTxOut& out : deposit.dtx.vout) {
             CScript scriptPubKey = out.scriptPubKey;
@@ -174,7 +174,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
     }
     // TODO LogPrintf("Sidechain client received %d deposits\n", incoming.size());
 
-    // return valid deposits in sidechain format
+    // return valid (in terms of format) deposits in sidechain format
     return incoming;
 }
 
