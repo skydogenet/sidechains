@@ -147,7 +147,7 @@ public:
     bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
     bool GetWTJoin(const uint256 & /* WT^ ID */, SidechainWTJoin &wtJoin);
     bool GetDeposit(const uint256 & /* Deposit ID */, SidechainDeposit &deposit);
-    bool GetCTIPAmount(const uint256& hash, const uint32_t n, CAmount& amtRet);
+    bool GetCTIPAmount(const uint256& hash, const uint32_t n, CAmount& amtRet, const std::vector<SidechainDeposit>& vDepositIn = {});
 
     bool HaveDeposits();
     bool HaveDepositNonAmount(const uint256& hash);

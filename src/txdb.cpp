@@ -469,9 +469,17 @@ std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSide
     return vDeposit;
 }
 
-bool CSidechainTreeDB::GetCTIPAmount(const uint256& hash, const uint32_t n, CAmount& amtRet)
+bool CSidechainTreeDB::GetCTIPAmount(const uint256& hash, const uint32_t n, CAmount& amtRet, const std::vector<SidechainDeposit>& vDepositIn)
 {
+    // Collect deposits which have already been processed
     std::vector<SidechainDeposit> vDeposit = GetDeposits(THIS_SIDECHAIN.nSidechain);
+
+    // Now add deposits which have been passed in manually. These deposits
+    // depend on CTIP which have not been added to the sidechain's ldb yet thus
+    // their input must exist as one of the other unprocessed depoits.
+    for (const SidechainDeposit& d : vDepositIn)
+        vDeposit.push_back(d);
+
     if (vDeposit.empty())
         return false;
 

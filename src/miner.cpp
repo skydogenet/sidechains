@@ -503,7 +503,7 @@ CTransaction CreateDepositTx()
             bool fFound = false;
             CAmount amtRet;
             for (const CTxIn& in : deposit.dtx.vin) {
-                if (psidechaintree->GetCTIPAmount(in.prevout.hash, in.prevout.n, amtRet)) {
+                if (psidechaintree->GetCTIPAmount(in.prevout.hash, in.prevout.n, amtRet, vDepositUniq)) {
                     fFound = true;
                     break;
                 }
@@ -522,7 +522,7 @@ CTransaction CreateDepositTx()
         bool fFound = false;
         CAmount amtRet = CAmount(0);
         for (const CTxIn& in : vDepositUniq[i].dtx.vin) {
-            if (psidechaintree->GetCTIPAmount(in.prevout.hash, in.prevout.n, amtRet)) {
+            if (psidechaintree->GetCTIPAmount(in.prevout.hash, in.prevout.n, amtRet, vDepositUniq)) {
                 fFound = true;
                 break;
             }
