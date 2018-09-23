@@ -212,6 +212,9 @@ void Shutdown()
         DumpMempool();
     }
 
+
+    DumpBMMCache();
+
     if (fFeeEstimatesInitialized)
     {
         ::feeEstimator.FlushUnconfirmed();
@@ -1604,6 +1607,8 @@ bool AppInitMain()
     if (!est_filein.IsNull())
         ::feeEstimator.Read(est_filein);
     fFeeEstimatesInitialized = true;
+
+    LoadBMMCache();
 
     // ********************************************************* Step 8: load wallet
 #ifdef ENABLE_WALLET

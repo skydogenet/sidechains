@@ -516,10 +516,6 @@ void UpdateMempoolForReorg(DisconnectedBlockTransactions &disconnectpool, bool f
     // the disconnectpool that were added back and cleans up the mempool state.
     mempool.UpdateTransactionsFromBlock(vHashUpdate);
 
-    std::cout << std::endl << std::endl;
-    std::cout << "Mempool reorg... chainActive->tip height: " << chainActive.Tip()->nHeight << std::endl;
-    std::cout << std::endl << std::endl;
-
     // We also need to remove any now-immature transactions
     mempool.removeForReorg(pcoinsTip.get(), chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
     // Re-limit mempool size, in case we added any transactions
@@ -4793,6 +4789,78 @@ bool DumpMempool(void)
         return false;
     }
     return true;
+}
+
+void LoadBMMCache()
+{
+    fs::path path = GetDataDir() / "bmmwtprime.dat";
+    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    if (filein.IsNull()) {
+        return;
+    }
+
+    // TODO log this
+    uint64_t fileSize = fs::file_size(path);
+
+    std::vector<uint256> vHash;
+    try {
+        int nVersionRequired, nVersionThatWrote;
+        filein >> nVersionRequired;
+        filein >> nVersionThatWrote;
+        if (nVersionRequired > CLIENT_VERSION) {
+            return;
+        }
+
+        int count = 0;
+        filein >> count;
+        for (int i = 0; i < count; i++) {
+            uint256 hash;
+            filein >> hash;
+            vHash.push_back(hash);
+        }
+    }
+    catch (const std::exception& e) {
+        // TODO log this
+        // std::cout << "Exception: " << e.what() << std::endl;
+        return;
+    }
+
+    int i = 0;
+    for (const uint256& u : vHash) {
+        bmmBlockCache.StoreBroadcastedWTPrime(u);
+        i++;
+    }
+}
+
+void DumpBMMCache()
+{
+    std::vector<uint256> vHash = bmmBlockCache.GetBMMWTPrimeCache();
+
+    int count = vHash.size();
+
+    // Write the coins
+    fs::path path = GetDataDir() / "bmmwtprime.dat";
+    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    if (fileout.IsNull()) {
+        return;
+    }
+
+    try {
+        fileout << 160000; // version required to read: 0.16.00 or later
+        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << count; // Number of WT^ hashes in file
+
+        int i = 0;
+        for (const uint256& u : vHash) {
+            fileout << u;
+            i++;
+        }
+    }
+    catch (const std::exception& e) {
+        // TODO log this
+        // std::cout << "Exception: " << e.what() << std::endl;
+        return;
+    }
 }
 
 //! Guess how far we are in the verification process at the given block index

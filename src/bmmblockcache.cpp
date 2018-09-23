@@ -33,13 +33,22 @@ bool BMMBlockCache::GetBMMBlock(const uint256& hashBlock, CBlock& block)
     return true;
 }
 
-std::vector<CBlock> BMMBlockCache::GetBMMBlockCache()
+std::vector<CBlock> BMMBlockCache::GetBMMBlockCache() const
 {
     std::vector<CBlock> vBlock;
-    for (auto& b : mapBMMBlocks) {
+    for (const auto& b : mapBMMBlocks) {
         vBlock.push_back(b.second);
     }
     return vBlock;
+}
+
+std::vector<uint256> BMMBlockCache::GetBMMWTPrimeCache() const
+{
+    std::vector<uint256> vHash;
+    for (const auto& u : setWTPrimeBroadcasted) {
+        vHash.push_back(u);
+    }
+    return vHash;
 }
 
 void BMMBlockCache::ClearBMMBlocks()
@@ -52,7 +61,7 @@ void BMMBlockCache::StoreBroadcastedWTPrime(const uint256& hashWTPrime)
     setWTPrimeBroadcasted.insert(hashWTPrime);
 }
 
-bool BMMBlockCache::HaveBroadcastedWTPrime(const uint256& hashWTPrime)
+bool BMMBlockCache::HaveBroadcastedWTPrime(const uint256& hashWTPrime) const
 {
     if (hashWTPrime.IsNull())
         return false;

@@ -503,4 +503,10 @@ bool DumpMempool();
 /** Load the mempool from disk. */
 bool LoadMempool();
 
+/** Dump the BMM cache to disk. */
+void DumpBMMCache();
+
+/** Load the BMM cache from disk. */
+void LoadBMMCache();
+
 #endif // BITCOIN_VALIDATION_H

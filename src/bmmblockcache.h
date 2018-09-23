@@ -17,13 +17,15 @@ public:
 
     bool GetBMMBlock(const uint256& hashBlock, CBlock& block);
 
-    std::vector<CBlock> GetBMMBlockCache();
+    std::vector<CBlock> GetBMMBlockCache() const;
+
+    std::vector<uint256> GetBMMWTPrimeCache() const;
 
     void ClearBMMBlocks();
 
     void StoreBroadcastedWTPrime(const uint256& hashWTPrime); // TODO move
 
-    bool HaveBroadcastedWTPrime(const uint256& hashWTPrime); // TODO move
+    bool HaveBroadcastedWTPrime(const uint256& hashWTPrime) const; // TODO move
 
 private:
     std::map<uint256, CBlock> mapBMMBlocks;
