@@ -79,8 +79,8 @@ public:
         strNetworkID = "main";
         consensus.nSubsidyHalvingInterval = 210000;
         consensus.BIP16Height = 0;
-        consensus.BIP34Height = 0;
-        consensus.BIP34Hash = uint256S("0x10069a9000bacaf0e74cc5e97ec78cdbd718141ab28d7927199e52dcfdc0f50c");
+        consensus.BIP34Height = 1;
+        consensus.BIP34Hash = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
         consensus.BIP65Height = 0;
         consensus.BIP66Height = 0;
 
@@ -109,7 +109,7 @@ public:
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000002");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x10069a9000bacaf0e74cc5e97ec78cdbd718141ab28d7927199e52dcfdc0f50c");
+        consensus.defaultAssumeValid = uint256S("0x026cec396ddd6b64837f0755e3a1cb10ecc41afe781fd19b353dff22bf81e27d");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -123,11 +123,11 @@ public:
         nDefaultPort = 2563;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1540099561, 3, 0x207fffff, 1, 0);
+        genesis = CreateGenesisBlock(1540877665, 22, 0x207fffff, 1, 0);
 
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x10069a9000bacaf0e74cc5e97ec78cdbd718141ab28d7927199e52dcfdc0f50c"));
 
+        assert(consensus.hashGenesisBlock == uint256S("0x026cec396ddd6b64837f0755e3a1cb10ecc41afe781fd19b353dff22bf81e27d"));
         assert(genesis.hashMerkleRoot == uint256S("0x8eb1364f43885edf1322b2d32095e57abb03c32a61a80ac25c8db3de58e16b8a"));
 
         vSeeds.clear();
@@ -149,7 +149,7 @@ public:
 
         checkpointData = {
             {
-                { 0, uint256S("0x10069a9000bacaf0e74cc5e97ec78cdbd718141ab28d7927199e52dcfdc0f50c")},
+                { 0, uint256S("0x026cec396ddd6b64837f0755e3a1cb10ecc41afe781fd19b353dff22bf81e27d")},
             }
         };
 
