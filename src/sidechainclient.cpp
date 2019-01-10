@@ -48,7 +48,7 @@ bool SidechainClient::BroadcastWTJoin(const std::string& hex)
 }
 
 // TODO return bool & state / fail string
-std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain)
+std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strBuildHash)
 {
     // List of deposits in sidechain format for DB
     std::vector<SidechainDeposit> incoming;
@@ -58,7 +58,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listsidechaindeposits\", \"params\": ");
     json.append("[\"");
-    json.append(std::to_string(nSidechain));
+    json.append(strBuildHash);
     json.append("\"");
     json.append("] }");
 
@@ -82,7 +82,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
                 if (!data.length())
                     continue;
                 uint8_t nSidechain = std::stoi(data);
-                if (nSidechain != THIS_SIDECHAIN.nSidechain)
+                if (nSidechain != SIDECHAIN_TEST)
                     continue;
 
                 deposit.nSidechain = nSidechain;
@@ -147,7 +147,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(uint8_t nSidechain
 
             // Check sidechain number
             uint8_t nSidechain = (unsigned int)scriptPubKey[1];
-            if (nSidechain != THIS_SIDECHAIN.nSidechain)
+            if (nSidechain != SIDECHAIN_TEST)
                 continue;
             if (nSidechain != deposit.nSidechain)
                 continue;
@@ -349,7 +349,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listsidechainctip\", \"params\": ");
     json.append("[\"");
-    json.append(std::to_string(THIS_SIDECHAIN.nSidechain));
+    json.append(std::to_string(SIDECHAIN_TEST));
     json.append("\"");
     json.append("] }");
 

@@ -482,7 +482,7 @@ CTransaction CreateDepositTx()
     SidechainClient client;
 
     // Find new deposits
-    std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(THIS_SIDECHAIN.nSidechain);
+    std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(SIDECHAIN_BUILD_COMMIT_HASH);
     std::vector<SidechainDeposit> vDepositUniq;
     for (const SidechainDeposit& d: vDeposit) {
         if (!psidechaintree->HaveDepositNonAmount(d.GetNonAmountHash())) {
@@ -554,7 +554,7 @@ CTransaction CreateDepositTx()
 
             // Double check nSidechain
             uint8_t nSidechain = (unsigned int)scriptPubKey[1];
-            if (nSidechain != THIS_SIDECHAIN.nSidechain)
+            if (nSidechain != SIDECHAIN_TEST)
                 continue;
 
             // Double check that keyID is not null
@@ -591,10 +591,8 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
 {
     SidechainClient client;
 
-    const Sidechain& s = THIS_SIDECHAIN;
-
     // Get WT(s) from psidechaintree
-    const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(s.nSidechain);
+    const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
     if (vWT.empty())
         return CTransaction();
 
@@ -654,7 +652,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
 
     // Create WT^ object
     SidechainWTJoin wtJoin;
-    wtJoin.nSidechain = s.nSidechain;
+    wtJoin.nSidechain = SIDECHAIN_TEST;
     wtJoin.wtJoin = wjtx;
 
     // Output data

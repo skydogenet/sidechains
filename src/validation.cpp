@@ -2011,7 +2011,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         // should not have to use or depend on the sidechain client.
         {
             // Send latest WT^ to the mainchain each block
-            std::vector<SidechainWTJoin> vWTJoin = psidechaintree->GetWTJoins(THIS_SIDECHAIN.nSidechain);
+            std::vector<SidechainWTJoin> vWTJoin = psidechaintree->GetWTJoins(SIDECHAIN_TEST);
             if (vWTJoin.size()) {
                 SidechainClient client;
                 std::string strHex = EncodeHexTx(vWTJoin.back().wtJoin);

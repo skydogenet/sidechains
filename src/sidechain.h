@@ -5,6 +5,8 @@
 #ifndef BITCOIN_PRIMITIVES_SIDECHAIN_H
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
+// TODO refactor entire mess
+
 #include "amount.h"
 #include "merkleblock.h"
 #include "primitives/transaction.h"
@@ -37,9 +39,9 @@ static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
 //cN5CqwXiaNWhNhx3oBQtA8iLjThSKxyZjfmieTsyMpG6NnHBzR7J
 
 //! This sidechain as it has been described to the mainchain
-static const Sidechain THIS_SIDECHAIN = {
-    SIDECHAIN_TEST, 10, CScript() << THIS_SIDECHAIN.nSidechain << ToByteVector(testkey) << OP_NOP4
-};
+//static const Sidechain THIS_SIDECHAIN = {
+//    SIDECHAIN_TEST, 10, CScript() << THIS_SIDECHAIN.nSidechain << ToByteVector(testkey) << OP_NOP4
+//};
 
 //! This sidechain's fee script
 static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << ToByteVector(testkey) << OP_EQUALVERIFY << OP_CHECKSIG;
@@ -56,6 +58,9 @@ static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 
 //! How many wt(s) should we wait for before creating a WT^
 static const unsigned int DEFAULT_WTPRIME_THRESHOLD = 256;
+
+//! Sidechain build commit hash
+static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "23DDDA4810068CC44360DFFD31B6C5A9AD13FB9E6A69C9354A5D1B07F1B9843F";
 
 /**
  * Base object for sidechain related database entries

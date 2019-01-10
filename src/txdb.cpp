@@ -31,6 +31,8 @@ static const char DB_FLAG = 'F';
 static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
 
+static const char DB_SIDECHAIN_DEPOSIT = 'd';
+
 namespace {
 
 struct CoinEntry {
@@ -472,7 +474,7 @@ std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSide
 bool CSidechainTreeDB::GetCTIPAmount(const uint256& hash, const uint32_t n, CAmount& amtRet, const std::vector<SidechainDeposit>& vDepositIn)
 {
     // Collect deposits which have already been processed
-    std::vector<SidechainDeposit> vDeposit = GetDeposits(THIS_SIDECHAIN.nSidechain);
+    std::vector<SidechainDeposit> vDeposit = GetDeposits(SIDECHAIN_TEST);
 
     // Now add deposits which have been passed in manually. These deposits
     // depend on CTIP which have not been added to the sidechain's ldb yet thus
@@ -502,7 +504,7 @@ bool CSidechainTreeDB::HaveDeposits()
 {
     const char sidechainop = 'D';
     std::ostringstream ss;
-    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, THIS_SIDECHAIN.nSidechain), uint256()));
+    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, DB_SIDECHAIN_DEPOSIT), uint256()));
 
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
     pcursor->Seek(ss.str());
@@ -520,7 +522,7 @@ bool CSidechainTreeDB::HaveDeposits()
 
 bool CSidechainTreeDB::HaveDepositNonAmount(const uint256& hash)
 {
-    std::vector<SidechainDeposit> vDeposit = GetDeposits(THIS_SIDECHAIN.nSidechain);
+    std::vector<SidechainDeposit> vDeposit = GetDeposits(SIDECHAIN_TEST);
     if (vDeposit.empty())
         return false;
 

@@ -29,7 +29,7 @@ public:
     /*
      * Ask for an updated list of recent deposits
      */
-    std::vector<SidechainDeposit> UpdateDeposits(uint8_t nSidechain);
+    std::vector<SidechainDeposit> UpdateDeposits(const std::string& strBuildHash);
 
     /*
      * Note: true return value indicates the request to verify the

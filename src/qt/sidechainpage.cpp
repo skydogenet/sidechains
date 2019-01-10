@@ -246,7 +246,7 @@ void SidechainPage::on_pushButtonWT_clicked()
     std::vector<CRecipient> vRecipient;
 
     SidechainWT wt;
-    wt.nSidechain = THIS_SIDECHAIN.nSidechain;
+    wt.nSidechain = SIDECHAIN_TEST;
     wt.strDestination = ui->payTo->text().toStdString();
     wt.wt = *bwtx.tx;
 
