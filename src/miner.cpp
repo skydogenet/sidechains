@@ -482,7 +482,7 @@ CTransaction CreateDepositTx()
     SidechainClient client;
 
     // Find new deposits
-    std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(SIDECHAIN_BUILD_COMMIT_HASH);
+    std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(SIDECHAIN_KEY);
     std::vector<SidechainDeposit> vDepositUniq;
     for (const SidechainDeposit& d: vDeposit) {
         if (!psidechaintree->HaveDepositNonAmount(d.GetNonAmountHash())) {

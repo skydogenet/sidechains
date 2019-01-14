@@ -60,7 +60,8 @@ static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 static const unsigned int DEFAULT_WTPRIME_THRESHOLD = 256;
 
 //! Sidechain build commit hash
-static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "23DDDA4810068CC44360DFFD31B6C5A9AD13FB9E6A69C9354A5D1B07F1B9843F";
+static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+static const std::string SIDECHAIN_KEY = "6cbb79de8861f2cceb3dfc4a0e343571b9c3b7228a095a71c7aa8e83fe76527f";
 
 /**
  * Base object for sidechain related database entries

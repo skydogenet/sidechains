@@ -348,9 +348,8 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listsidechainctip\", \"params\": ");
-    json.append("[\"");
+    json.append("[");
     json.append(std::to_string(SIDECHAIN_TEST));
-    json.append("\"");
     json.append("] }");
 
     // Try to request deposits from mainchain
