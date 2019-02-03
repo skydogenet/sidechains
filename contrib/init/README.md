@@ -1,11 +1,11 @@
 Sample configuration files for:
 ```
-SystemD: sidechaind.service
-Upstart: sidechaind.conf
-OpenRC:  sidechaind.openrc
-         sidechaind.openrcconf
-CentOS:  sidechaind.init
-OS X:    org.bitcoin.sidechaind.plist
+SystemD: testchaind.service
+Upstart: testchaind.conf
+OpenRC:  testchaind.openrc
+         testchaind.openrcconf
+CentOS:  testchaind.init
+OS X:    org.bitcoin.testchaind.plist
 ```
 have been made available to assist packagers in creating node packages here.
 

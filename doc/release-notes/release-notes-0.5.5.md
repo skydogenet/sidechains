@@ -1,7 +1,7 @@
-sidechaind and Bitcoin-Qt version 0.5.5 are now available for download at:
+testchaind and Bitcoin-Qt version 0.5.5 are now available for download at:
 Windows: installer | zip (sig)
 Source: tar.gz
-sidechaind and Bitcoin-Qt version 0.6.0.7 are also tagged in git, but it is recommended to upgrade to 0.6.1.
+testchaind and Bitcoin-Qt version 0.6.0.7 are also tagged in git, but it is recommended to upgrade to 0.6.1.
 
 These are bugfix-only releases.
 

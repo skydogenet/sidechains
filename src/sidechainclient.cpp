@@ -56,7 +56,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
     // JSON for requesting sidechain deposits via mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"listsidechaindeposits\", \"params\": ");
+    json.append("\"method\": \"listtestchaindeposits\", \"params\": ");
     json.append("[\"");
     json.append(strBuildHash);
     json.append("\"");

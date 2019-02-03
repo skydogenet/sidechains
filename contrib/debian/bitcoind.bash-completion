@@ -1,2 +1,2 @@
-contrib/sidechaind.bash-completion	sidechaind
-contrib/sidechain-cli.bash-completion	sidechain-cli
+contrib/testchaind.bash-completion	testchaind
+contrib/testchain-cli.bash-completion	testchain-cli

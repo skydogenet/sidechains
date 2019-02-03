@@ -1,2 +1,2 @@
-usr/local/bin/sidechaind usr/bin
-usr/local/bin/sidechain-cli usr/bin
+usr/local/bin/testchaind usr/bin
+usr/local/bin/testchain-cli usr/bin

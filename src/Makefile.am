@@ -26,7 +26,7 @@ BITCOIN_INCLUDES += $(UNIVALUE_CFLAGS)
 LIBBITCOIN_SERVER=libbitcoin_server.a
 LIBBITCOIN_COMMON=libbitcoin_common.a
 LIBBITCOIN_CONSENSUS=libbitcoin_consensus.a
-LIBBITCOIN_CLI=libsidechain_cli.a
+LIBBITCOIN_CLI=libtestchain_cli.a
 LIBBITCOIN_UTIL=libbitcoin_util.a
 LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a
 LIBBITCOINQT=qt/libbitcoinqt.a
@@ -65,11 +65,11 @@ TESTS =
 BENCHMARKS =
 
 if BUILD_BITCOIND
-  bin_PROGRAMS += sidechaind
+  bin_PROGRAMS += testchaind
 endif
 
 if BUILD_BITCOIN_UTILS
-  bin_PROGRAMS += sidechain-cli sidechain-tx
+  bin_PROGRAMS += testchain-cli testchain-tx
 endif
 
 .PHONY: FORCE check-symbols check-security
@@ -185,7 +185,7 @@ obj/build.h: FORCE
 	  "$(abs_top_srcdir)"
 libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 
-# server: shared between sidechaind and bitcoin-qt
+# server: shared between testchaind and bitcoin-qt
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
@@ -239,7 +239,7 @@ libbitcoin_zmq_a_SOURCES = \
 endif
 
 
-# wallet: shared between sidechaind and bitcoin-qt, but only linked
+# wallet: shared between testchaind and bitcoin-qt, but only linked
 # when wallet enabled
 libbitcoin_wallet_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
@@ -321,7 +321,7 @@ libbitcoin_consensus_a_SOURCES = \
   utilstrencodings.h \
   version.h
 
-# common: shared between sidechaind, and bitcoin-qt and non-server tools
+# common: shared between testchaind, and bitcoin-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_common_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_common_a_SOURCES = \
@@ -374,27 +374,27 @@ if GLIBC_BACK_COMPAT
 libbitcoin_util_a_SOURCES += compat/glibc_compat.cpp
 endif
 
-# cli: shared between sidechain-cli and bitcoin-qt
-libsidechain_cli_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-libsidechain_cli_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libsidechain_cli_a_SOURCES = \
+# cli: shared between testchain-cli and bitcoin-qt
+libtestchain_cli_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+libtestchain_cli_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libtestchain_cli_a_SOURCES = \
   rpc/client.cpp \
   $(BITCOIN_CORE_H)
 
 nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
-# sidechaind binary #
-sidechaind_SOURCES = sidechaind.cpp
-sidechaind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-sidechaind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-sidechaind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+# testchaind binary #
+testchaind_SOURCES = testchaind.cpp
+testchaind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+testchaind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+testchaind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-sidechaind_SOURCES += sidechaind-res.rc
+testchaind_SOURCES += testchaind-res.rc
 endif
 
-sidechaind_LDADD = \
+testchaind_LDADD = \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_COMMON) \
@@ -408,38 +408,38 @@ sidechaind_LDADD = \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-sidechaind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
+testchaind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
 
-# sidechain-cli binary #
-sidechain_cli_SOURCES = sidechain-cli.cpp
-sidechain_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
-sidechain_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-sidechain_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+# testchain-cli binary #
+testchain_cli_SOURCES = testchain-cli.cpp
+testchain_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
+testchain_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+testchain_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-sidechain_cli_SOURCES += sidechain-cli-res.rc
+testchain_cli_SOURCES += testchain-cli-res.rc
 endif
 
-sidechain_cli_LDADD = \
+testchain_cli_LDADD = \
   $(LIBBITCOIN_CLI) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO)
 
-sidechain_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
+testchain_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
 #
 
-# sidechain-tx binary #
-sidechain_tx_SOURCES = sidechain-tx.cpp
-sidechain_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-sidechain_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-sidechain_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+# testchain-tx binary #
+testchain_tx_SOURCES = testchain-tx.cpp
+testchain_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+testchain_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+testchain_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-sidechain_tx_SOURCES += sidechain-tx-res.rc
+testchain_tx_SOURCES += testchain-tx-res.rc
 endif
 
-sidechain_tx_LDADD = \
+testchain_tx_LDADD = \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
@@ -447,7 +447,7 @@ sidechain_tx_LDADD = \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBSECP256K1)
 
-sidechain_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
+testchain_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
 #
 
 # bitcoinconsensus library #

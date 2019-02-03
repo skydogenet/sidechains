@@ -83,8 +83,8 @@
 // Application startup time (used for uptime calculation)
 const int64_t nStartupTime = GetTime();
 
-const char * const BITCOIN_CONF_FILENAME = "sidechain.conf";
-const char * const BITCOIN_PID_FILENAME = "sidechain.pid";
+const char * const BITCOIN_CONF_FILENAME = "testchain.conf";
+const char * const BITCOIN_PID_FILENAME = "testchain.pid";
 const char * const DEFAULT_DEBUGLOGFILE = "debug.log";
 
 ArgsManager gArgs;
@@ -580,7 +580,7 @@ fs::path GetDefaultDataDir()
     // Unix: ~/.bitcoin
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "Sidechain";
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "Testchain";
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
@@ -590,10 +590,10 @@ fs::path GetDefaultDataDir()
         pathRet = fs::path(pszHome);
 #ifdef MAC_OSX
     // Mac
-    return pathRet / "Library/Application Support/Sidechain";
+    return pathRet / "Library/Application Support/Testchain";
 #else
     // Unix
-    return pathRet / ".sidechain";
+    return pathRet / ".testchain";
 #endif
 #endif
 }
