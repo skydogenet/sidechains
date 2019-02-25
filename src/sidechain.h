@@ -5,8 +5,6 @@
 #ifndef BITCOIN_PRIMITIVES_SIDECHAIN_H
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
-// TODO refactor entire mess
-
 #include "amount.h"
 #include "merkleblock.h"
 #include "primitives/transaction.h"
@@ -18,6 +16,14 @@
 #include <limits.h>
 #include <string>
 #include <vector>
+
+/* Sidechain Identifiers */
+
+//! Sidechain address bytes
+static const std::string SIDECHAIN_ADDRESS_BYTES = "6cbb79de8861f2cceb3dfc4a0e343571b9c3b7228a095a71c7aa8e83fe76527f";
+
+//! Sidechain build commit hash
+static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 
 struct Sidechain {
     uint8_t nSidechain;
@@ -38,17 +44,8 @@ static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
 //mx3PT9t2kzCFgAURR9HeK6B5wN8egReUxY
 //cN5CqwXiaNWhNhx3oBQtA8iLjThSKxyZjfmieTsyMpG6NnHBzR7J
 
-//! This sidechain as it has been described to the mainchain
-//static const Sidechain THIS_SIDECHAIN = {
-//    SIDECHAIN_TEST, 10, CScript() << THIS_SIDECHAIN.nSidechain << ToByteVector(testkey) << OP_NOP4
-//};
-
 //! This sidechain's fee script
 static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << ToByteVector(testkey) << OP_EQUALVERIFY << OP_CHECKSIG;
-//! Max number of WT^(s) per sidechain per period
-static const int SIDECHAIN_MAX_WT = 3;
-//! State script version number
-static const int SIDECHAIN_STATE_VERSION = 0; // TODO remove
 
 //! The default payment amount to mainchain miner for critical data commitment
 static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
@@ -58,10 +55,6 @@ static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 
 //! How many wt(s) should we wait for before creating a WT^
 static const unsigned int DEFAULT_WTPRIME_THRESHOLD = 256;
-
-//! Sidechain build commit hash
-static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
-static const std::string SIDECHAIN_KEY = "6cbb79de8861f2cceb3dfc4a0e343571b9c3b7228a095a71c7aa8e83fe76527f";
 
 /**
  * Base object for sidechain related database entries
