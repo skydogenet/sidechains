@@ -27,7 +27,6 @@ static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "000000000000000000000000
 
 struct Sidechain {
     uint8_t nSidechain;
-    uint16_t nWTPrimeBroadcastInterval;
     CScript depositScript;
 
     std::string ToString() const;

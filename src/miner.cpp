@@ -607,6 +607,8 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     CAmount joinAmount = 0;  // Total output
     CMutableTransaction wjtx; // WT^
     wjtx.nVersion = 2;
+    wjtx.vin.resize(1); // Dummy vin for serialization...
+    wjtx.vin[0].scriptSig = CScript() << OP_0;
     for (const SidechainWT& wt : vWTFiltered) {
         CAmount amountWT = wt.wt.GetValueBurnedForWT();
         joinAmount += amountWT;
@@ -619,15 +621,6 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     // Did anything make it into the WT^?
     if (!wjtx.vout.size())
         return CTransaction();
-
-    // Lookup the mainchain CTIP
-    std::pair<uint256, uint32_t> ctip;
-    if (!client.GetCTIP(ctip))
-        return CTransaction();
-
-    // Add this sidechain's current CTIP to the WT^
-    // Note that the real scriptSig will be provided by the mainchain
-    wjtx.vin.push_back(CTxIn(COutPoint(ctip.first, ctip.second), CScript() << OP_0));
 
     // TODO improve fee calculation
     CAmount nBaseFee = CENT;
