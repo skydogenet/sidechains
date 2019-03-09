@@ -341,18 +341,25 @@ void SidechainPage::generateAddress()
 
     vpwallets[0]->TopUpKeyPool();
 
-    // TODO don't generate address here
     CPubKey newKey;
     if (vpwallets[0]->GetKeyFromPool(newKey)) {
-        CKeyID keyID = newKey.GetID();
+        // We want a "legacy" type address
+        OutputType type = OUTPUT_TYPE_LEGACY;
+        CTxDestination dest = GetDestinationForKey(newKey, type);
 
-        CTxDestination address(keyID);
-        std::string strAddress = EncodeDestination(address);
+        // Watch the script
+        vpwallets[0]->LearnRelatedScripts(newKey, type);
 
+        // Generate QR code
+        std::string strAddress = EncodeDestination(dest);
         generateQR(strAddress);
 
         ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
+
+        // Add to address book
+        vpwallets[0]->SetAddressBook(dest, "Sidechain Deposit", "receive");
     }
+    // TODO display error if we didn't get a key
 }
 
 void SidechainPage::on_pushButtonCreateBlock_clicked()

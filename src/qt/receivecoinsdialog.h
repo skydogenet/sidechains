@@ -63,6 +63,9 @@ private:
     void copyColumnToClipboard(int column);
     virtual void resizeEvent(QResizeEvent *event);
 
+    void generateQR(std::string data);
+    void generateAddress();
+
 private Q_SLOTS:
     void on_receiveButton_clicked();
     void on_showRequestButton_clicked();
@@ -75,6 +78,8 @@ private Q_SLOTS:
     void copyLabel();
     void copyMessage();
     void copyAmount();
+    void on_pushButtonCopy_clicked();
+    void on_pushButtonNew_clicked();
 };
 
 #endif // BITCOIN_QT_RECEIVECOINSDIALOG_H
