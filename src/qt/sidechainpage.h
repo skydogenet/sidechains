@@ -73,6 +73,8 @@ private Q_SLOTS:
 
     void RefreshBMM();
 
+    void on_pushButtonConfigureBMM_clicked();
+
 private:
     Ui::SidechainPage *ui;
 

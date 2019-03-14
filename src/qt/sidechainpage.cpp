@@ -6,6 +6,7 @@
 #include <qt/forms/ui_sidechainpage.h>
 
 #include <qt/bitcoinunits.h>
+#include <qt/confgeneratordialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
@@ -664,4 +665,10 @@ void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
         bmmTimer->stop();
         bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
     }
+}
+
+void SidechainPage::on_pushButtonConfigureBMM_clicked()
+{
+    ConfGeneratorDialog *dialog = new ConfGeneratorDialog(this);
+    dialog->exec();
 }

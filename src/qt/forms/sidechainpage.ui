@@ -636,14 +636,14 @@
            <string>Automated</string>
           </attribute>
           <layout class="QGridLayout" name="gridLayout_14">
-           <item row="1" column="0" colspan="2">
+           <item row="2" column="0" colspan="2">
             <widget class="Line" name="line_2">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
             </widget>
            </item>
-           <item row="8" column="0" colspan="2">
+           <item row="9" column="0" colspan="2">
             <widget class="QFrame" name="frame_13">
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
@@ -675,7 +675,7 @@
              </layout>
             </widget>
            </item>
-           <item row="9" column="0" colspan="2">
+           <item row="10" column="0" colspan="2">
             <spacer name="verticalSpacer_3">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -691,7 +691,7 @@
              </property>
             </spacer>
            </item>
-           <item row="3" column="1">
+           <item row="4" column="1">
             <widget class="QSpinBox" name="spinBoxRefreshInterval">
              <property name="suffix">
               <string> Seconds</string>
@@ -707,7 +707,7 @@
              </property>
             </widget>
            </item>
-           <item row="4" column="0" colspan="2">
+           <item row="5" column="0" colspan="2">
             <widget class="QFrame" name="frame_14">
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
@@ -739,7 +739,7 @@
              </layout>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="4" column="0">
             <widget class="QDoubleSpinBox" name="doubleSpinBoxBMMAmount">
              <property name="prefix">
               <string/>
@@ -764,14 +764,14 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="3" column="1">
             <widget class="QLabel" name="label_14">
              <property name="text">
               <string>Refresh Interval</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
+           <item row="3" column="0">
             <widget class="QLabel" name="label_13">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
@@ -784,7 +784,7 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="0" colspan="2">
+           <item row="1" column="0">
             <widget class="QCheckBox" name="checkBoxEnableAutomation">
              <property name="statusTip">
               <string/>
@@ -797,6 +797,13 @@
              </property>
              <property name="checked">
               <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="pushButtonConfigureBMM">
+             <property name="text">
+              <string>Configure BMM</string>
              </property>
             </widget>
            </item>
