@@ -478,7 +478,7 @@ bool CSidechainTreeDB::GetCTIPAmount(const uint256& hash, const uint32_t n, CAmo
 
     // Now add deposits which have been passed in manually. These deposits
     // depend on CTIP which have not been added to the sidechain's ldb yet thus
-    // their input must exist as one of the other unprocessed depoits.
+    // their input must exist as one of the other unprocessed deposits.
     for (const SidechainDeposit& d : vDepositIn)
         vDeposit.push_back(d);
 

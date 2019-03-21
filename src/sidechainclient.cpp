@@ -344,7 +344,7 @@ std::vector<uint256> SidechainClient::RequestMainBlockHashes()
 
 bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
 {
-    // JSON for requesting sidechain deposits via mainchain HTTP-RPC
+    // JSON for requesting sidechain CTIP via mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listsidechainctip\", \"params\": ");
@@ -352,7 +352,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     json.append(std::to_string(SIDECHAIN_TEST));
     json.append("] }");
 
-    // Try to request deposits from mainchain
+    // Try to request CTIP from mainchain
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
         // TODO LogPrintf("ERROR Sidechain client failed to request CTIP\n");
@@ -363,9 +363,8 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     uint256 txid;
     uint32_t n;
     BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
-        // Looping through this deposit's members
         if (value.first == "n") {
-            // Read sidechain number
+            // Read n
             std::string data = value.second.data();
             if (!data.length())
                 continue;
@@ -373,7 +372,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
         }
         else
         if (value.first == "txid") {
-            // Read keyID
+            // Read TXID
             std::string data = value.second.data();
             if (!data.length())
                 continue;
@@ -385,7 +384,6 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
 
     ctip = std::make_pair(txid, n);
 
-    // return valid deposits in sidechain format
     return true;
 }
 
