@@ -197,7 +197,7 @@ void SidechainPage::on_pushButtonWT_clicked()
     }
 
     // Check destination
-    CTxDestination dest = DecodeDestination(ui->payTo->text().toStdString());
+    CTxDestination dest = DecodeDestination(ui->payTo->text().toStdString(), true);
     if (!IsValidDestination(dest)) {
         // Invalid address message box
         messageBox.setWindowTitle("Invalid destination!");

@@ -264,7 +264,7 @@ public:
     std::string operator()(const CNoDestination& no) const { return {}; }
 };
 
-CTxDestination DecodeDestination(const std::string& str, const CChainParams& params)
+CTxDestination DecodeDestination(const std::string& str, const CChainParams& params, bool fMainchain)
 {
     std::vector<unsigned char> data;
     uint160 hash;
@@ -272,7 +272,7 @@ CTxDestination DecodeDestination(const std::string& str, const CChainParams& par
         // base58-encoded Bitcoin addresses.
         // Public-key-hash-addresses have version 0 (or 111 testnet).
         // The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
-        const std::vector<unsigned char>& pubkey_prefix = params.Base58Prefix(CChainParams::PUBKEY_ADDRESS);
+        const std::vector<unsigned char>& pubkey_prefix = fMainchain ? params.Base58Prefix(CChainParams::MAINCHAIN_PUBKEY_ADDRESS) : params.Base58Prefix(CChainParams::PUBKEY_ADDRESS);
         if (data.size() == hash.size() + pubkey_prefix.size() && std::equal(pubkey_prefix.begin(), pubkey_prefix.end(), data.begin())) {
             std::copy(data.begin() + pubkey_prefix.size(), data.end(), hash.begin());
             return CKeyID(hash);
@@ -361,14 +361,14 @@ std::string EncodeDestination(const CTxDestination& dest)
     return boost::apply_visitor(DestinationEncoder(Params()), dest);
 }
 
-CTxDestination DecodeDestination(const std::string& str)
+CTxDestination DecodeDestination(const std::string& str, bool fMainchain)
 {
-    return DecodeDestination(str, Params());
+    return DecodeDestination(str, Params(), fMainchain);
 }
 
 bool IsValidDestinationString(const std::string& str, const CChainParams& params)
 {
-    return IsValidDestination(DecodeDestination(str, params));
+    return IsValidDestination(DecodeDestination(str, params, false));
 }
 
 bool IsValidDestinationString(const std::string& str)
