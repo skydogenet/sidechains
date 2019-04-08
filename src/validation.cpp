@@ -4838,7 +4838,6 @@ void DumpBMMCache()
 
     int count = vHash.size();
 
-    // Write the coins
     fs::path path = GetDataDir() / "bmmwtprime.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {

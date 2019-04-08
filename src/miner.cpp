@@ -561,23 +561,22 @@ CTransaction CreateDepositTx()
             if (deposit.keyID.IsNull())
                 continue;
 
-            // Is deposit greater than minimum fee?
-            if (deposit.amtUserPayout < SIDECHAIN_DEPOSIT_FEE)
-                continue;
+            // Payout
+            if (deposit.amtUserPayout >= SIDECHAIN_DEPOSIT_FEE) {
+                // Pay keyID the deposit if it isn't dust after paying fee
+                CScript script;
+                script << OP_DUP << OP_HASH160 << ToByteVector(deposit.keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
+                CTxOut depositOut(deposit.amtUserPayout - SIDECHAIN_DEPOSIT_FEE, script);
+                if (!IsDust(depositOut, ::dustRelayFee))
+                    mtx.vout.push_back(depositOut);
 
-            // Pay keyID the deposit if it isn't dust after paying fee
-            CScript script;
-            script << OP_DUP << OP_HASH160 << ToByteVector(deposit.keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
-            CTxOut depositOut(deposit.amtUserPayout - SIDECHAIN_DEPOSIT_FEE, script);
-            if (!IsDust(depositOut, ::dustRelayFee))
-                mtx.vout.push_back(depositOut);
-
-            // Depositor pays fee to sidechain
-            CKeyID sidechainKey;
-            sidechainKey.SetHex(SIDECHAIN_CHANGE_KEY);
-            CScript sidechainChangeScript;
-            sidechainChangeScript << OP_DUP << OP_HASH160 << ToByteVector(sidechainKey) << OP_EQUALVERIFY << OP_CHECKSIG;
-            mtx.vout.push_back(CTxOut(CENT, sidechainChangeScript));
+                // Depositor pays fee to sidechain
+                CKeyID sidechainKey;
+                sidechainKey.SetHex(SIDECHAIN_CHANGE_KEY);
+                CScript sidechainChangeScript;
+                sidechainChangeScript << OP_DUP << OP_HASH160 << ToByteVector(sidechainKey) << OP_EQUALVERIFY << OP_CHECKSIG;
+                mtx.vout.push_back(CTxOut(SIDECHAIN_DEPOSIT_FEE, sidechainChangeScript));
+            }
 
             // Add serialization of deposit
             mtx.vout.push_back(CTxOut(0, deposit.GetScript()));
@@ -614,7 +613,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
         joinAmount += amountWT;
 
         // Output to mainchain keyID
-        CTxDestination dest = DecodeDestination(wt.strDestination);
+        CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
         wjtx.vout.push_back(CTxOut(amountWT, GetScriptForDestination(dest)));
     }
 
