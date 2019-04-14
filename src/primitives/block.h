@@ -33,6 +33,7 @@ public:
     // BMM header contents
     std::string criticalProof;
     CMutableTransaction criticalTx;
+    uint256 hashWTPrime;
 
     CBlockHeader()
     {
@@ -51,6 +52,7 @@ public:
         READWRITE(nNonce);
         READWRITE(criticalProof);
         READWRITE(criticalTx);
+        READWRITE(hashWTPrime);
     }
 
     void SetNull()
@@ -68,11 +70,12 @@ public:
     {
         criticalProof = "";
         criticalTx = CMutableTransaction();
+        hashWTPrime.SetNull();
     }
 
     bool IsNull() const
     {
-        return (nBits == 0 && criticalProof.empty() && criticalTx.IsEmpty());
+        return (nBits == 0 && criticalProof.empty() && criticalTx.IsEmpty() && hashWTPrime.IsNull());
     }
 
     uint256 GetHash() const;
@@ -132,6 +135,7 @@ public:
         block.nNonce         = nNonce;
         block.criticalProof  = criticalProof;
         block.criticalTx     = criticalTx;
+        block.hashWTPrime    = hashWTPrime;
         return block;
     }
 
