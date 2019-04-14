@@ -569,7 +569,7 @@ uint256 SidechainPage::SendBMMRequest(const uint256& hashBMM)
 {
     // TODO use user input bmm amount
     SidechainClient client;
-    uint256 hashTXID = client.SendCriticalDataRequest(hashBMM, 0, 0);
+    uint256 hashTXID = client.SendBMMCriticalDataRequest(hashBMM, 0, 0);
     if (!hashTXID.IsNull()) {
         // Add to list widget
         QString str = "txid: ";
