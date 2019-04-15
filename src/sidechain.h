@@ -23,7 +23,7 @@
 static const std::string SIDECHAIN_ADDRESS_BYTES = "6cbb79de8861f2cceb3dfc4a0e343571b9c3b7228a095a71c7aa8e83fe76527f";
 
 //! Sidechain build commit hash
-static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "bb34f5688dce6006f053ed9536c9e972d515803e";
 
 struct Sidechain {
     uint8_t nSidechain;
