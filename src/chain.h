@@ -217,6 +217,8 @@ public:
     std::string criticalProof;
     CMutableTransaction criticalTx;
 
+    uint256 hashWTPrime;
+
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId;
 
@@ -247,6 +249,7 @@ public:
 
         criticalProof = "";
         criticalTx = CMutableTransaction();
+        hashWTPrime = uint256();
     }
 
     CBlockIndex()
@@ -266,6 +269,7 @@ public:
 
         criticalProof = block.criticalProof;
         criticalTx = block.criticalTx;
+        hashWTPrime = block.hashWTPrime;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -298,6 +302,7 @@ public:
         block.nNonce         = nNonce;
         block.criticalProof  = criticalProof;
         block.criticalTx     = criticalTx;
+        block.hashWTPrime    = hashWTPrime;
         return block;
     }
 
@@ -428,6 +433,8 @@ public:
         // BMM part of block header
         READWRITE(criticalProof);
         READWRITE(criticalTx);
+
+        READWRITE(hashWTPrime);
     }
 
     uint256 GetBlockHash() const
@@ -441,6 +448,7 @@ public:
         block.nNonce          = nNonce;
         block.criticalProof   = criticalProof;
         block.criticalTx      = criticalTx;
+        block.hashWTPrime     = hashWTPrime;
         return block.GetHash();
     }
 

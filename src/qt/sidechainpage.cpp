@@ -406,7 +406,21 @@ void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
         messageBox.exec();
         return;
     }
-    uint256 hashTXID = SendBMMRequest(hashBMM);
+
+    if (ui->lineEditManualMainchainBlockHash->text().isEmpty()) {
+        messageBox.setText("You must enter the current mainchain chain tip block hash!");
+        messageBox.exec();
+        return;
+    }
+
+    uint256 hashMainBlock = uint256S(ui->lineEditManualMainchainBlockHash->text().toStdString());
+    if (hashMainBlock.IsNull()) {
+        messageBox.setText("Invalid previous mainchain block hash!");
+        messageBox.exec();
+        return;
+    }
+
+    uint256 hashTXID = SendBMMRequest(hashBMM, hashMainBlock);
 
     if (hashTXID.IsNull()) {
         messageBox.setText("Failed to create BMM request on mainchain!");
@@ -565,11 +579,11 @@ bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
     return true;
 }
 
-uint256 SidechainPage::SendBMMRequest(const uint256& hashBMM)
+uint256 SidechainPage::SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain)
 {
     // TODO use user input bmm amount
     SidechainClient client;
-    uint256 hashTXID = client.SendBMMCriticalDataRequest(hashBMM, 0, 0);
+    uint256 hashTXID = client.SendBMMCriticalDataRequest(hashBMM, hashBlockMain, 0, 0);
     if (!hashTXID.IsNull()) {
         // Add to list widget
         QString str = "txid: ";
@@ -614,9 +628,12 @@ void SidechainPage::RefreshBMM()
     // Get our cached BMM blocks
     std::vector<CBlock> vBMMCache = bmmBlockCache.GetBMMBlockCache();
     if (vBMMCache.empty()) {
+        // If we don't have any existing BMM requests cached, create our first
         CBlock block;
         if (CreateBMMBlock(block)) {
-            SendBMMRequest(block.GetBlindHash());
+            // TODO refactor so that we don't create a BMM request here - it
+            // happens later in the function as well.
+            SendBMMRequest(block.GetBlindHash(), vMainBlockHash.back());
             return;
         }
     }
@@ -654,7 +671,7 @@ void SidechainPage::RefreshBMM()
         CBlock block;
         if (CreateBMMBlock(block)) {
             // Create BMM critical data request
-            SendBMMRequest(block.GetBlindHash());
+            SendBMMRequest(block.GetBlindHash(), vMainBlockHash.back());
         }
     }
 }

@@ -98,7 +98,7 @@ private:
 
     bool CreateBMMBlock(CBlock& block, QString error = "");
 
-    uint256 SendBMMRequest(const uint256& hashBMM);
+    uint256 SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain);
 
     bool SubmitBMMBlock(const CBlock& block);
 

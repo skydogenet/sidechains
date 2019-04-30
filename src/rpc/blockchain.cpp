@@ -104,6 +104,7 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.pushKV("bits", strprintf("%08x", blockindex->nBits));
     result.pushKV("difficulty", GetDifficulty(blockindex));
     result.pushKV("chainwork", blockindex->nChainWork.GetHex());
+    result.pushKV("hashwtprime", blockindex->hashWTPrime.GetHex());
 
     if (blockindex->pprev)
         result.pushKV("previousblockhash", blockindex->pprev->GetBlockHash().GetHex());
@@ -130,6 +131,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.pushKV("version", block.nVersion);
     result.pushKV("versionHex", strprintf("%08x", block.nVersion));
     result.pushKV("merkleroot", block.hashMerkleRoot.GetHex());
+    result.pushKV("hashwtprime", block.hashWTPrime.GetHex());
     UniValue txs(UniValue::VARR);
     for(const auto& tx : block.vtx)
     {
@@ -652,6 +654,47 @@ UniValue getblockhash(const JSONRPCRequest& request)
 
     CBlockIndex* pblockindex = chainActive[nHeight];
     return pblockindex->GetBlockHash().GetHex();
+}
+
+UniValue getchainheaders(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 1)
+        throw std::runtime_error(
+            "getchainheaders count\n"
+            "Returns N number of block headers starting from the chain tip and iterating backwards.\n"
+            "\nArguments:\n"
+            "1. count          (numeric, required) the number of chain headers to print.\n"
+            "\nResult: JSON array of block headers\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getchainheaders", "21")
+            + HelpExampleRpc("getchainheaders", "21")
+        );
+
+    int count = request.params[0].get_int();
+
+    LOCK(cs_main);
+
+    if (count > chainActive.Height())
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid header count: too large!");
+
+    UniValue arr(UniValue::VARR);
+
+    CBlockIndex* pblockindex = chainActive.Tip();
+
+    // TODO support passing in the starting point block hash.
+    if (!pblockindex)
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid starting index!");
+
+    for (int i = 0; i < count; i++) {
+        arr.push_back(blockheaderToJSON(pblockindex));
+
+        if (!pblockindex->pprev)
+            break;
+
+        pblockindex = pblockindex->pprev;
+    }
+
+    return arr;
 }
 
 UniValue getblockheader(const JSONRPCRequest& request)
@@ -1626,6 +1669,7 @@ static const CRPCCommand commands[] =
     { "blockchain",         "getblockhash",           &getblockhash,           {"height"} },
     { "blockchain",         "getblockheader",         &getblockheader,         {"blockhash","verbose"} },
     { "blockchain",         "getchaintips",           &getchaintips,           {} },
+    { "blockchain",         "getchainheaders",        &getchainheaders,        {"count"} },
     { "blockchain",         "getdifficulty",          &getdifficulty,          {} },
     { "blockchain",         "getmempoolancestors",    &getmempoolancestors,    {"txid","verbose"} },
     { "blockchain",         "getmempooldescendants",  &getmempooldescendants,  {"txid","verbose"} },

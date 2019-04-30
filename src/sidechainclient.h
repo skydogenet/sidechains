@@ -47,7 +47,7 @@ public:
     /*
      * Send BMM critical data request
      */
-    uint256 SendBMMCriticalDataRequest(const uint256& hashCritical, int nHeight = 0, const CAmount& amount = CAmount(0));
+    uint256 SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight = 0, const CAmount& amount = CAmount(0));
 
     /*
      * Request main:block hashes

@@ -224,11 +224,11 @@ bool SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint25
 }
 
 // TODO rename
-uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical, int nHeight, const CAmount& amount)
+uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight, const CAmount& amount)
 {
     uint256 txid = uint256();
     LOCK(cs_main);
-    std::string strPrevHash = chainActive.Tip()->GetBlockHash().ToString();
+    std::string strPrevHash = hashBlockMain.ToString();
 
     // JSON for sending critical data request to mainchain via mainchain HTTP-RPC
     std::string json;
