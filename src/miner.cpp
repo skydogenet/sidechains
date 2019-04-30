@@ -182,6 +182,11 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     for (const CTxOut& out : depositTx.vout)
         coinbaseTx.vout.push_back(out);
 
+    // TODO improve this
+    // Signal the most recent WT^ created by this sidechain
+    std::vector<SidechainWTJoin> vWT = psidechaintree->GetWTJoins(SIDECHAIN_TEST);
+    pblock->hashWTPrime = vWT.back().wtJoin.GetHash();
+
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
