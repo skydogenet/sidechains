@@ -185,7 +185,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // TODO improve this
     // Signal the most recent WT^ created by this sidechain
     std::vector<SidechainWTJoin> vWT = psidechaintree->GetWTJoins(SIDECHAIN_TEST);
-    pblock->hashWTPrime = vWT.back().wtJoin.GetHash();
+    if (vWT.size())
+        pblock->hashWTPrime = vWT.back().wtJoin.GetHash();
 
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
