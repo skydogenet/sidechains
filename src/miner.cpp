@@ -173,8 +173,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
 
     // Create WT^
-    CTransaction wtJoinTx = CreateWTPrimeTx(chainActive.Height() + 1);
-    for (const CTxOut& out : wtJoinTx.vout)
+    CTransaction wtPrimeTx = CreateWTPrimeTx(chainActive.Height() + 1);
+    for (const CTxOut& out : wtPrimeTx.vout)
         coinbaseTx.vout.push_back(out);
 
     // Create deposit transactions
@@ -184,9 +184,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // TODO improve this
     // Signal the most recent WT^ created by this sidechain
-    std::vector<SidechainWTJoin> vWT = psidechaintree->GetWTJoins(SIDECHAIN_TEST);
+    std::vector<SidechainWTPrime> vWT = psidechaintree->GetWTPrimes(SIDECHAIN_TEST);
     if (vWT.size())
-        pblock->hashWTPrime = vWT.back().wtJoin.GetHash();
+        pblock->hashWTPrime = vWT.back().wtPrime.GetHash();
 
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
@@ -649,13 +649,13 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
         wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
 
     // Create WT^ object
-    SidechainWTJoin wtJoin;
-    wtJoin.nSidechain = SIDECHAIN_TEST;
-    wtJoin.wtJoin = wjtx;
+    SidechainWTPrime wtPrime;
+    wtPrime.nSidechain = SIDECHAIN_TEST;
+    wtPrime.wtPrime = wjtx;
 
     // Output data
     CMutableTransaction mtx;
-    mtx.vout.push_back(CTxOut(0, wtJoin.GetScript()));
+    mtx.vout.push_back(CTxOut(0, wtPrime.GetScript()));
 
     return mtx;
 }

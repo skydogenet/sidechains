@@ -22,7 +22,7 @@ uint256 SidechainObj::GetHash(void) const
         ret = SerializeHash(*(SidechainWT *) this);
     else
     if (sidechainop == 'J')
-        ret = SerializeHash(*(SidechainWTJoin *) this);
+        ret = SerializeHash(*(SidechainWTPrime *) this);
     else
     if (sidechainop == 'D')
         ret = SerializeHash(*(SidechainDeposit *) this);
@@ -37,7 +37,7 @@ CScript SidechainObj::GetScript(void) const
         ((SidechainWT *) this)->Serialize(ds);
     else
     if (sidechainop == 'J')
-        ((SidechainWTJoin *) this)->Serialize(ds);
+        ((SidechainWTPrime *) this)->Serialize(ds);
     else
     if (sidechainop == 'D')
         ((SidechainDeposit *) this)->Serialize(ds);
@@ -67,7 +67,7 @@ SidechainObj *SidechainObjCtr(const CScript &script)
     }
     else
     if (*vch0 == 'J') {
-        SidechainWTJoin *obj = new SidechainWTJoin;
+        SidechainWTPrime *obj = new SidechainWTPrime;
         obj->Unserialize(ds);
         return obj;
     }
@@ -98,7 +98,7 @@ std::string SidechainWT::ToString() const
     return str.str();
 }
 
-std::string SidechainWTJoin::ToString() const
+std::string SidechainWTPrime::ToString() const
 {
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;

@@ -20,7 +20,7 @@ class CCoinsViewDBCursor;
 class SidechainObj;
 class SidechainDeposit;
 class SidechainWT;
-class SidechainWTJoin;
+class SidechainWTPrime;
 class uint256;
 
 //! No need to periodic flush if at least this much space still available.
@@ -145,7 +145,7 @@ public:
     bool ReadFlag(const std::string &name, bool &fValue);
 
     bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
-    bool GetWTJoin(const uint256 & /* WT^ ID */, SidechainWTJoin &wtJoin);
+    bool GetWTPrime(const uint256 & /* WT^ ID */, SidechainWTPrime &wtPrime);
     bool GetDeposit(const uint256 & /* Deposit ID */, SidechainDeposit &deposit);
     bool GetCTIPAmount(const uint256& hash, const uint32_t n, CAmount& amtRet, const std::vector<SidechainDeposit>& vDepositIn = {});
 
@@ -153,7 +153,7 @@ public:
     bool HaveDepositNonAmount(const uint256& hash);
 
     std::vector<SidechainWT> GetWTs(const uint8_t & /* nSidechain */);
-    std::vector<SidechainWTJoin> GetWTJoins(const uint8_t & /* nSidechain */);
+    std::vector<SidechainWTPrime> GetWTPrimes(const uint8_t & /* nSidechain */);
     std::vector<SidechainDeposit> GetDeposits(const uint8_t & /* nSidechain */);
 };
 

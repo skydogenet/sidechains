@@ -29,7 +29,7 @@ SidechainClient::SidechainClient()
 
 }
 
-bool SidechainClient::BroadcastWTJoin(const std::string& hex)
+bool SidechainClient::BroadcastWTPrime(const std::string& hex)
 {
     // JSON for sending the WT^ to mainchain via HTTP-RPC
     std::string json;

@@ -25,7 +25,7 @@ public:
     /*
      * Send B-WT^ hash to local node
      */
-    bool BroadcastWTJoin(const std::string& hex);
+    bool BroadcastWTPrime(const std::string& hex);
 
     /*
      * Ask for an updated list of recent deposits

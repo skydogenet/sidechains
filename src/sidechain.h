@@ -98,12 +98,12 @@ struct SidechainWT: public SidechainObj {
 /**
  * Sidechain joined withdraw proposal (WT^) database object
  */
-struct SidechainWTJoin: public SidechainObj {
+struct SidechainWTPrime: public SidechainObj {
     uint8_t nSidechain;
-    CMutableTransaction wtJoin;
+    CMutableTransaction wtPrime;
 
-    SidechainWTJoin(void) : SidechainObj() { sidechainop = 'J'; }
-    virtual ~SidechainWTJoin(void) { }
+    SidechainWTPrime(void) : SidechainObj() { sidechainop = 'J'; }
+    virtual ~SidechainWTPrime(void) { }
 
     ADD_SERIALIZE_METHODS
 
@@ -111,7 +111,7 @@ struct SidechainWTJoin: public SidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
-        READWRITE(wtJoin);
+        READWRITE(wtPrime);
     }
 
     std::string ToString(void) const;

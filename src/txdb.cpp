@@ -360,8 +360,8 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
         }
         else
         if (obj->sidechainop == 'J') {
-            const SidechainWTJoin *ptr = (const SidechainWTJoin *) obj;
-            std::pair<SidechainWTJoin, uint256> value = std::make_pair(*ptr, obj->txid);
+            const SidechainWTPrime *ptr = (const SidechainWTPrime *) obj;
+            std::pair<SidechainWTPrime, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
             batch.Write(std::make_pair(std::make_pair(std::make_pair('j', ptr->nSidechain), ptr->nHeight), objid), value);
         }
@@ -391,9 +391,9 @@ bool CSidechainTreeDB::ReadFlag(const std::string& name, bool &fValue)
     return true;
 }
 
-bool CSidechainTreeDB::GetWTJoin(const uint256& objid, SidechainWTJoin& wtJoin)
+bool CSidechainTreeDB::GetWTPrime(const uint256& objid, SidechainWTPrime& wtPrime)
 {
-    if (ReadSidechain(std::make_pair('W', objid), wtJoin))
+    if (ReadSidechain(std::make_pair('W', objid), wtPrime))
         return true;
 
     return false;
@@ -428,25 +428,25 @@ std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
     return vWT;
 }
 
-std::vector<SidechainWTJoin> CSidechainTreeDB::GetWTJoins(const uint8_t& nSidechain)
+std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSidechain)
 {
     const char sidechainop = 'J';
     std::ostringstream ss;
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
-    std::vector<SidechainWTJoin> vWTJoin;
+    std::vector<SidechainWTPrime> vWTPrime;
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
     for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
         boost::this_thread::interruption_point();
 
         std::pair<char, uint256> key;
-        SidechainWTJoin wtJoin;
+        SidechainWTPrime wtPrime;
         if (pcursor->GetKey(key) && key.first == sidechainop) {
-            if (pcursor->GetSidechainValue(wtJoin))
-                vWTJoin.push_back(wtJoin);
+            if (pcursor->GetSidechainValue(wtPrime))
+                vWTPrime.push_back(wtPrime);
         }
     }
-    return vWTJoin;
+    return vWTPrime;
 }
 
 std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSidechain)
