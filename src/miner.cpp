@@ -558,11 +558,6 @@ CTransaction CreateDepositTx()
             if (scriptPubKey.size() < 2)
                 continue;
 
-            // Double check nSidechain
-            uint8_t nSidechain = (unsigned int)scriptPubKey[1];
-            if (nSidechain != SIDECHAIN_TEST)
-                continue;
-
             // Double check that keyID is not null
             if (deposit.keyID.IsNull())
                 continue;
