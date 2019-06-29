@@ -414,8 +414,10 @@ std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
     std::vector<SidechainWT> vWT;
-    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
-    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(ss.str());
+    while (pcursor->Valid()) {
         boost::this_thread::interruption_point();
 
         std::pair<char, uint256> key;
@@ -424,7 +426,10 @@ std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
             if (pcursor->GetSidechainValue(wt))
                 vWT.push_back(wt);
         }
+
+        pcursor->Next();
     }
+
     return vWT;
 }
 
@@ -435,8 +440,10 @@ std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSide
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
     std::vector<SidechainWTPrime> vWTPrime;
-    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
-    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(ss.str());
+    while (pcursor->Valid()) {
         boost::this_thread::interruption_point();
 
         std::pair<char, uint256> key;
@@ -445,6 +452,8 @@ std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSide
             if (pcursor->GetSidechainValue(wtPrime))
                 vWTPrime.push_back(wtPrime);
         }
+
+        pcursor->Next();
     }
     return vWTPrime;
 }
@@ -457,8 +466,10 @@ std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSide
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
     std::vector<SidechainDeposit> vDeposit;
-    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
-    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(ss.str());
+    while (pcursor->Valid()) {
         boost::this_thread::interruption_point();
 
         std::pair<char, uint256> key;
@@ -467,6 +478,8 @@ std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSide
             if (pcursor->GetSidechainValue(deposit))
                 vDeposit.push_back(deposit);
         }
+
+        pcursor->Next();
     }
     return vDeposit;
 }
