@@ -12,17 +12,20 @@ TEST_QT_MOC_CPP = \
 
 if ENABLE_WALLET
 TEST_QT_MOC_CPP += \
-  qt/test/moc_paymentservertests.cpp \
   qt/test/moc_wallettests.cpp
 endif
+
+# TODO add ^ qt/test/moc_paymentservertests.cpp
 
 TEST_QT_H = \
   qt/test/compattests.h \
   qt/test/rpcnestedtests.h \
   qt/test/uritests.h \
-  qt/test/paymentrequestdata.h \
-  qt/test/paymentservertests.h \
   qt/test/wallettests.h
+
+# TODO add to ^
+#qt/test/paymentrequestdata.h
+#qt/test/paymentservertests.h
 
 TEST_BITCOIN_CPP = \
   test/test_bitcoin.cpp
@@ -41,13 +44,13 @@ qt_test_test_bitcoin_qt_SOURCES = \
   $(TEST_QT_H) \
   $(TEST_BITCOIN_CPP) \
   $(TEST_BITCOIN_H)
-# TODO
-#if ENABLE_WALLET
-#qt_test_test_bitcoin_qt_SOURCES += \
-#  qt/test/paymentservertests.cpp \
-#  qt/test/wallettests.cpp \
-#  wallet/test/wallet_test_fixture.cpp
-#endif
+if ENABLE_WALLET
+qt_test_test_bitcoin_qt_SOURCES += \
+  qt/test/wallettests.cpp \
+  wallet/test/wallet_test_fixture.cpp
+endif
+
+# TODO add to ^ in if enable wallet scope qt/test/paymentservertests.cpp
 
 nodist_qt_test_test_bitcoin_qt_SOURCES = $(TEST_QT_MOC_CPP)
 

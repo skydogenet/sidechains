@@ -8,7 +8,7 @@ noinst_PROGRAMS += test/test_bitcoin_fuzzy
 TEST_SRCDIR = test
 TEST_BINARY=test/test_bitcoin$(EXEEXT)
 
-JSON_TEST_FILES = #\
+JSON_TEST_FILES = \
   test/data/script_tests.json \
   test/data/base58_keys_valid.json \
   test/data/base58_encode_decode.json \
@@ -89,14 +89,15 @@ BITCOIN_TESTS =\
   test/uint256_tests.cpp \
   test/util_tests.cpp
 
-#if ENABLE_WALLET_TODO
-#BITCOIN_TESTS += \
-#  wallet/test/wallet_test_fixture.cpp \
-#  wallet/test/wallet_test_fixture.h \
 #  wallet/test/accounting_tests.cpp \
-#  wallet/test/wallet_tests.cpp \
 #  wallet/test/crypto_tests.cpp
-#endif
+
+if ENABLE_WALLET
+BITCOIN_TESTS += \
+  wallet/test/wallet_test_fixture.cpp \
+  wallet/test/wallet_test_fixture.h \
+  wallet/test/wallet_tests.cpp
+endif
 
 test_test_bitcoin_SOURCES = $(BITCOIN_TESTS) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
 test_test_bitcoin_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(TESTDEFS) $(EVENT_CFLAGS)
@@ -156,12 +157,12 @@ check-local:
 #	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C univalue check
 #endif
 
-#%.json.h: %.json
-#	@$(MKDIR_P) $(@D)
-#	@{ \
-#	 echo "namespace json_tests{" && \
-#	 echo "static unsigned const char $(*F)[] = {" && \
-#	 $(HEXDUMP) -v -e '8/1 "0x%02x, "' -e '"\n"' $< | $(SED) -e 's/0x  ,//g' && \
-#	 echo "};};"; \
-#	} > "$@.new" && mv -f "$@.new" "$@"
-#	@echo "Generated $@"
+%.json.h: %.json
+	@$(MKDIR_P) $(@D)
+	@{ \
+	 echo "namespace json_tests{" && \
+	 echo "static unsigned const char $(*F)[] = {" && \
+	 $(HEXDUMP) -v -e '8/1 "0x%02x, "' -e '"\n"' $< | $(SED) -e 's/0x  ,//g' && \
+	 echo "};};"; \
+	} > "$@.new" && mv -f "$@.new" "$@"
+	@echo "Generated $@"
