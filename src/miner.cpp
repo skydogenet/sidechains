@@ -202,6 +202,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblock->nNonce         = 0;
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
 
+    // We have to skip BMM checks when first creating a block as we haven't
+    // received BMM proof from the mainchain yet.
     CValidationState state;
     if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false, fSkipBMMChecks)) {
         throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
@@ -654,3 +656,105 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
 
     return mtx;
 }
+
+// TODO refactor : remove duplicate code from both versions of GenerateBMMBlock
+
+bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block, std::string& strError)
+{
+    std::unique_ptr<CBlockTemplate> pblocktemplate(
+                BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true));
+
+    if (!pblocktemplate.get()) {
+        // No block template error message
+        strError = "Failed to get block template!\n";
+        return false;
+    }
+
+    unsigned int nExtraNonce = 0;
+    CBlock *pblock = &pblocktemplate->block;
+    {
+        LOCK(cs_main);
+        IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
+    }
+
+    int nMaxTries = 1000;
+    while (true) {
+        if (pblock->nNonce == 0)
+            pblock->nTime++;
+
+        if (CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
+            break;
+        }
+
+        if (nMaxTries == 0) {
+            strError = "Couldn't generate PoW, try again!\n";
+            break;
+        }
+
+        pblock->nNonce++;
+        nMaxTries--;
+    }
+
+    if (!CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
+        strError = "Invalid PoW!\n";
+        return false;
+    }
+
+    block = *pblock;
+
+    return true;
+}
+
+bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx)
+{
+    std::unique_ptr<CBlockTemplate> pblocktemplate(
+                BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true));
+
+    if (!pblocktemplate.get()) {
+        // No block template error message
+        strError = "Failed to get block template!\n";
+        return false;
+    }
+
+    // Replace all transactions besides coinbase.
+    pblock->vtx.resize(1);
+    for (const CMutableTransaction& m : vtx)
+        pblock->vtx.push_back(MakeTransactionRef(m));
+
+
+    unsigned int nExtraNonce = 0;
+    CBlock *pblock = &pblocktemplate->block;
+    {
+        LOCK(cs_main);
+        IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
+    }
+
+    int nMaxTries = 1000;
+    while (true) {
+        if (pblock->nNonce == 0)
+            pblock->nTime++;
+
+        if (CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
+            break;
+        }
+
+        if (nMaxTries == 0) {
+            strError = "Couldn't generate PoW, try again!\n";
+            break;
+        }
+
+        pblock->nNonce++;
+        nMaxTries--;
+    }
+
+    if (!CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
+        strError = "Invalid PoW!\n";
+        return false;
+    }
+
+    block = *pblock;
+
+    return true;
+
+}
+

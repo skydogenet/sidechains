@@ -507,64 +507,10 @@ void SidechainPage::on_pushButtonHashBlockLastSeen_clicked()
 
 bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
 {
-    // Create a new BMM block
-    if (vpwallets.empty()) {
-        error = "No active wallet found!\n";
-        return false;
-    }
-    if (vpwallets[0]->IsLocked()) {
-        error = "Wallet locked!\n";
-        return false;
-    }
-
-    std::shared_ptr<CReserveScript> coinbaseScript;
-    vpwallets[0]->GetScriptForMining(coinbaseScript);
-
-    // If the keypool is exhausted, no script is returned at all.  Catch this.
-    if (!coinbaseScript || coinbaseScript->reserveScript.empty()) {
-        // No script for mining error message
-        error = "Keypool exhausted!\n";
-        return false;
-    }
-
-    coinbaseScript->KeepScript();
-
-    std::unique_ptr<CBlockTemplate> pblocktemplate(
-                BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, true));
-
-    if (!pblocktemplate.get()) {
-        // No block template error message
-        error = "Failed to get block template!\n";
-        return false;
-    }
-
-    unsigned int nExtraNonce = 0;
-    CBlock *pblock = &pblocktemplate->block;
-    {
-        LOCK(cs_main);
-        IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
-    }
-
-    int nMaxTries = 1000;
-    while (true) {
-        if (pblock->nNonce == 0)
-            pblock->nTime++;
-
-        if (CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
-            break;
-        }
-
-        if (nMaxTries == 0) {
-            error = "Couldn't generate PoW, try again!\n";
-            break;
-        }
-
-        pblock->nNonce++;
-        nMaxTries--;
-    }
-
-    if (!CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
-        error = "Invalid PoW!\n";
+    std::string strError = "";
+    CScript scriptPubKey;
+    if (!BlockAssembler(Params()).GenerateBMMBlock(scriptPubKey, block, strError)) {
+        error = QString::fromStdString(strError);
         return false;
     }
 

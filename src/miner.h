@@ -155,10 +155,23 @@ public:
     explicit BlockAssembler(const CChainParams& params);
     BlockAssembler(const CChainParams& params, const Options& options);
 
+
+    /**
+     * Generates a BMM block (selects transactions, minimal PoW) which can
+     * then be commited to on the parent chain. Once the parent chain commits
+     * the BMM hash of this block, a BMM proof can be used to actually connect
+     * this block to the chain.
+     */
+    bool GenerateBMMBlock(const CScript& scriptPubkey, CBlock& block, std::string& strError);
+
+    /* Generate BMM block but only include coinbase & passed in transactions */
+    bool GenerateBMMBlock(const CScript& scriptPubkey, CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx);
+
+private:
+    // Note: this is private because we should use GenerateBMMBlock() always.
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true, bool fSkipBMMChecks = false);
 
-private:
     // utility functions
     /** Clear the block's state and prepare for assembling a new block */
     void resetBlock();
@@ -201,5 +214,6 @@ CTransaction CreateDepositTx();
 
 /** Create joined WT^ to be sent to the mainchain */
 CTransaction CreateWTPrimeTx(uint32_t nHeight);
+
 
 #endif // BITCOIN_MINER_H
