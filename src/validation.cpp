@@ -228,14 +228,6 @@ int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 bool fSidechainIndex = true;
 
-// TODO make configurable
-// False by default because of all of the issues a improper configuration will
-// cause. Should be enable by sidechain miners.
-//! BMM h* verification options
-bool fVerifyCriticalHashReadBlock = false;
-bool fVerifyCriticalHashCheckBlock = false;
-bool fVerifyCriticalHashAcceptBlockHeader = false;
-
 uint256 hashAssumeValid;
 arith_uint256 nMinimumChainWork;
 
@@ -1129,9 +1121,13 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     if (!CheckProofOfWork((fCoinbase ? block.GetHash() : block.GetBlindHash()), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
+    // Do we want to verify BMM in this context?
+    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmreadblock", DEFAULT_VERIFY_BMM_READ_BLOCK);
+
     // Optionally verify that block has a valid h* proof
-    if (fVerifyCriticalHashReadBlock && !VerifyCriticalHashProof(block))
+    if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
         return error("%s: ReadBlockFromDisk: bad-critical-hash", __func__);
+    }
 
     return true;
 }
@@ -3086,9 +3082,13 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (fCheckPOW && fCheckMerkleRoot)
         block.fChecked = true;
 
+    // Do we want to verify BMM in this context?
+    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
+
     // Check h* for BMM block
-    if (!fSkipBMMChecks && fVerifyCriticalHashCheckBlock && !VerifyCriticalHashProof(block))
+    if (!fSkipBMMChecks && fVerifyBMM && !VerifyCriticalHashProof(block)) {
         return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof B");
+    }
 
     return true;
 }
@@ -3367,8 +3367,11 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
         if (!CheckBlockHeader(block, state, chainparams.GetConsensus()))
             return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
-        if (fVerifyCriticalHashAcceptBlockHeader && !VerifyCriticalHashProof(block))
+        // Do we want to verify BMM in this context?
+        bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER);
+        if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
             return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof A");
+        }
 
         // Get prev block index
         CBlockIndex* pindexPrev = nullptr;

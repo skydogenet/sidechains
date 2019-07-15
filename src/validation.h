@@ -227,9 +227,9 @@ static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc59115285
 static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
 
 /** Blind merged mining */
-extern bool fVerifyCriticalHashReadBlock;
-extern bool fVerifyCriticalHashCheckBlock;
-extern bool fVerifyCriticalHashAcceptBlockHeader;
+static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = false;
+static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = false;
+static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = false;
 
 extern BMMBlockCache bmmBlockCache;
 
