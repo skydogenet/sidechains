@@ -31,7 +31,7 @@
 
 #include <atomic>
 
-class BMMBlockCache;
+class BMMCache;
 class CBlockIndex;
 class CBlockTreeDB;
 class CSidechainTreeDB;
@@ -231,7 +231,7 @@ static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = false;
 static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = false;
 static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = false;
 
-extern BMMBlockCache bmmBlockCache;
+extern BMMCache bmmCache;
 
 /**
  * Process an incoming block. This only returns after the best known valid

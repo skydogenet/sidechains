@@ -6,7 +6,7 @@
 #include <validation.h>
 
 #include <arith_uint256.h>
-#include <bmmblockcache.h>
+#include <bmmcache.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <checkpoints.h>
@@ -205,7 +205,7 @@ private:
 
 CCriticalSection cs_main;
 
-BMMBlockCache bmmBlockCache;
+BMMCache bmmCache;
 
 BlockMap& mapBlockIndex = g_chainstate.mapBlockIndex;
 CChain& chainActive = g_chainstate.chainActive;
@@ -2012,9 +2012,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 SidechainClient client;
                 std::string strHex = EncodeHexTx(vWTPrime.back().wtPrime);
                 uint256 hashWTPrimeToBroadcast = vWTPrime.back().wtPrime.GetHash();
-                if (!bmmBlockCache.HaveBroadcastedWTPrime(hashWTPrimeToBroadcast)) {
+                if (!bmmCache.HaveBroadcastedWTPrime(hashWTPrimeToBroadcast)) {
                     if (client.BroadcastWTPrime(EncodeHexTx(vWTPrime.back().wtPrime)))
-                        bmmBlockCache.StoreBroadcastedWTPrime(vWTPrime.back().wtPrime.GetHash());
+                        bmmCache.StoreBroadcastedWTPrime(vWTPrime.back().wtPrime.GetHash());
                 }
             }
         }
@@ -3135,14 +3135,19 @@ bool VerifyCriticalHashProof(const CBlock& block)
     if (hashBlindBlock != hashCommitted)
         return false;
 
-    // TODO
-    // Should be cached and probably not done here. Making call each time for
-    // testing. Verify that critical hash was included in mainchain coinbase.
+    // Check if we have cached the validation of this BMM
+    if (bmmCache.HaveBMMProof(block.GetHash(), criticalTx.GetHash()))
+        return true;
+
+    // Verify critical hash proof with local mainchain node
     uint256 txid;
     SidechainClient client;
     client.VerifyCriticalHashProof(block.criticalProof, txid);
     if (txid != criticalTx.GetHash())
         return false;
+
+    // Cache the valid BMM proof
+    bmmCache.CacheBMMProof(block.GetHash(), criticalTx.GetHash());
 
     return true;
 }
@@ -4830,14 +4835,14 @@ void LoadBMMCache()
 
     int i = 0;
     for (const uint256& u : vHash) {
-        bmmBlockCache.StoreBroadcastedWTPrime(u);
+        bmmCache.StoreBroadcastedWTPrime(u);
         i++;
     }
 }
 
 void DumpBMMCache()
 {
-    std::vector<uint256> vHash = bmmBlockCache.GetBMMWTPrimeCache();
+    std::vector<uint256> vHash = bmmCache.GetBMMWTPrimeCache();
 
     int count = vHash.size();
 

@@ -153,7 +153,7 @@ struct SidechainDeposit : public SidechainObj {
 
 struct SidechainBMMProof
 {
-    uint256 hashBMMBlock; // TODO remove
+    uint256 hashBMMBlock;
     std::string txOutProof;
     std::string coinbaseHex;
 

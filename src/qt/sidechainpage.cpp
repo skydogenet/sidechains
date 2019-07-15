@@ -13,7 +13,7 @@
 #include <qt/walletmodel.h>
 
 #include <base58.h>
-#include <bmmblockcache.h>
+#include <bmmcache.h>
 #include <coins.h>
 #include <consensus/validation.h>
 #include <core_io.h>
@@ -457,7 +457,7 @@ void SidechainPage::on_pushButtonSubmitBlock_clicked()
     uint256 hashBlock = uint256S(ui->lineEditBMMHash->text().toStdString());
     CBlock block;
 
-    if (!bmmBlockCache.GetBMMBlock(hashBlock, block)) {
+    if (!bmmCache.GetBMMBlock(hashBlock, block)) {
         // Block not stored message box
         messageBox.setWindowTitle("Block not found!");
         messageBox.setText("You do not have this BMM block cached.");
@@ -514,13 +514,12 @@ bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
         return false;
     }
 
-    if (!bmmBlockCache.StoreBMMBlock(*pblock)) {
+    if (!bmmCache.StoreBMMBlock(block)) {
         // Failed to store BMM candidate block
         error = "Failed to store BMM block!\n";
         return false;
     }
 
-    block = *pblock;
 
     return true;
 }
@@ -572,7 +571,7 @@ void SidechainPage::RefreshBMM()
     ui->pushButtonHashBlockLastSeen->setText(QString::fromStdString(hashMainBlockLastSeen.ToString()));
 
     // Get our cached BMM blocks
-    std::vector<CBlock> vBMMCache = bmmBlockCache.GetBMMBlockCache();
+    std::vector<CBlock> vBMMCache = bmmCache.GetBMMBlockCache();
     if (vBMMCache.empty()) {
         // If we don't have any existing BMM requests cached, create our first
         CBlock block;
@@ -611,7 +610,7 @@ void SidechainPage::RefreshBMM()
     // Was there a new mainchain block?
     if (hashMainBlockLastSeenOld != hashMainBlockLastSeen) {
         // Clear out the bmm cache, the old requests are invalid now
-        bmmBlockCache.ClearBMMBlocks();
+        bmmCache.ClearBMMBlocks();
 
         // Create a new BMM request (old ones have expired)
         CBlock block;
