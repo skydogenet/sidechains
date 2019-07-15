@@ -287,10 +287,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x5684db1edea6f832077a9f3c051e5bc0a5845feebaf82a02920b35ceb1348a66");
+        consensus.nMinimumChainWork = uint256S("0x00");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x5684db1edea6f832077a9f3c051e5bc0a5845feebaf82a02920b35ceb1348a66");
+        consensus.defaultAssumeValid = uint256S("0x00");
 
         pchMessageStart[0] = 0xfa;
         pchMessageStart[1] = 0xbf;
@@ -299,11 +299,11 @@ public:
         nDefaultPort = 12444;
         nPruneAfterHeight = 1000;
 
-        genesis = CreateGenesisBlock(1517121888, 891, 0x207fffff, 1, 0);
+        genesis = CreateGenesisBlock(1562799448, 256, 0x207fffff, 1, 0);
 
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        assert(consensus.hashGenesisBlock == uint256S("0x5684db1edea6f832077a9f3c051e5bc0a5845feebaf82a02920b35ceb1348a66"));
+        assert(consensus.hashGenesisBlock == uint256S("0x3043ff178d78800e8cd0dbcf9e324931c92b3c7cd0c1a3e8493af3b969206b8a"));
         assert(genesis.hashMerkleRoot == uint256S("0x8eb1364f43885edf1322b2d32095e57abb03c32a61a80ac25c8db3de58e16b8a"));
 
         vFixedSeeds.clear(); //!< Regtest mode doesn't have any fixed seeds.
@@ -315,7 +315,6 @@ public:
 
         checkpointData = {
             {
-                {0, uint256S("0x5684db1edea6f832077a9f3c051e5bc0a5845feebaf82a02920b35ceb1348a66")},
             }
         };
 
