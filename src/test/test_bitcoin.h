@@ -78,10 +78,11 @@ class CScript;
 struct TestChain100Setup : public TestingSetup {
     TestChain100Setup();
 
-    // Create a new block with just given transactions, coinbase paying to
-    // scriptPubKey, and try to add it to the current chain.
-    CBlock CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns,
-                                 const CScript& scriptPubKey);
+    // Create a new block with coinbase paying to scriptPubKey, and try to add
+    // it to the current chain.
+    CBlock CreateAndProcessBlock(const CScript& scriptPubKey);
+
+    CBlock CreateAndProcessBlock(const std::vector<CMutableTransaction>& vtx, const CScript& scriptPubKey);
 
     ~TestChain100Setup();
 

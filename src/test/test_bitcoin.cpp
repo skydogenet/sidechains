@@ -125,35 +125,39 @@ TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
     CScript scriptPubKey = CScript() <<  ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
     for (int i = 0; i < COINBASE_MATURITY; i++)
     {
-        std::vector<CMutableTransaction> noTxns;
-        CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);
+        CBlock b = CreateAndProcessBlock(scriptPubKey);
         coinbaseTxns.push_back(*b.vtx[0]);
     }
 }
 
+// TODO refactor
+//
 //
 // Create a new block with just given transactions, coinbase paying to
 // scriptPubKey, and try to add it to the current chain.
 //
-CBlock
-TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
+CBlock TestChain100Setup::CreateAndProcessBlock(const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey);
-    CBlock& block = pblocktemplate->block;
+    CBlock block;
 
-    // Replace mempool-selected txns with just coinbase plus passed-in txns:
-    block.vtx.resize(1);
-    for (const CMutableTransaction& tx : txns)
-        block.vtx.push_back(MakeTransactionRef(tx));
-    // IncrementExtraNonce creates a valid coinbase and merkleRoot
-    unsigned int extraNonce = 0;
-    {
-        LOCK(cs_main);
-        IncrementExtraNonce(&block, chainActive.Tip(), extraNonce);
-    }
+    std::string strError = "";
+    BlockAssembler(chainparams).GenerateBMMBlock(scriptPubKey, block, strError);
 
-    while (!CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus())) ++block.nNonce;
+    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
+    ProcessNewBlock(chainparams, shared_pblock, true, nullptr);
+
+    CBlock result = block;
+    return result;
+}
+
+CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& vtx, const CScript& scriptPubKey)
+{
+    const CChainParams& chainparams = Params();
+    CBlock block;
+
+    std::string strError = "";
+    BlockAssembler(chainparams).GenerateBMMBlock(scriptPubKey, block, strError, vtx);
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     ProcessNewBlock(chainparams, shared_pblock, true, nullptr);
