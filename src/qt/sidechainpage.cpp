@@ -500,28 +500,14 @@ void SidechainPage::on_pushButtonSubmitBlock_clicked()
     }
 }
 
-void SidechainPage::on_pushButtonHashBlockLastSeen_clicked()
-{
-    GUIUtil::setClipboard(QString::fromStdString(hashMainBlockLastSeen.ToString()));
-}
-
 bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
 {
+    SidechainClient client;
     std::string strError = "";
-    CScript scriptPubKey;
-    if (!BlockAssembler(Params()).GenerateBMMBlock(scriptPubKey, block, strError)) {
-        error = QString::fromStdString(strError);
-        return false;
-    }
+    bool fCreated = client.CreateBMMBlock(block, strError);
 
-    if (!bmmCache.StoreBMMBlock(block)) {
-        // Failed to store BMM candidate block
-        error = "Failed to store BMM block!\n";
-        return false;
-    }
-
-
-    return true;
+    error = QString::fromStdString(strError);
+    return fCreated;
 }
 
 uint256 SidechainPage::SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain)
@@ -553,72 +539,8 @@ bool SidechainPage::SubmitBMMBlock(const CBlock& block)
 
 void SidechainPage::RefreshBMM()
 {
-    // TODO load / save bmm amount
-
-    // Get updated list of recent main:blocks
     SidechainClient client;
-    std::vector<uint256> vNewHash = client.RequestMainBlockHashes();
-
-    if (vNewHash.empty())
-        return;
-
-    // Replace local cache
-    vMainBlockHash = vNewHash;
-
-    // Update hashBlockLastSeen and keep a backup for later
-    uint256 hashMainBlockLastSeenOld = hashMainBlockLastSeen;
-    hashMainBlockLastSeen = vNewHash.back();
-    ui->pushButtonHashBlockLastSeen->setText(QString::fromStdString(hashMainBlockLastSeen.ToString()));
-
-    // Get our cached BMM blocks
-    std::vector<CBlock> vBMMCache = bmmCache.GetBMMBlockCache();
-    if (vBMMCache.empty()) {
-        // If we don't have any existing BMM requests cached, create our first
-        CBlock block;
-        if (CreateBMMBlock(block)) {
-            // TODO refactor so that we don't create a BMM request here - it
-            // happens later in the function as well.
-            SendBMMRequest(block.GetBlindHash(), vMainBlockHash.back());
-            return;
-        }
-    }
-
-    // TODO this could be more efficient
-    // Check new main:blocks for our bmm requests
-    for (const uint256& u : vNewHash) {
-        // Check main:block for any of our current BMM requests
-        for (const CBlock& b : vBMMCache) {
-            const uint256& hashBMMBlock = b.GetBlindHash();
-            // Send 'getbmmproof' rpc request to mainchain
-            SidechainBMMProof proof;
-            proof.hashBMMBlock = hashBMMBlock;
-            if (client.RequestBMMProof(u, hashBMMBlock, proof)) {
-                CBlock block = b;
-
-                block.criticalProof = proof.txOutProof;
-
-                if (!DecodeHexTx(block.criticalTx, proof.coinbaseHex))
-                    continue;
-
-                // Submit BMM block
-                if (!SubmitBMMBlock(block))
-                    continue;
-            }
-        }
-    }
-
-    // Was there a new mainchain block?
-    if (hashMainBlockLastSeenOld != hashMainBlockLastSeen) {
-        // Clear out the bmm cache, the old requests are invalid now
-        bmmCache.ClearBMMBlocks();
-
-        // Create a new BMM request (old ones have expired)
-        CBlock block;
-        if (CreateBMMBlock(block)) {
-            // Create BMM critical data request
-            SendBMMRequest(block.GetBlindHash(), vMainBlockHash.back());
-        }
-    }
+    client.RefreshBMM();
 }
 
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)

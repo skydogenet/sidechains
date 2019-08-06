@@ -16,6 +16,7 @@
 #include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/util.h>
+#include <sidechainclient.h>
 #include <timedata.h>
 #include <util.h>
 #include <utilstrencodings.h>
@@ -460,6 +461,31 @@ static UniValue getinfo_deprecated(const JSONRPCRequest& request)
     );
 }
 
+UniValue refreshbmm(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "refreshbmm\n"
+            "\nRefresh automated BMM. Basic testing implementation\n"
+            "\nResult:\n"
+            "txid  (boolean) If the signature is verified or not.\n"
+        );
+
+    // TODO
+
+    SidechainClient client;
+    client.RefreshBMM();
+
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("hash_mainchain_block", "hash");
+    result.pushKV("bmm_txid", "txid");
+    result.pushKV("bmm_created", "hash");
+    result.pushKV("bmm_submitted", "txid");
+
+    return result;
+}
+
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
@@ -475,6 +501,9 @@ static const CRPCCommand commands[] =
     { "hidden",             "echo",                   &echo,                   {"arg0","arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9"}},
     { "hidden",             "echojson",               &echo,                   {"arg0","arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9"}},
     { "hidden",             "getinfo",                &getinfo_deprecated,     {}},
+
+    /* Sidechain RPC functions */
+    { "sidechain",          "refreshbmm",             &refreshbmm,            {}},
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)

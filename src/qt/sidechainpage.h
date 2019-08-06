@@ -67,8 +67,6 @@ private Q_SLOTS:
 
     void on_pushButtonSubmitBlock_clicked();
 
-    void on_pushButtonHashBlockLastSeen_clicked();
-
     void on_spinBoxRefreshInterval_valueChanged(int n);
 
     void RefreshBMM();
@@ -88,10 +86,6 @@ private:
 
     QTimer *bmmTimer;
 
-    std::vector<uint256> vMainBlockHash;
-
-    uint256 hashMainBlockLastSeen;
-
     bool validateWTAmount();
 
     void generateAddress();
@@ -101,7 +95,6 @@ private:
     uint256 SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain);
 
     bool SubmitBMMBlock(const CBlock& block);
-
 };
 
 #endif // SIDECHAINPAGE_H
