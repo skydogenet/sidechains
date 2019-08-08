@@ -4270,3 +4270,66 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
     default: assert(false);
     }
 }
+
+bool CWallet::CreateWT(const CAmount& nAmount, const std::string& strDestination, std::string& strFail)
+{
+
+    CTxDestination dest = DecodeDestination(strDestination, true /*fMainchain */);
+    if (!IsValidDestination(dest)) {
+        strFail = "Invalid destination";
+        return false;
+    }
+
+    LOCK2(cs_main, cs_wallet);
+
+    // Create the WT burn transaction
+    CRecipient burnRecipient = {CScript() << OP_RETURN, nAmount, false};
+    CWalletTx bwtx;
+    CReserveKey burnReserveKey(this);
+    CAmount nBurnFee;
+    int nBurnChangePos = -1;
+    CCoinControl control;
+    std::string strError;
+    if (!CreateTransaction(std::vector<CRecipient>{ burnRecipient }, bwtx,
+                burnReserveKey, nBurnFee, nBurnChangePos, strError, control))
+    {
+        strFail = strError;
+        return false;
+    }
+
+    // Commit WT burn transaction
+    CValidationState burnState;
+    if (!CommitTransaction(bwtx, burnReserveKey, g_connman.get(), burnState)) {
+        strFail = "Failed to commit burn transaction";
+        return false;
+    }
+
+    // Create WT data transaction
+    SidechainWT wt;
+    wt.nSidechain = SIDECHAIN_TEST;
+    wt.strDestination = strDestination;
+    wt.wt = *bwtx.tx;
+
+    CRecipient recipient = {wt.GetScript(), CENT, false};
+
+    CWalletTx wtx;
+    CReserveKey reserveKey(this);
+    CAmount nFee;
+    int nChangePos = -1;
+    strError.clear();
+    if (!CreateTransaction(std::vector<CRecipient>{ recipient }, wtx,
+                reserveKey, nFee, nChangePos, strError, control))
+    {
+        strFail = strError;
+        return false;
+    }
+
+    // Commit WT data transaction
+    CValidationState state;
+    if (!CommitTransaction(wtx, reserveKey, g_connman.get(), state)) {
+        strFail = "Failed to commit WT data transaction";
+        return false;
+    }
+
+    return true;
+}
