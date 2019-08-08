@@ -9,6 +9,7 @@
 #include <script/script.h>
 #include <uint256.h>
 #include <utilstrencodings.h>
+#include <util.h>
 
 #include <boost/variant/apply_visitor.hpp>
 #include <boost/variant/static_visitor.hpp>
@@ -272,8 +273,18 @@ CTxDestination DecodeDestination(const std::string& str, const CChainParams& par
         // base58-encoded Bitcoin addresses.
         // Public-key-hash-addresses have version 0 (or 111 testnet).
         // The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
-        const std::vector<unsigned char>& pubkey_prefix = fMainchain ? params.Base58Prefix(CChainParams::MAINCHAIN_PUBKEY_ADDRESS) : params.Base58Prefix(CChainParams::PUBKEY_ADDRESS);
-        if (data.size() == hash.size() + pubkey_prefix.size() && std::equal(pubkey_prefix.begin(), pubkey_prefix.end(), data.begin())) {
+        bool fMainchainRegtest = gArgs.GetBoolArg("-mainchainregtest", false);
+        std::vector<unsigned char> pubkey_prefix;
+        if (fMainchain && fMainchainRegtest)
+            pubkey_prefix = params.Base58Prefix(CChainParams::MAINCHAIN_REGTEST_PUBKEY_ADDRESS);
+        else
+        if (fMainchain)
+            pubkey_prefix = params.Base58Prefix(CChainParams::MAINCHAIN_PUBKEY_ADDRESS);
+        else
+            pubkey_prefix = params.Base58Prefix(CChainParams::PUBKEY_ADDRESS);
+
+        if (data.size() == hash.size() + pubkey_prefix.size() && std::equal(pubkey_prefix.begin(), pubkey_prefix.end(), data.begin()))
+        {
             std::copy(data.begin() + pubkey_prefix.size(), data.end(), hash.begin());
             return CKeyID(hash);
         }
