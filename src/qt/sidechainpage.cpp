@@ -438,7 +438,7 @@ void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
 
 }
 
-void SidechainPage::on_checkBoxEnableAutomation_clicked(bool fChecked)
+void SidechainPage::on_checkBoxEnableAutomation_toggled(bool fChecked)
 {
     // Start or stop timer
     if (fChecked) {
@@ -540,7 +540,24 @@ bool SidechainPage::SubmitBMMBlock(const CBlock& block)
 void SidechainPage::RefreshBMM()
 {
     SidechainClient client;
-    client.RefreshBMM();
+    std::string strError = "";
+    if (!client.RefreshBMM(strError)) {
+        ui->checkBoxEnableAutomation->setChecked(false);
+
+        QMessageBox messageBox;
+        messageBox.setDefaultButton(QMessageBox::Ok);
+
+        messageBox.setWindowTitle("Automated BMM failed!");
+        std::string str;
+        str = "The sidechain has failed to refresh BMM status.\n\n";
+        str += "This may be due to configuration issues.";
+        str += " Please check that you have set up configuration files";
+        str += " and re-enable automated BMM.\n\n";
+        str += "Error message:\n" + strError + "\n";
+        messageBox.setText(QString::fromStdString(str));
+        messageBox.exec();
+        return;
+    }
 }
 
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)

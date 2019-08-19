@@ -63,7 +63,7 @@ private Q_SLOTS:
 
     void on_pushButtonSendCriticalRequest_clicked();
 
-    void on_checkBoxEnableAutomation_clicked(bool fChecked);
+    void on_checkBoxEnableAutomation_toggled(bool fChecked);
 
     void on_pushButtonSubmitBlock_clicked();
 

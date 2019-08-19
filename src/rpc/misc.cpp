@@ -472,9 +472,12 @@ UniValue refreshbmm(const JSONRPCRequest& request)
         );
 
     // TODO
+    // Check return value
+    // output strFail
 
     SidechainClient client;
-    client.RefreshBMM();
+    std::string strError = "";
+    client.RefreshBMM(strError);
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("hash_mainchain_block", "hash");

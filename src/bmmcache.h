@@ -31,6 +31,10 @@ public:
 
     void CacheBMMProof(const uint256& hashBlock, const uint256& hashCritical);
 
+    void UpdateMainBlocks(const std::vector<uint256>& vMainBlockHashIn);
+
+    uint256 GetLastMainBlockHash() const;
+
 private:
     // BMM blocks (without proof) that we have created with the intention of
     // adding to the side blockchain once proof is aquired from the main chain.
@@ -41,6 +45,12 @@ private:
 
     // WT^(s) that we have already broadcasted to the mainchain.
     std::set<uint256> setWTPrimeBroadcasted;
+
+    // Cache of mainchain block hashes that we've scanned for BMM commitments
+    std::vector<uint256> vMainBlockHash;
+
+    // The last mainchain block that we've scanned
+    uint256 hashMainBlockLastSeen;
 };
 
 #endif // BITCOIN_BMMCACHE_H

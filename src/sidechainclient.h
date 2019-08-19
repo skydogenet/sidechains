@@ -63,7 +63,7 @@ public:
      * Automatically check our BMM requests on the mainchain and create new BMM
      * requests if needed.
      */
-    void RefreshBMM();
+    bool RefreshBMM(std::string& strError);
 
     bool CreateBMMBlock(CBlock& block, std::string& strError);
 
@@ -74,10 +74,6 @@ private:
      * Send json request to local node
      */
     bool SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree);
-
-    std::vector<uint256> vMainBlockHash;
-
-    uint256 hashMainBlockLastSeen;
 };
 
 #endif // SIDECHAINCLIENT_H

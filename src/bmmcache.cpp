@@ -94,3 +94,14 @@ void BMMCache::CacheBMMProof(const uint256& hashBlock, const uint256& hashCritic
 
     mapBMMCache.insert(std::make_pair(hashBlock, hashCritical));
 }
+
+void BMMCache::UpdateMainBlocks(const std::vector<uint256>& vMainBlockHashIn)
+{
+    vMainBlockHash = vMainBlockHashIn;
+    hashMainBlockLastSeen = vMainBlockHash.back();
+}
+
+uint256 BMMCache::GetLastMainBlockHash() const
+{
+    return hashMainBlockLastSeen;
+}
