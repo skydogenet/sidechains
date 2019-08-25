@@ -69,6 +69,8 @@ public:
 
     bool SubmitBMMBlock(const CBlock& block);
 
+    bool GetAverageFees(int nBlocks, int nStartHeight, CAmount& nAverageFees);
+
 private:
     /*
      * Send json request to local node

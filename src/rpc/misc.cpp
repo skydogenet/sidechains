@@ -488,6 +488,33 @@ UniValue refreshbmm(const JSONRPCRequest& request)
     return result;
 }
 
+UniValue getaveragemainchainfees(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 2)
+        throw std::runtime_error(
+            "getaveragemainchainfees\n"
+            "\nArguments:\n"
+            "1. \"numblocks (numeric, required) the number of blocks to scan\"\n"
+            "2. \"startheight (numeric, required) the block height to start scanning at\"\n"
+            "\nGet the average transaction fees from the mainchain\n"
+            "\nResult:\n"
+            "averagefees  (numeric) x.xx\n"
+        );
+
+    int nBlocks = request.params[0].get_int();
+    int nStartHeight = request.params[1].get_int();
+
+    SidechainClient client;
+    CAmount nAverageFees = 0;
+    if (!client.GetAverageFees(nBlocks, nStartHeight, nAverageFees))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to request fee average!");
+
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("fees", ValueFromAmount(nAverageFees));
+
+    return result;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
@@ -505,7 +532,8 @@ static const CRPCCommand commands[] =
     { "hidden",             "getinfo",                &getinfo_deprecated,     {}},
 
     /* Sidechain RPC functions */
-    { "sidechain",          "refreshbmm",             &refreshbmm,            {}},
+    { "sidechain",          "refreshbmm",             &refreshbmm,             {}},
+    { "sidechain",          "getaveragemainchainfees",&getaveragemainchainfees,{"blockcount", "startheight"}},
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)

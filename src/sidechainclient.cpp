@@ -457,6 +457,46 @@ bool SidechainClient::SubmitBMMBlock(const CBlock& block)
     return ProcessNewBlock(Params(), shared_pblock, true, NULL);
 }
 
+bool SidechainClient::GetAverageFees(int nBlocks, int nStartHeight, CAmount& nAverageFee)
+{
+    // JSON for 'getaveragefees' mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"getaveragefee\", \"params\": ");
+    json.append("[");
+    json.append(std::to_string(nBlocks));
+    json.append(",");
+    json.append(std::to_string(nStartHeight));
+    json.append("]");
+    json.append("}");
+
+    // Try to request average fees from mainchain
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request average fees\n");
+        return false;
+    }
+
+    // Process result
+    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
+        // Looping through members
+        if (value.first == "feeaverage") {
+            // Read
+            std::string data = value.second.data();
+            if (!data.length()) {
+                LogPrintf("ERROR Sidechain client received invalid data\n");
+                return false;
+            }
+
+            if (ParseMoney(data, nAverageFee)) {
+                LogPrintf("Sidechain client received average mainchain fee: %d.\n", nAverageFee);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)
 {
     // Format user:pass for authentication
@@ -546,6 +586,7 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
         boost::property_tree::json_parser::read_json(jss, ptree);
     } catch (std::exception &exception) {
         LogPrintf("ERROR Sidechain client (sendRequestToMainchain): %s\n", exception.what());
+
         return false;
     }
     return true;
