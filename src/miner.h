@@ -215,5 +215,4 @@ CTransaction CreateDepositTx();
 /** Create joined WT^ to be sent to the mainchain */
 CTransaction CreateWTPrimeTx(uint32_t nHeight);
 
-
 #endif // BITCOIN_MINER_H

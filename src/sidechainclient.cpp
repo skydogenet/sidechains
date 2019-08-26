@@ -586,7 +586,6 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
         boost::property_tree::json_parser::read_json(jss, ptree);
     } catch (std::exception &exception) {
         LogPrintf("ERROR Sidechain client (sendRequestToMainchain): %s\n", exception.what());
-
         return false;
     }
     return true;

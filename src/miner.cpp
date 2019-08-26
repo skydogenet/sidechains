@@ -19,6 +19,7 @@
 #include <net.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
+#include <policy/wtprime.h>
 #include <pow.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
@@ -598,6 +599,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     if (vWT.empty())
         return CTransaction();
 
+    // TODO make default the MAX_WTPRIME_WEIGHT
     unsigned int nThreshold = gArgs.GetArg("-wtprimethreshold", DEFAULT_WTPRIME_THRESHOLD);
     if (nThreshold > vWT.size())
         return CTransaction();
@@ -605,6 +607,8 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     // TODO filter vWT (by height & used)
     // Select which WT(s) to join in WT^
     const std::vector<SidechainWT> vWTFiltered = vWT;
+
+    // TODO sort vWT by fees
 
     CAmount joinAmount = 0;  // Total output
     CMutableTransaction wjtx; // WT^
@@ -618,6 +622,14 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
         // Output to mainchain keyID
         CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
         wjtx.vout.push_back(CTxOut(amountWT, GetScriptForDestination(dest)));
+
+        // Make sure we have room for more outputs
+        if (GetTransactionWeight(wjtx) > MAX_WTPRIME_WEIGHT) {
+            // If we went over size, undo this output and stop
+            wjtx.vout.pop_back();
+            joinAmount -= amountWT;
+            break;
+        }
     }
 
     // Did anything make it into the WT^?
@@ -644,6 +656,13 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     // leaving the rest for the mainchain miners
     if (nJoinFee > 0)
         wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
+
+    // Check that the WT^ is valid by mainchain policy
+    CFeeRate dustFee = CFeeRate(DUST_RELAY_TX_FEE);
+    std::string strReason = "";
+    if (!CoreIsStandardTx(wjtx, true, dustFee, strReason)) {
+        return CTransaction();
+    }
 
     // Create WT^ object
     SidechainWTPrime wtPrime;
@@ -755,6 +774,5 @@ bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block
     block = *pblock;
 
     return true;
-
 }
 

@@ -122,6 +122,7 @@ BITCOIN_CORE_H = \
   policy/fees.h \
   policy/policy.h \
   policy/rbf.h \
+  policy/wtprime.h \
   pow.h \
   protocol.h \
   random.h \
