@@ -596,13 +596,17 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
 
     // Get WT(s) from psidechaintree
     const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
-    if (vWT.empty())
+    if (vWT.empty()) {
+        LogPrintf("%s: No wt(s) to create WT^\n", __func__);
         return CTransaction();
+    }
 
     // TODO make default the MAX_WTPRIME_WEIGHT
     unsigned int nThreshold = gArgs.GetArg("-wtprimethreshold", DEFAULT_WTPRIME_THRESHOLD);
-    if (nThreshold > vWT.size())
+    if (nThreshold > vWT.size()) {
+        LogPrintf("%s: -wtprimethreshold set: not enough wt(s) to create WT^\n", __func__);
         return CTransaction();
+    }
 
     // TODO filter vWT (by height & used)
     // Select which WT(s) to join in WT^
@@ -633,8 +637,10 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     }
 
     // Did anything make it into the WT^?
-    if (!wjtx.vout.size())
+    if (!wjtx.vout.size()) {
+        LogPrintf("%s: ERROR: WT^ empty!\n", __func__);
         return CTransaction();
+    }
 
     // TODO improve fee calculation
     CAmount nBaseFee = CENT;
@@ -661,6 +667,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     CFeeRate dustFee = CFeeRate(DUST_RELAY_TX_FEE);
     std::string strReason = "";
     if (!CoreIsStandardTx(wjtx, true, dustFee, strReason)) {
+        LogPrintf("%s: ERROR: WT^ failed core standardness tests!\n", __func__);
         return CTransaction();
     }
 
