@@ -2005,6 +2005,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         // TODO Cleanup
         // Sending the lastest WT^ shouldn't take place here, and validation
         // should not have to use or depend on the sidechain client.
+        // TODO we can also check with the mainchain to find out if it has
+        // received this WT^ and then stop re-broadcasting it.
         {
             // Send latest WT^ to the mainchain each block
             std::vector<SidechainWTPrime> vWTPrime = psidechaintree->GetWTPrimes(SIDECHAIN_TEST);

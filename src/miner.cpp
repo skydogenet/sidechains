@@ -667,7 +667,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     CFeeRate dustFee = CFeeRate(DUST_RELAY_TX_FEE);
     std::string strReason = "";
     if (!CoreIsStandardTx(wjtx, true, dustFee, strReason)) {
-        LogPrintf("%s: ERROR: WT^ failed core standardness tests!\n", __func__);
+        LogPrintf("%s: ERROR: WT^ failed core standardness tests! Reason: %s\n", __func__, strReason);
         return CTransaction();
     }
 
