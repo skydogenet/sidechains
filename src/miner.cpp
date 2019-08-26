@@ -680,6 +680,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     CMutableTransaction mtx;
     mtx.vout.push_back(CTxOut(0, wtPrime.GetScript()));
 
+    LogPrintf("%s: WT^ created! Hash: %s\n", __func__, wjtx.GetHash().ToString());
     return mtx;
 }
 
