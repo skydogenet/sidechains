@@ -77,7 +77,7 @@ struct SidechainObj {
 struct SidechainWT: public SidechainObj {
     uint8_t nSidechain;
     std::string strDestination;
-    CMutableTransaction wt;
+    CAmount amount;
 
     SidechainWT(void) : SidechainObj() { sidechainop = 'W'; }
     virtual ~SidechainWT(void) { }
@@ -89,7 +89,7 @@ struct SidechainWT: public SidechainObj {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
         READWRITE(strDestination);
-        READWRITE(wt);
+        READWRITE(amount);
     }
 
     std::string ToString(void) const;
@@ -102,7 +102,7 @@ struct SidechainWTPrime: public SidechainObj {
     uint8_t nSidechain;
     CMutableTransaction wtPrime;
 
-    SidechainWTPrime(void) : SidechainObj() { sidechainop = 'J'; }
+    SidechainWTPrime(void) : SidechainObj() { sidechainop = 'P'; }
     virtual ~SidechainWTPrime(void) { }
 
     ADD_SERIALIZE_METHODS

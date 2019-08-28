@@ -197,7 +197,8 @@ void SidechainPage::on_pushButtonWT_clicked()
     }
 
     // Check destination
-    CTxDestination dest = DecodeDestination(ui->payTo->text().toStdString(), true);
+    std::string strDest = ui->payTo->text().toStdString();
+    CTxDestination dest = DecodeDestination(strDest, true);
     if (!IsValidDestination(dest)) {
         // Invalid address message box
         messageBox.setWindowTitle("Invalid destination!");
@@ -206,91 +207,27 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
-    // WT burn transaction
-    std::vector<CRecipient> vBurnRecipient;
-    CAmount nBurn = ui->payAmount->value();
-    CRecipient burnRecipient = {CScript() << OP_RETURN, nBurn, false};
-    vBurnRecipient.push_back(burnRecipient);
-
-    CWalletTx bwtx;
-    CReserveKey burnKey(vpwallets[0]);
-    CAmount nBurnFee;
-    int nBurnChangePos = -1;
-    std::string strError;
-    CCoinControl coin_control;
-    if (!vpwallets[0]->CreateTransaction(vBurnRecipient, bwtx, burnKey, nBurnFee, nBurnChangePos, strError, coin_control))
-    {
+    std::string strError = "";
+    CAmount burnAmount = ui->payAmount->value();
+    uint256 txid;
+    if (!vpwallets[0]->CreateWT(burnAmount, strDest, strError, txid)) {
         // Create burn transaction error message box
-        messageBox.setWindowTitle("Creating withdraw burn transaction failed!");
+        messageBox.setWindowTitle("Creating withdraw transaction failed!");
         QString createError = "Error creating transaction: ";
         createError += QString::fromStdString(strError);
         createError += "\n";
         messageBox.setText(createError);
-        messageBox.exec();
-        return;
-    }
-
-    CValidationState burnState;
-    if (!vpwallets[0]->CommitTransaction(bwtx, burnKey, g_connman.get(), burnState))
-    {
-        // Commit burn transaction error message box
-        messageBox.setWindowTitle("Committing withdraw burn transaction failed!");
-        QString commitError = "Error committing transaction: ";
-        commitError += QString::fromStdString(burnState.GetRejectReason());
-        commitError += "\n";
-        messageBox.setText(commitError);
-        messageBox.exec();
-        return;
-    }
-
-    /* Create WT data transaction */
-    std::vector<CRecipient> vRecipient;
-
-    SidechainWT wt;
-    wt.nSidechain = SIDECHAIN_TEST;
-    wt.strDestination = ui->payTo->text().toStdString();
-    wt.wt = *bwtx.tx;
-
-    CRecipient recipient = {wt.GetScript(), CENT, false};
-    vRecipient.push_back(recipient);
-
-    CWalletTx wtx;
-    CReserveKey reserveKey(vpwallets[0]);
-    CAmount nFee;
-    int nChangePos = -1;
-    strError.clear();
-    if (!vpwallets[0]->CreateTransaction(vRecipient, wtx, reserveKey, nFee, nChangePos, strError, coin_control))
-    {
-        // Create transaction error message box
-        messageBox.setWindowTitle("Creating withdraw data transaction failed!");
-        QString createError = "Error creating transaction: ";
-        createError += QString::fromStdString(strError);
-        createError += "\n";
-        messageBox.setText(createError);
-        messageBox.exec();
-        return;
-    }
-
-    CValidationState state;
-    if (!vpwallets[0]->CommitTransaction(wtx, reserveKey, g_connman.get(), state))
-    {
-        // Commit transaction error message box
-        messageBox.setWindowTitle("Committing withdraw data transaction failed!");
-        QString commitError = "Error committing transaction: ";
-        commitError += QString::fromStdString(state.GetRejectReason());
-        commitError += "\n";
-        messageBox.setText(commitError);
         messageBox.exec();
         return;
     }
 
     // Successful withdraw message box
     messageBox.setWindowTitle("Withdraw transaction created!");
-    QString result = "txid: " + QString::fromStdString(wtx.GetHash().ToString());
+    QString result = "txid: " + QString::fromStdString(txid.ToString());
     result += "\n";
     result += "Amount withdrawn: ";
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
-    result += BitcoinUnits::formatWithUnit(unit, nBurn, false, BitcoinUnits::separatorAlways);
+    result += BitcoinUnits::formatWithUnit(unit, burnAmount, false, BitcoinUnits::separatorAlways);
     messageBox.setText(result);
     messageBox.exec();
 }

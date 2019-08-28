@@ -620,18 +620,18 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     wjtx.vin.resize(1); // Dummy vin for serialization...
     wjtx.vin[0].scriptSig = CScript() << OP_0;
     for (const SidechainWT& wt : vWTFiltered) {
-        CAmount amountWT = wt.wt.GetValueBurnedForWT();
-        joinAmount += amountWT;
+        CAmount amountWTBurn = wt.amount;
+        joinAmount += amountWTBurn;
 
         // Output to mainchain keyID
         CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
-        wjtx.vout.push_back(CTxOut(amountWT, GetScriptForDestination(dest)));
+        wjtx.vout.push_back(CTxOut(amountWTBurn, GetScriptForDestination(dest)));
 
         // Make sure we have room for more outputs
         if (GetTransactionWeight(wjtx) > MAX_WTPRIME_WEIGHT) {
             // If we went over size, undo this output and stop
             wjtx.vout.pop_back();
-            joinAmount -= amountWT;
+            joinAmount -= amountWTBurn;
             break;
         }
     }
@@ -642,26 +642,29 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
         return CTransaction();
     }
 
+    // TODO deterministic WT^ creation will need to handle fees another way
     // TODO improve fee calculation
-    CAmount nBaseFee = CENT;
+    //CAmount nBaseFee = CENT;
     // Calculate total group fee to be split evenly between sidechain & mainchain
-    unsigned int nBytes = GetSerializeSize(wjtx, SER_NETWORK, PROTOCOL_VERSION);
-    CCoinControl coin_control;
-    coin_control.m_feerate.reset();
-    FeeCalculation feeCalc;
+    //unsigned int nBytes = GetSerializeSize(wjtx, SER_NETWORK, PROTOCOL_VERSION);
+    //CCoinControl coin_control;
+    //coin_control.m_feerate.reset();
+    //FeeCalculation feeCalc;
     // 2 * the fee as it is split in two
-    CAmount nJoinFee = (nBaseFee + 2*GetMinimumFee(nBytes, coin_control, mempool, ::feeEstimator, &feeCalc));
-    CAmount nFeePerOutput = nJoinFee / wjtx.vout.size();
+    //CAmount nJoinFee = (nBaseFee + 2*GetMinimumFee(nBytes, coin_control, mempool, ::feeEstimator, &feeCalc));
+    //CAmount nFeePerOutput = nJoinFee / wjtx.vout.size();
 
+    // TODO deterministic WT^ creation will need to handle fees another way
     // TODO drop outputs with < nFeePerOutput nValue & recalculate
     // Split fee equally among output(s)
-    for (size_t i = 0; i < wjtx.vout.size(); i++)
-        wjtx.vout[i].nValue -= nFeePerOutput;
+    //for (size_t i = 0; i < wjtx.vout.size(); i++)
+    //    wjtx.vout[i].nValue -= nFeePerOutput;
 
+    // TODO deterministic WT^ creation will need to handle fees another way
     // Pay sidechain miners their half of the join fee,
     // leaving the rest for the mainchain miners
-    if (nJoinFee > 0)
-        wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
+    //if (nJoinFee > 0)
+    //    wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
 
     // Check that the WT^ is valid by mainchain policy
     CFeeRate dustFee = CFeeRate(DUST_RELAY_TX_FEE);
@@ -671,7 +674,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
         return CTransaction();
     }
 
-    // Create WT^ object
+    // Create WT^ object for psidechaintree (sidechain only)
     SidechainWTPrime wtPrime;
     wtPrime.nSidechain = SIDECHAIN_TEST;
     wtPrime.wtPrime = wjtx;

@@ -21,7 +21,7 @@ uint256 SidechainObj::GetHash(void) const
     if (sidechainop == 'W')
         ret = SerializeHash(*(SidechainWT *) this);
     else
-    if (sidechainop == 'J')
+    if (sidechainop == 'P')
         ret = SerializeHash(*(SidechainWTPrime *) this);
     else
     if (sidechainop == 'D')
@@ -36,7 +36,7 @@ CScript SidechainObj::GetScript(void) const
     if (sidechainop == 'W')
         ((SidechainWT *) this)->Serialize(ds);
     else
-    if (sidechainop == 'J')
+    if (sidechainop == 'P')
         ((SidechainWTPrime *) this)->Serialize(ds);
     else
     if (sidechainop == 'D')
@@ -66,7 +66,7 @@ SidechainObj *SidechainObjCtr(const CScript &script)
         return obj;
     }
     else
-    if (*vch0 == 'J') {
+    if (*vch0 == 'P') {
         SidechainWTPrime *obj = new SidechainWTPrime;
         obj->Unserialize(ds);
         return obj;

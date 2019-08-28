@@ -3543,14 +3543,13 @@ UniValue createwt(const JSONRPCRequest& request)
     EnsureWalletIsUnlocked(pwallet);
 
     std::string strFail = "";
-    if (!pwallet->CreateWT(nAmount, request.params[0].get_str(), strFail)) {
+    uint256 txid;
+    if (!pwallet->CreateWT(nAmount, request.params[0].get_str(), strFail, txid)) {
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
-    // TODO return the two transaction ids that should have been created
     UniValue response(UniValue::VOBJ);
-    response.pushKV("burntxid", "txid");
-    response.pushKV("datatxid", "txid");
+    response.pushKV("txid", txid.ToString());
     return response;
 }
 

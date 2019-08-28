@@ -359,7 +359,7 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
             batch.Write(std::make_pair(std::make_pair(std::make_pair('w', ptr->nSidechain), ptr->nHeight), objid), value);
         }
         else
-        if (obj->sidechainop == 'J') {
+        if (obj->sidechainop == 'P') {
             const SidechainWTPrime *ptr = (const SidechainWTPrime *) obj;
             std::pair<SidechainWTPrime, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
@@ -435,7 +435,7 @@ std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
 
 std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSidechain)
 {
-    const char sidechainop = 'J';
+    const char sidechainop = 'P';
     std::ostringstream ss;
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 

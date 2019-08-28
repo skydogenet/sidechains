@@ -1973,7 +1973,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
     // TODO add deposit output amounts and re-enable
     /*
-    CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
+    CAmount blockReward = nFees));
     if (block.vtx[0]->GetValueOut() > blockReward)
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
@@ -2026,7 +2026,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         for (const CTransactionRef& tx : block.vtx) {
             for (const CTxOut& txout : tx->vout) {
                 const CScript& scriptPubKey = txout.scriptPubKey;
-                size_t script_sz = scriptPubKey.size();
+                const size_t script_sz = scriptPubKey.size();
                 if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
                     continue;
 
@@ -2034,6 +2034,25 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 if (!obj)
                     continue;
 
+                // Check validity of wt(s). Block invalid if any wt is invalid.
+                if (obj->sidechainop == 'W') {
+                    SidechainWT *wt = dynamic_cast<SidechainWT*>(obj);
+                    // Verify that burn output actually exists
+                    bool fBurnFound = false;
+                    // TODO refactor: looping through vout again during a loop
+                    // through vout... could be more efficient
+                    for (const CTxOut& o : tx->vout) {
+                        if (o.scriptPubKey.size()
+                                && o.scriptPubKey[0] == OP_RETURN
+                                && o.nValue == wt->amount)
+                        {
+                                fBurnFound = true;
+                        }
+                    }
+                    if (!fBurnFound) {
+                        return state.Error("Invalid wt - no burn found!");
+                    }
+                }
                 obj->txid = tx->GetHash();
                 vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
             }
