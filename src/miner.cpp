@@ -601,16 +601,18 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
         return CTransaction();
     }
 
-    // TODO make default the MAX_WTPRIME_WEIGHT
-    unsigned int nThreshold = gArgs.GetArg("-wtprimethreshold", DEFAULT_WTPRIME_THRESHOLD);
+    // TODO remove
+    unsigned int nThreshold = gArgs.GetArg("-wtprimethreshold", 0);
     if (nThreshold > vWT.size()) {
         LogPrintf("%s: -wtprimethreshold set: not enough wt(s) to create WT^\n", __func__);
         return CTransaction();
     }
 
-    // TODO filter vWT (by height & used)
-    // Select which WT(s) to join in WT^
-    const std::vector<SidechainWT> vWTFiltered = vWT;
+    std::vector<SidechainWT> vWTFiltered;
+    for (const SidechainWT& wt : vWT) {
+        if (wt.status == WT_UNSPENT)
+            vWTFiltered.push_back(wt);
+    }
 
     // TODO sort vWT by fees
 

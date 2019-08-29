@@ -38,6 +38,11 @@ enum Sidechains {
     SIDECHAIN_TEST = 0,
 };
 
+//! WT status / zone (unspent, included in a WT^, paid out)
+static const char WT_UNSPENT = 'a';
+static const char WT_IN_WTPRIME = 'b';
+static const char WT_SPENT = 'c';
+
 //! KeyID for testing
 static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
 //mx3PT9t2kzCFgAURR9HeK6B5wN8egReUxY
@@ -51,9 +56,6 @@ static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
 
 //! The fee for sidechain deposits on this sidechain
 static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
-
-//! How many wt(s) should we wait for before creating a WT^
-static const unsigned int DEFAULT_WTPRIME_THRESHOLD = 256;
 
 /**
  * Base object for sidechain related database entries
@@ -78,8 +80,9 @@ struct SidechainWT: public SidechainObj {
     uint8_t nSidechain;
     std::string strDestination;
     CAmount amount;
+    char status;
 
-    SidechainWT(void) : SidechainObj() { sidechainop = 'W'; }
+    SidechainWT(void) : SidechainObj() { sidechainop = 'W'; status = WT_UNSPENT; }
     virtual ~SidechainWT(void) { }
 
     ADD_SERIALIZE_METHODS
@@ -90,6 +93,7 @@ struct SidechainWT: public SidechainObj {
         READWRITE(nSidechain);
         READWRITE(strDestination);
         READWRITE(amount);
+        READWRITE(status);
     }
 
     std::string ToString(void) const;
