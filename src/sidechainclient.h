@@ -17,6 +17,9 @@
 class SidechainDeposit;
 class SidechainBMMProof;
 
+// TODO refactor: doesn't need to be a class anymore as the
+// client isn't tracking any data anymore.
+
 class SidechainClient
 {
 public:
@@ -70,6 +73,8 @@ public:
     bool SubmitBMMBlock(const CBlock& block);
 
     bool GetAverageFees(int nBlocks, int nStartHeight, CAmount& nAverageFees);
+
+    bool GetBlockCount(int& nBlocks);
 
 private:
     /*

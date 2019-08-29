@@ -497,6 +497,27 @@ bool SidechainClient::GetAverageFees(int nBlocks, int nStartHeight, CAmount& nAv
     return false;
 }
 
+bool SidechainClient::GetBlockCount(int& nBlocks)
+{
+    // JSON for 'getaveragefees' mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"getblockcount\", \"params\": ");
+    json.append("[] }");
+
+    // Try to request mainchain block count
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request block count\n");
+        return false;
+    }
+
+    // Process result
+    nBlocks = ptree.get("result", 0);
+
+    return nBlocks > 0;
+}
+
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)
 {
     // Format user:pass for authentication

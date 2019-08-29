@@ -515,6 +515,28 @@ UniValue getaveragemainchainfees(const JSONRPCRequest& request)
     return result;
 }
 
+UniValue getmainchainblockcount(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "getmainchainblockcount\n"
+            "\nArguments: none\n"
+            "\nGet the mainchain block count\n"
+            "\nResult:\n"
+            "blockcount  (numeric) x\n"
+        );
+
+    SidechainClient client;
+    int nBlocks = 0;
+    if (!client.GetBlockCount(nBlocks))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to request mainchain height!");
+
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("blockcount", nBlocks);
+
+    return result;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
@@ -534,6 +556,7 @@ static const CRPCCommand commands[] =
     /* Sidechain RPC functions */
     { "sidechain",          "refreshbmm",             &refreshbmm,             {}},
     { "sidechain",          "getaveragemainchainfees",&getaveragemainchainfees,{"blockcount", "startheight"}},
+    { "sidechain",          "getmainchainblockcount", &getmainchainblockcount, {}},
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)
