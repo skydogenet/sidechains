@@ -591,6 +591,35 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         return state.Invalid(false, REJECT_DUPLICATE, "txn-already-in-mempool");
     }
 
+    // If this is a wt check that it is valid
+    for (const CTxOut& txout : tx.vout) {
+        const CScript& scriptPubKey = txout.scriptPubKey;
+        const size_t script_sz = scriptPubKey.size();
+        if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+            continue;
+
+        SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+        if (!obj)
+            continue;
+
+        if (obj->sidechainop == 'W') {
+            SidechainWT *wt = dynamic_cast<SidechainWT*>(obj);
+            // Verify that burn output actually exists
+            bool fBurnFound = false;
+            for (const CTxOut& o : tx.vout) {
+                if (o.scriptPubKey.size()
+                        && o.scriptPubKey[0] == OP_RETURN
+                        && o.nValue == wt->amount)
+                {
+                    fBurnFound = true;
+                }
+            }
+            if (!fBurnFound) {
+                return state.DoS(100, false, REJECT_INVALID, "invalid-wt-no-burn");
+            }
+        }
+    }
+
     // Check for conflicts with in-memory transactions
     std::set<uint256> setConflicts;
     for (const CTxIn &txin : tx.vin)
