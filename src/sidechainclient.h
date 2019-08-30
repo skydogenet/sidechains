@@ -76,6 +76,10 @@ public:
 
     bool GetBlockCount(int& nBlocks);
 
+    bool GetWorkScore(const uint256& hashWTPrime, int& nWorkScore);
+
+    bool ListWTPrimes(std::vector<uint256>& vHashWTPrime);
+
 private:
     /*
      * Send json request to local node

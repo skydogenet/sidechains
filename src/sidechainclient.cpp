@@ -499,7 +499,7 @@ bool SidechainClient::GetAverageFees(int nBlocks, int nStartHeight, CAmount& nAv
 
 bool SidechainClient::GetBlockCount(int& nBlocks)
 {
-    // JSON for 'getaveragefees' mainchain HTTP-RPC
+    // JSON for 'getblockcount' mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"getblockcount\", \"params\": ");
@@ -516,6 +516,69 @@ bool SidechainClient::GetBlockCount(int& nBlocks)
     nBlocks = ptree.get("result", 0);
 
     return nBlocks > 0;
+}
+
+bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
+{
+    // JSON for 'getworkscore' mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"getworkscore\", \"params\": ");
+    json.append("[");
+    json.append(std::to_string(SIDECHAIN_TEST));
+    json.append("\"");
+    json.append(hashWTPrime.ToString());
+    json.append("\"");
+    json.append("] }");
+
+    // Try to request mainchain block count
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request workscore\n");
+        return false;
+    }
+
+    // Process result, note that starting workscore on mainchain is 1
+    nWorkScore = ptree.get("workscore", 0);
+
+    return nWorkScore > 0;
+}
+
+bool SidechainClient::ListWTPrimes(std::vector<uint256>& vHashWTPrime)
+{
+    // JSON for 'listwtprimes' mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"listwtprimes\", \"params\": ");
+    json.append("[");
+    json.append(std::to_string(SIDECHAIN_TEST));
+    json.append("] }");
+
+    // Try to request mainchain block count
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request WT^(s)\n");
+        return false;
+    }
+
+    // Process result
+    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
+        BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
+            // Looping through members
+            if (v.first == "hashwtprime") {
+                // Read txid
+                std::string data = v.second.data();
+                if (!data.length())
+                    continue;
+
+                uint256 hash = uint256S(data);
+                if (!hash.IsNull())
+                    vHashWTPrime.push_back(hash);
+            }
+        }
+    }
+
+    return vHashWTPrime.size() > 0;
 }
 
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)
