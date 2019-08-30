@@ -7,6 +7,7 @@
 
 #include <amount.h>
 #include <base58.h>
+#include <bmmcache.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <coins.h>
@@ -183,11 +184,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     for (const CTxOut& out : depositTx.vout)
         coinbaseTx.vout.push_back(out);
 
-    // TODO improve this
     // Signal the most recent WT^ created by this sidechain
-    std::vector<SidechainWTPrime> vWT = psidechaintree->GetWTPrimes(SIDECHAIN_TEST);
-    if (vWT.size())
-        pblock->hashWTPrime = vWT.back().wtPrime.GetHash();
+    uint256 hashWTPrime = bmmCache.GetLatestWTPrime();
+    if (!hashWTPrime.IsNull())
+        pblock->hashWTPrime = hashWTPrime;
 
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
@@ -589,11 +589,24 @@ CTransaction CreateDepositTx()
     return mtx;
 }
 
+int GetBlocksVerificationPeriod(int nMainchainHeight)
+{
+    if (nMainchainHeight % MAINCHAIN_WTPRIME_VERIFICATION_PERIOD == 0)
+        return MAINCHAIN_WTPRIME_VERIFICATION_PERIOD;
+
+    int nBlocks = 0;
+    for (;;) {
+        nBlocks++;
+        if ((nMainchainHeight + nBlocks) % MAINCHAIN_WTPRIME_VERIFICATION_PERIOD == 0)
+            break;
+    }
+
+    return nBlocks;
+}
+
 /** Create joined WT^ to be sent to the mainchain */
 CTransaction CreateWTPrimeTx(uint32_t nHeight)
 {
-    SidechainClient client;
-
     // Get WT(s) from psidechaintree
     const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
     if (vWT.empty()) {
@@ -601,13 +614,30 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
         return CTransaction();
     }
 
-    // TODO remove
-    unsigned int nThreshold = gArgs.GetArg("-wtprimethreshold", 0);
-    if (nThreshold > vWT.size()) {
-        LogPrintf("%s: -wtprimethreshold set: not enough wt(s) to create WT^\n", __func__);
+    // Get the mainchain's chain height
+    SidechainClient client;
+    int nMainchainHeight = 0;
+    if (!client.GetBlockCount(nMainchainHeight)) {
+        LogPrintf("%s: Failed to request mainchain block count!");
         return CTransaction();
     }
 
+    // Check if remaining mainchain WT^ verification period blocks are enough
+    // to get minimum workscore
+    int nBlocksRemaining = GetBlocksVerificationPeriod(nMainchainHeight);
+    if (nBlocksRemaining < MAINCHAIN_WTPRIME_MIN_WORKSCORE) {
+        LogPrintf("%s: Not enough blocks left in mainchain verification period to achieve minimim workscore\n", __func__);
+        return CTransaction();
+    }
+
+    // Check for existing WT^ in mainchain SCDB for this sidechain
+    std::vector<uint256> vHashWTPrime;
+    if (client.ListWTPrimes(vHashWTPrime)) {
+        LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
+        return CTransaction();
+    }
+
+    // Check the status / zone of wt(s) before including them in a WT^
     std::vector<SidechainWT> vWTFiltered;
     for (const SidechainWT& wt : vWT) {
         if (wt.status == WT_UNSPENT)

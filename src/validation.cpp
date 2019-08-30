@@ -591,6 +591,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         return state.Invalid(false, REJECT_DUPLICATE, "txn-already-in-mempool");
     }
 
+    // TODO update the status / zone of the WT when included in WT^
     // If this is a wt check that it is valid
     for (const CTxOut& txout : tx.vout) {
         const CScript& scriptPubKey = txout.scriptPubKey;
@@ -2050,7 +2051,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             }
         }
 
-        // Collect sidechain objects
+        // Collect & verify sidechain objects
+        int nWTPrime = 0; // Keep track of new WT^ objects. Max = 1 per block
         std::vector<std::pair<uint256, const SidechainObj *> > vSidechainObjects;
         for (const CTransactionRef& tx : block.vtx) {
             for (const CTxOut& txout : tx->vout) {
@@ -2082,6 +2084,22 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                         return state.Error("Invalid wt - no burn found!");
                     }
                 }
+
+                // Check validity of WT^
+                if (obj->sidechainop == 'P') {
+                    nWTPrime++;
+                    if (nWTPrime > 1)
+                        return state.Error("Invalid WT^ - multiple in block!");
+
+                    // TODO for full determinism, check previous WT^ payout
+                    // proof before allowing a new WT^
+
+                    SidechainWTPrime *wtPrime = dynamic_cast<SidechainWTPrime*>(obj);
+
+                    bmmCache.SetLatestWTPrime(wtPrime->wtPrime.GetHash());
+                }
+
+
                 obj->txid = tx->GetHash();
                 vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
             }

@@ -105,3 +105,13 @@ uint256 BMMCache::GetLastMainBlockHash() const
 {
     return hashMainBlockLastSeen;
 }
+
+void BMMCache::SetLatestWTPrime(const uint256& hashWTPrime)
+{
+    hashLatestWTPrime = hashWTPrime;
+}
+
+uint256 BMMCache::GetLatestWTPrime() const
+{
+    return hashLatestWTPrime;
+}

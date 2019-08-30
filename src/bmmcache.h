@@ -35,6 +35,10 @@ public:
 
     uint256 GetLastMainBlockHash() const;
 
+    void SetLatestWTPrime(const uint256& hashWTPrime);
+
+    uint256 GetLatestWTPrime() const;
+
 private:
     // BMM blocks (without proof) that we have created with the intention of
     // adding to the side blockchain once proof is aquired from the main chain.
@@ -51,6 +55,9 @@ private:
 
     // The last mainchain block that we've scanned
     uint256 hashMainBlockLastSeen;
+
+    // The last WT^ added to the sidechain tree
+    uint256 hashLatestWTPrime;
 };
 
 #endif // BITCOIN_BMMCACHE_H
