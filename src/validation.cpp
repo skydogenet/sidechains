@@ -2096,6 +2096,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
                     SidechainWTPrime *wtPrime = dynamic_cast<SidechainWTPrime*>(obj);
 
+                    // TODO check MainchainIsStandard
+                    // TODO check size
+
                     bmmCache.SetLatestWTPrime(wtPrime->wtPrime.GetHash());
                 }
 
