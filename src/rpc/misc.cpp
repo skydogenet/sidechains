@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <base58.h>
+#include <bmmcache.h>
 #include <chain.h>
 #include <clientversion.h>
 #include <core_io.h>
@@ -477,13 +478,14 @@ UniValue refreshbmm(const JSONRPCRequest& request)
 
     SidechainClient client;
     std::string strError = "";
-    client.RefreshBMM(strError);
+    uint256 hashCreated;
+    uint256 hashConnected;
+    client.RefreshBMM(strError, hashCreated, hashConnected);
 
     UniValue result(UniValue::VOBJ);
-    result.pushKV("hash_mainchain_block", "hash");
-    result.pushKV("bmm_txid", "txid");
-    result.pushKV("bmm_created", "hash");
-    result.pushKV("bmm_submitted", "txid");
+    result.pushKV("hash_last_main_block", bmmCache.GetLastMainBlockHash().ToString());
+    result.pushKV("bmm_block_created", hashCreated.ToString());
+    result.pushKV("bmm_block_submitted", hashConnected.ToString());
 
     return result;
 }

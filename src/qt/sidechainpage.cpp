@@ -478,7 +478,9 @@ void SidechainPage::RefreshBMM()
 {
     SidechainClient client;
     std::string strError = "";
-    if (!client.RefreshBMM(strError)) {
+    uint256 hashCreated;
+    uint256 hashConnected;
+    if (!client.RefreshBMM(strError, hashCreated, hashConnected)) {
         ui->checkBoxEnableAutomation->setChecked(false);
 
         QMessageBox messageBox;
@@ -495,6 +497,17 @@ void SidechainPage::RefreshBMM()
         messageBox.exec();
         return;
     }
+
+    // Update GUI
+
+    uint256 hashBlock = bmmCache.GetLastMainBlockHash();
+    ui->pushButtonHashBlockLastSeen->setText(QString::fromStdString(hashBlock.ToString()));
+
+    if (!hashCreated.IsNull())
+        new QListWidgetItem(QString::fromStdString(hashCreated.ToString()), ui->listWidgetBMMCreated);
+
+    if (!hashConnected.IsNull())
+        new QListWidgetItem(QString::fromStdString(hashConnected.ToString()), ui->listWidgetBMMConnected);
 }
 
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)

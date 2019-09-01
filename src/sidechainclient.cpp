@@ -364,7 +364,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     return true;
 }
 
-bool SidechainClient::RefreshBMM(std::string& strError)
+bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, uint256& hashConnected)
 {
     // Get updated list of recent main:blocks
     std::vector<uint256> vHashMainBlockNew = RequestMainBlockHashes();
@@ -387,6 +387,7 @@ bool SidechainClient::RefreshBMM(std::string& strError)
             // TODO refactor so that we don't create a BMM request here - it
             // happens later in the function as well.
             // TODO check return value
+            hashCreated = block.GetBlindHash();
             SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlockNew.back(), 0, 0);
             return true;
         } else {
@@ -414,6 +415,8 @@ bool SidechainClient::RefreshBMM(std::string& strError)
                 // Submit BMM block
                 if (!SubmitBMMBlock(block))
                     continue;
+                else
+                    hashConnected = block.GetHash();
             }
         }
     }
@@ -427,6 +430,7 @@ bool SidechainClient::RefreshBMM(std::string& strError)
         CBlock block;
         if (CreateBMMBlock(block, strError)) {
             // Create BMM critical data request
+            hashCreated = block.GetBlindHash();
             SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlockNew.back());
         } else {
             return false;
