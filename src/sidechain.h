@@ -60,6 +60,15 @@ static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
 //! The fee for sidechain deposits on this sidechain
 static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 
+static const char DB_SIDECHAIN_DEPOSIT_OP = 'D';
+static const char DB_SIDECHAIN_DEPOSIT_KEY = 'd';
+
+static const char DB_SIDECHAIN_WT_OP = 'W';
+static const char DB_SIDECHAIN_WT_KEY = 'w';
+
+static const char DB_SIDECHAIN_WTPRIME_OP = 'P';
+static const char DB_SIDECHAIN_WTPRIME_KEY = 'p';
+
 /**
  * Base object for sidechain related database entries
  */
@@ -85,7 +94,7 @@ struct SidechainWT: public SidechainObj {
     CAmount amount;
     char status;
 
-    SidechainWT(void) : SidechainObj() { sidechainop = 'W'; status = WT_UNSPENT; }
+    SidechainWT(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WT_OP; status = WT_UNSPENT; }
     virtual ~SidechainWT(void) { }
 
     ADD_SERIALIZE_METHODS
@@ -109,7 +118,7 @@ struct SidechainWTPrime: public SidechainObj {
     uint8_t nSidechain;
     CMutableTransaction wtPrime;
 
-    SidechainWTPrime(void) : SidechainObj() { sidechainop = 'P'; }
+    SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; }
     virtual ~SidechainWTPrime(void) { }
 
     ADD_SERIALIZE_METHODS
@@ -134,7 +143,7 @@ struct SidechainDeposit : public SidechainObj {
     CMutableTransaction dtx;
     CMainchainMerkleBlock proof;
 
-    SidechainDeposit(void) : SidechainObj() { sidechainop = 'D'; }
+    SidechainDeposit(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_DEPOSIT_OP; }
     virtual ~SidechainDeposit(void) { }
 
     ADD_SERIALIZE_METHODS

@@ -18,13 +18,13 @@ const uint32_t nVersion = 1;
 uint256 SidechainObj::GetHash(void) const
 {
     uint256 ret;
-    if (sidechainop == 'W')
+    if (sidechainop == DB_SIDECHAIN_WT_OP)
         ret = SerializeHash(*(SidechainWT *) this);
     else
-    if (sidechainop == 'P')
+    if (sidechainop == DB_SIDECHAIN_WTPRIME_OP)
         ret = SerializeHash(*(SidechainWTPrime *) this);
     else
-    if (sidechainop == 'D')
+    if (sidechainop == DB_SIDECHAIN_DEPOSIT_OP)
         ret = SerializeHash(*(SidechainDeposit *) this);
 
     return ret;
@@ -33,13 +33,13 @@ uint256 SidechainObj::GetHash(void) const
 CScript SidechainObj::GetScript(void) const
 {
     CDataStream ds (SER_DISK, CLIENT_VERSION);
-    if (sidechainop == 'W')
+    if (sidechainop == DB_SIDECHAIN_WT_OP)
         ((SidechainWT *) this)->Serialize(ds);
     else
-    if (sidechainop == 'P')
+    if (sidechainop == DB_SIDECHAIN_WTPRIME_OP)
         ((SidechainWTPrime *) this)->Serialize(ds);
     else
-    if (sidechainop == 'D')
+    if (sidechainop == DB_SIDECHAIN_DEPOSIT_OP)
         ((SidechainDeposit *) this)->Serialize(ds);
 
     CScript script;
@@ -60,19 +60,19 @@ SidechainObj *SidechainObjCtr(const CScript &script)
     const char *vch0 = (const char *) &vch.begin()[0];
     CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
-    if (*vch0 == 'W') {
+    if (*vch0 == DB_SIDECHAIN_WT_OP) {
         SidechainWT *obj = new SidechainWT;
         obj->Unserialize(ds);
         return obj;
     }
     else
-    if (*vch0 == 'P') {
+    if (*vch0 == DB_SIDECHAIN_WTPRIME_OP) {
         SidechainWTPrime *obj = new SidechainWTPrime;
         obj->Unserialize(ds);
         return obj;
     }
     else
-    if (*vch0 == 'D') {
+    if (*vch0 == DB_SIDECHAIN_DEPOSIT_OP) {
         SidechainDeposit *obj = new SidechainDeposit;
         obj->Unserialize(ds);
         return obj;

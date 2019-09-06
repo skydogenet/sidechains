@@ -603,7 +603,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         if (!obj)
             continue;
 
-        if (obj->sidechainop == 'W') {
+        if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
             SidechainWT *wt = dynamic_cast<SidechainWT*>(obj);
             // Verify that burn output actually exists
             bool fBurnFound = false;
@@ -2066,7 +2066,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     continue;
 
                 // Check validity of wt(s). Block invalid if any wt is invalid.
-                if (obj->sidechainop == 'W') {
+                if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
                     SidechainWT *wt = dynamic_cast<SidechainWT*>(obj);
                     // Verify that burn output actually exists
                     bool fBurnFound = false;
@@ -2086,7 +2086,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 }
 
                 // Check validity of WT^
-                if (obj->sidechainop == 'P') {
+                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
                     nWTPrime++;
                     if (nWTPrime > 1)
                         return state.Error("Invalid WT^ - multiple in block!");

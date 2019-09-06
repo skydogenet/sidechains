@@ -31,8 +31,6 @@ static const char DB_FLAG = 'F';
 static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
 
-static const char DB_SIDECHAIN_DEPOSIT = 'd';
-
 namespace {
 
 struct CoinEntry {
@@ -352,25 +350,25 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
         const SidechainObj *obj = it->second;
         std::pair<char, uint256> key = std::make_pair(obj->sidechainop, objid);
 
-        if (obj->sidechainop == 'W') {
+        if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
             const SidechainWT *ptr = (const SidechainWT *) obj;
             std::pair<SidechainWT, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
-            batch.Write(std::make_pair(std::make_pair(std::make_pair('w', ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_WT_KEY, ptr->nSidechain), ptr->nHeight), objid), value);
         }
         else
-        if (obj->sidechainop == 'P') {
+        if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
             const SidechainWTPrime *ptr = (const SidechainWTPrime *) obj;
             std::pair<SidechainWTPrime, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
-            batch.Write(std::make_pair(std::make_pair(std::make_pair('j', ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_WTPRIME_KEY, ptr->nSidechain), ptr->nHeight), objid), value);
         }
         else
-        if (obj->sidechainop == 'D') {
+        if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
             const SidechainDeposit *ptr = (const SidechainDeposit *) obj;
             std::pair<SidechainDeposit, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
-            batch.Write(std::make_pair(std::make_pair(std::make_pair('d', ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_DEPOSIT_KEY, ptr->nSidechain), ptr->nHeight), objid), value);
         }
     }
 
@@ -393,7 +391,7 @@ bool CSidechainTreeDB::ReadFlag(const std::string& name, bool &fValue)
 
 bool CSidechainTreeDB::GetWTPrime(const uint256& objid, SidechainWTPrime& wtPrime)
 {
-    if (ReadSidechain(std::make_pair('W', objid), wtPrime))
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WTPRIME_OP, objid), wtPrime))
         return true;
 
     return false;
@@ -401,7 +399,7 @@ bool CSidechainTreeDB::GetWTPrime(const uint256& objid, SidechainWTPrime& wtPrim
 
 bool CSidechainTreeDB::GetDeposit(const uint256& objid, SidechainDeposit& deposit)
 {
-    if (ReadSidechain(std::make_pair('D', objid), deposit))
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, objid), deposit))
         return true;
 
     return false;
@@ -409,7 +407,7 @@ bool CSidechainTreeDB::GetDeposit(const uint256& objid, SidechainDeposit& deposi
 
 std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
 {
-    const char sidechainop = 'W';
+    const char sidechainop = DB_SIDECHAIN_WT_OP;
     std::ostringstream ss;
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
@@ -435,7 +433,7 @@ std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
 
 std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSidechain)
 {
-    const char sidechainop = 'P';
+    const char sidechainop = DB_SIDECHAIN_WTPRIME_OP;
     std::ostringstream ss;
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
@@ -461,7 +459,7 @@ std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSide
 std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSidechain)
 {
     // TODO filter by height
-    const char sidechainop = 'D';
+    const char sidechainop = DB_SIDECHAIN_DEPOSIT_OP;
     std::ostringstream ss;
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
@@ -515,9 +513,9 @@ bool CSidechainTreeDB::GetCTIPAmount(const uint256& hash, const uint32_t n, CAmo
 
 bool CSidechainTreeDB::HaveDeposits()
 {
-    const char sidechainop = 'D';
+    const char sidechainop = DB_SIDECHAIN_DEPOSIT_OP;
     std::ostringstream ss;
-    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, DB_SIDECHAIN_DEPOSIT), uint256()));
+    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, DB_SIDECHAIN_DEPOSIT_KEY), uint256()));
 
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
     pcursor->Seek(ss.str());
