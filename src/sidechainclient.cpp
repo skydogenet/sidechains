@@ -189,7 +189,8 @@ bool SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint25
     // Try to request BMM proof from mainchain
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
-        LogPrintf("ERROR Sidechain client failed to request BMM proof\n");
+        // Can be enabled for debug -- too noisy
+        // LogPrintf("ERROR Sidechain client failed to request BMM proof\n");
         return false;
     }
 
@@ -314,7 +315,8 @@ std::vector<uint256> SidechainClient::RequestMainBlockHashes()
             }
         }
     }
-    LogPrintf("Sidechain client received %d main:block hashes.\n", vHash.size());
+    // Can be enabled for debug -- too noisy
+    //LogPrintf("Sidechain client received %d main:block hashes.\n", vHash.size());
 
     return vHash;
 }
