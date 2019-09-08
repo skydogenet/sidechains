@@ -646,6 +646,10 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
 
     // TODO sort vWT by fees
 
+    // WT^ database object for psidechaintree (sidechain only)
+    SidechainWTPrime wtPrime;
+    wtPrime.nSidechain = SIDECHAIN_TEST;
+
     CAmount joinAmount = 0;  // Total output
     CMutableTransaction wjtx; // WT^
     wjtx.nVersion = 2;
@@ -659,9 +663,13 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
         CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
         wjtx.vout.push_back(CTxOut(amountWTBurn, GetScriptForDestination(dest)));
 
+        // Add WT objid to WT^ obj
+        wtPrime.vWT.push_back(wt.GetHash());
+
         // Make sure we have room for more outputs
         if (GetTransactionWeight(wjtx) > MAX_WTPRIME_WEIGHT) {
             // If we went over size, undo this output and stop
+            wtPrime.vWT.pop_back();
             wjtx.vout.pop_back();
             joinAmount -= amountWTBurn;
             break;
@@ -699,16 +707,14 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     //    wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
 
     // Check that the WT^ is valid by mainchain policy
-    CFeeRate dustFee = CFeeRate(DUST_RELAY_TX_FEE);
+    CFeeRate dust = CFeeRate(DUST_RELAY_TX_FEE);
     std::string strReason = "";
-    if (!CoreIsStandardTx(wjtx, true, dustFee, strReason)) {
+    if (!CoreIsStandardTx(wjtx, true, dust, strReason)) {
         LogPrintf("%s: ERROR: WT^ failed core standardness tests! Reason: %s\n", __func__, strReason);
         return CTransaction();
     }
 
-    // Create WT^ object for psidechaintree (sidechain only)
-    SidechainWTPrime wtPrime;
-    wtPrime.nSidechain = SIDECHAIN_TEST;
+    // Add WT^ transaction to the WT^ database object
     wtPrime.wtPrime = wjtx;
 
     // Output data

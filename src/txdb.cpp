@@ -389,6 +389,14 @@ bool CSidechainTreeDB::ReadFlag(const std::string& name, bool &fValue)
     return true;
 }
 
+bool CSidechainTreeDB::GetWT(const uint256& objid, SidechainWT& wt)
+{
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WT_OP, objid), wt))
+        return true;
+
+    return false;
+}
+
 bool CSidechainTreeDB::GetWTPrime(const uint256& objid, SidechainWTPrime& wtPrime)
 {
     if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WTPRIME_OP, objid), wtPrime))

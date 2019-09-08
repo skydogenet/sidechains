@@ -42,9 +42,9 @@ enum Sidechains {
 };
 
 //! WT status / zone (unspent, included in a WT^, paid out)
-static const char WT_UNSPENT = 'a';
-static const char WT_IN_WTPRIME = 'b';
-static const char WT_SPENT = 'c';
+static const char WT_UNSPENT = 'u';
+static const char WT_IN_WTPRIME = 'p';
+static const char WT_SPENT = 's';
 
 //! KeyID for testing
 static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
@@ -117,6 +117,7 @@ struct SidechainWT: public SidechainObj {
 struct SidechainWTPrime: public SidechainObj {
     uint8_t nSidechain;
     CMutableTransaction wtPrime;
+    std::vector<uint256> vWT; // The id in ldb of WT(s) that this WT^ is using
 
     SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; }
     virtual ~SidechainWTPrime(void) { }
@@ -128,6 +129,7 @@ struct SidechainWTPrime: public SidechainObj {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
         READWRITE(wtPrime);
+        READWRITE(vWT);
     }
 
     std::string ToString(void) const;

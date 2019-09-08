@@ -6,6 +6,7 @@
 #include <validation.h>
 
 #include <arith_uint256.h>
+#include <base58.h>
 #include <bmmcache.h>
 #include <chain.h>
 #include <chainparams.h>
@@ -21,6 +22,7 @@
 #include <policy/fees.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
+#include <policy/wtprime.h>
 #include <pow.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
@@ -2094,14 +2096,53 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     // TODO for full determinism, check previous WT^ payout
                     // proof before allowing a new WT^
 
-                    SidechainWTPrime *wtPrime = dynamic_cast<SidechainWTPrime*>(obj);
+                    const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
 
-                    // TODO check MainchainIsStandard
-                    // TODO check size
+                    // Check that every WT this WT^ has listed is in the db
+                    // and verify the status is not spent.
+                    std::vector<SidechainWT> vWT;
+                    for (const uint256& wtid : wtPrime->vWT) {
+                        SidechainWT wt;
+
+                        if (!psidechaintree->GetWT(wtid, wt))
+                            return state.Error("Invalid wt - does not exist!");
+                        if (wt.status != WT_UNSPENT)
+                            return state.Error("Invalid wt - spent!");
+
+                        vWT.push_back(wt);
+                    }
+
+                    // Check that the number of outputs equals the number of
+                    // WT(s) listed in the WT^
+                    if (wtPrime->wtPrime.vout.size() != vWT.size())
+                        return state.Error("Invalid WT^ - too many outputs!");
+
+                    // Check that every WT listed in the WT^ is included
+                    for (const SidechainWT& wt : vWT) {
+                        bool fFound = false;
+                        for (const CTxOut& out : wtPrime->wtPrime.vout) {
+                            if (out.nValue == wt.amount &&
+                                    GetScriptForDestination(DecodeDestination(wt.strDestination)) == out.scriptPubKey) {
+                                fFound = true;
+                                break;
+                            }
+                        }
+                        if (!fFound)
+                            return state.Error("Invalid WT^ - missing output!");
+                    }
+
+                    // Check if standard by mainchain bitcoin core standards
+                    CFeeRate dust = CFeeRate(DUST_RELAY_TX_FEE);
+                    std::string strReason = "";
+                    if (!CoreIsStandardTx(wtPrime->wtPrime, true, dust, strReason))
+                        return state.Error("Invalid WT^ - failed CoreIsStandardTx!");
+
+                    // Check WT^ weight
+                    if (GetTransactionWeight(wtPrime->wtPrime) > MAX_WTPRIME_WEIGHT)
+                        return state.Error("Invalid WT^ - too large");
 
                     bmmCache.SetLatestWTPrime(wtPrime->wtPrime.GetHash());
                 }
-
 
                 obj->txid = tx->GetHash();
                 vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
