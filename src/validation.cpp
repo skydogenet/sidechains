@@ -2122,7 +2122,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                         bool fFound = false;
                         for (const CTxOut& out : wtPrime->wtPrime.vout) {
                             if (out.nValue == wt.amount &&
-                                    GetScriptForDestination(DecodeDestination(wt.strDestination)) == out.scriptPubKey) {
+                                    GetScriptForDestination(DecodeDestination(wt.strDestination, true)) == out.scriptPubKey) {
                                 fFound = true;
                                 break;
                             }
