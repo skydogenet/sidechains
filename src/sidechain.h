@@ -109,6 +109,13 @@ struct SidechainWT: public SidechainObj {
     }
 
     std::string ToString(void) const;
+
+    uint256 GetNonStatusHash() const
+    {
+        SidechainWT wt(*this);
+        wt.status = WT_UNSPENT;
+        return wt.GetHash();
+    }
 };
 
 /**
@@ -161,6 +168,7 @@ struct SidechainDeposit : public SidechainObj {
     }
 
     std::string ToString(void) const;
+
     uint256 GetNonAmountHash() const
     {
         SidechainDeposit deposit(*this);

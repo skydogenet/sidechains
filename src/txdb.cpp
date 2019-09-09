@@ -375,6 +375,22 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
     return WriteBatch(batch);
 }
 
+bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
+{
+    CDBBatch batch(*this);
+
+    for (const SidechainWT& wt : vWT)
+    {
+        std::pair<char, uint256> key = std::make_pair(wt.sidechainop, wt.GetNonStatusHash());
+
+        std::pair<SidechainWT, uint256> value = std::make_pair(wt, wt.txid);
+        batch.Write(key, value);
+        batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_WT_KEY, wt.nSidechain), wt.nHeight), wt.GetNonStatusHash()), value);
+    }
+
+    return WriteBatch(batch);
+}
+
 bool CSidechainTreeDB::WriteFlag(const std::string& name, bool fValue)
 {
     return Write(std::make_pair(DB_FLAG, name), fValue ? '1' : '0');

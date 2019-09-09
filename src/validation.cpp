@@ -2033,23 +2033,20 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         return false;
 
     if (fSidechainIndex) {
-
         // TODO Cleanup
         // Sending the lastest WT^ shouldn't take place here, and validation
         // should not have to use or depend on the sidechain client.
         // TODO we can also check with the mainchain to find out if it has
         // received this WT^ and then stop re-broadcasting it.
-        {
             // Send latest WT^ to the mainchain each block
-            std::vector<SidechainWTPrime> vWTPrime = psidechaintree->GetWTPrimes(SIDECHAIN_TEST);
-            if (vWTPrime.size()) {
-                SidechainClient client;
-                std::string strHex = EncodeHexTx(vWTPrime.back().wtPrime);
-                uint256 hashWTPrimeToBroadcast = vWTPrime.back().wtPrime.GetHash();
-                if (!bmmCache.HaveBroadcastedWTPrime(hashWTPrimeToBroadcast)) {
-                    if (client.BroadcastWTPrime(EncodeHexTx(vWTPrime.back().wtPrime)))
-                        bmmCache.StoreBroadcastedWTPrime(vWTPrime.back().wtPrime.GetHash());
-                }
+        std::vector<SidechainWTPrime> vWTPrime = psidechaintree->GetWTPrimes(SIDECHAIN_TEST);
+        if (vWTPrime.size()) {
+            SidechainClient client;
+            std::string strHex = EncodeHexTx(vWTPrime.back().wtPrime);
+            uint256 hashWTPrimeToBroadcast = vWTPrime.back().wtPrime.GetHash();
+            if (!bmmCache.HaveBroadcastedWTPrime(hashWTPrimeToBroadcast)) {
+                if (client.BroadcastWTPrime(EncodeHexTx(vWTPrime.back().wtPrime)))
+                    bmmCache.StoreBroadcastedWTPrime(vWTPrime.back().wtPrime.GetHash());
             }
         }
 
@@ -2069,7 +2066,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
                 // Check validity of wt(s). Block invalid if any wt is invalid.
                 if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
-                    SidechainWT *wt = dynamic_cast<SidechainWT*>(obj);
+                    const SidechainWT *wt = (const SidechainWT *) obj;
                     // Verify that burn output actually exists
                     bool fBurnFound = false;
                     // TODO refactor: looping through vout again during a loop
@@ -2142,12 +2139,30 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                         return state.Error("Invalid WT^ - too large");
 
                     bmmCache.SetLatestWTPrime(wtPrime->wtPrime.GetHash());
+
+                    // Update the status of wt(s) included in the WT^
+                    for (size_t i = 0; i < vWT.size(); i++)
+                        vWT[i].status = WT_IN_WTPRIME;
+
+                    // Write updated status to ldb
+                    psidechaintree->WriteWTUpdate(vWT);
                 }
 
+                // If the object is a wt we do not want the ID to change when
+                // the wt status is changed so that we can update the status
+                // using the same ID in ldb.
+                uint256 id;
+                if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
+                    const SidechainWT *wt = (const SidechainWT *) obj;
+                    id = wt->GetNonStatusHash();
+                } else {
+                    id = obj->GetHash();
+                }
                 obj->txid = tx->GetHash();
                 vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
             }
         }
+
         // Write sidechain objects to db
         if (vSidechainObjects.size()) {
             bool ret = psidechaintree->WriteSidechainIndex(vSidechainObjects);

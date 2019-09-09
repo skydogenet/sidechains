@@ -141,6 +141,7 @@ public:
     bool WriteReindexing(bool fReindex);
     bool ReadReindexing(bool &fReindex);
     bool WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list);
+    bool WriteWTUpdate(const std::vector<SidechainWT>& vWT);
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
 
