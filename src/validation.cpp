@@ -1614,13 +1614,54 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
 
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
+        //
+        // Also check for WT^(s) and restore the status of wt(s) it used
         for (size_t o = 0; o < tx.vout.size(); o++) {
-            if (!tx.vout[o].scriptPubKey.IsUnspendable()) {
+            const CScript& scriptPubKey = tx.vout[o].scriptPubKey;
+            const size_t script_sz = scriptPubKey.size();
+            if (!scriptPubKey.IsUnspendable()) {
                 COutPoint out(hash, o);
                 Coin coin;
                 bool is_spent = view.SpendCoin(out, &coin);
                 if (!is_spent || tx.vout[o] != coin.out || pindex->nHeight != coin.nHeight || is_coinbase != coin.fCoinBase) {
                     fClean = false; // transaction output mismatch
+                }
+            }
+
+            // If this output is a WT^ database entry, reset the status of wt(s)
+            // included in the WT^
+            if (script_sz > 2 && scriptPubKey[script_sz - 1] == OP_SIDECHAIN) {
+                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+                if (!obj) {
+                    error("DisconnectBlock(): failure reading sidechain obj");
+                    return DISCONNECT_FAILED;
+                }
+
+                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
+                    const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
+
+                    std::vector<SidechainWT> vWT;
+                    for (const uint256& wtid : wtPrime->vWT) {
+                        SidechainWT wt;
+
+                        if (!psidechaintree->GetWT(wtid, wt)) {
+                            error("DisconnectBlock(): wt of WT^ not in ldb");
+                            return DISCONNECT_FAILED;
+                        }
+                        if (wt.status == WT_UNSPENT) {
+                            error("DisconnectBlock(): wt of WT^ has invalid unspent status");
+                            return DISCONNECT_FAILED;
+                        }
+
+                        vWT.push_back(wt);
+                    }
+
+                    // Update status of wt(s)
+                    for (size_t w = 0; w < vWT.size(); w++)
+                        vWT[w].status = WT_UNSPENT;
+
+                    // Write to ldb
+                    psidechaintree->WriteWTUpdate(vWT);
                 }
             }
         }
