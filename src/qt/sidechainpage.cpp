@@ -476,6 +476,24 @@ bool SidechainPage::SubmitBMMBlock(const CBlock& block)
 
 void SidechainPage::RefreshBMM()
 {
+    // Make sure the user has at least --verifybmmcheckblock set
+    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
+    if (!fVerifyBMM) {
+        ui->checkBoxEnableAutomation->setChecked(false);
+
+        QMessageBox messageBox;
+        messageBox.setDefaultButton(QMessageBox::Ok);
+
+        messageBox.setWindowTitle("Automated BMM failed - invalid settings detected!");
+        std::string str;
+        str = "No verification of BMM commitments configured!\n\n";
+        str += "Please restart with at least --verifybmmcheckblock to verify ";
+        str += "BMM blocks if you would like to BMM!";
+        messageBox.setText(QString::fromStdString(str));
+        messageBox.exec();
+        return;
+    }
+
     SidechainClient client;
     std::string strError = "";
     uint256 hashCreated;
@@ -492,6 +510,7 @@ void SidechainPage::RefreshBMM()
         str += "This may be due to configuration issues.";
         str += " Please check that you have set up configuration files";
         str += " and re-enable automated BMM.\n\n";
+        str += "Also make sure that the mainchain node is running!\n\n";
         str += "Error message:\n" + strError + "\n";
         messageBox.setText(QString::fromStdString(str));
         messageBox.exec();

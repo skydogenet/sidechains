@@ -472,15 +472,16 @@ UniValue refreshbmm(const JSONRPCRequest& request)
             "txid  (boolean) If the signature is verified or not.\n"
         );
 
-    // TODO
-    // Check return value
-    // output strFail
+    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
+    if (!fVerifyBMM)
+        throw JSONRPCError(RPC_MISC_ERROR, "Please enable BMM verification (at least --verifybmmcheckblock)!");
 
     SidechainClient client;
     std::string strError = "";
     uint256 hashCreated;
     uint256 hashConnected;
-    client.RefreshBMM(strError, hashCreated, hashConnected);
+    if (!client.RefreshBMM(strError, hashCreated, hashConnected))
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("hash_last_main_block", bmmCache.GetLastMainBlockHash().ToString());

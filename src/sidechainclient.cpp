@@ -393,6 +393,7 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
             SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlockNew.back(), 0, 0);
             return true;
         } else {
+            strError = "Failed to create our first BMM request!";
             return false;
         }
     }
@@ -435,6 +436,7 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
             hashCreated = block.GetBlindHash();
             SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlockNew.back());
         } else {
+            strError = "Failed to create a new BMM request!";
             return false;
         }
     }
