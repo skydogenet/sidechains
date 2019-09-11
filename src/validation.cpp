@@ -4969,7 +4969,7 @@ bool DumpMempool(void)
 
 void LoadBMMCache()
 {
-    fs::path path = GetDataDir() / "bmmwtprime.dat";
+    fs::path path = GetDataDir() / "bmm.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return;
@@ -4996,25 +4996,24 @@ void LoadBMMCache()
         }
     }
     catch (const std::exception& e) {
-        // TODO log this
-        // std::cout << "Exception: " << e.what() << std::endl;
+        LogPrintf("%s: Error reading BMM cache: %s", __func__, e.what());
         return;
     }
 
-    int i = 0;
     for (const uint256& u : vHash) {
         bmmCache.StoreBroadcastedWTPrime(u);
-        i++;
     }
 }
 
 void DumpBMMCache()
 {
     std::vector<uint256> vHash = bmmCache.GetBMMWTPrimeCache();
+    if (vHash.empty())
+        return;
 
     int count = vHash.size();
 
-    fs::path path = GetDataDir() / "bmmwtprime.dat";
+    fs::path path = GetDataDir() / "bmm.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5025,15 +5024,12 @@ void DumpBMMCache()
         fileout << CLIENT_VERSION; // version that wrote the file
         fileout << count; // Number of WT^ hashes in file
 
-        int i = 0;
         for (const uint256& u : vHash) {
             fileout << u;
-            i++;
         }
     }
     catch (const std::exception& e) {
-        // TODO log this
-        // std::cout << "Exception: " << e.what() << std::endl;
+        LogPrintf("%s: Error writing BMM cache: %s", __func__, e.what());
         return;
     }
 }
