@@ -175,10 +175,12 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
 
     // Create WT^
-    CTransaction wtPrimeTx = CreateWTPrimeTx(chainActive.Height() + 1);
-    for (const CTxOut& out : wtPrimeTx.vout)
-        coinbaseTx.vout.push_back(out);
-
+    CTransactionRef wtPrimeTx;
+    CTransactionRef wtPrimeDataTx;
+    if (CreateWTPrimeTx(chainActive.Height() + 1, wtPrimeTx, wtPrimeDataTx)) {
+        for (const CTxOut& out : wtPrimeDataTx->vout)
+            coinbaseTx.vout.push_back(out);
+    }
     // Create deposit transactions
     CTransaction depositTx = CreateDepositTx();
     for (const CTxOut& out : depositTx.vout)

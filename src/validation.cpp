@@ -2180,11 +2180,14 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                         return state.Error("Invalid WT^ - too large!");
 
                     // Verify that we can replicate this WT^
-                    const CMutableTransaction wtPrimeTx = CreateWTPrimeTx(chainActive.Height() + 1);
-                    if (CTransaction(wtPrimeTx) != CTransaction(wtPrime->wtPrime)) {
-                        return state.Error("Invalid WT^ - failed to replicate!");
-                    }
+                    CTransactionRef wtPrimeTx;
+                    CTransactionRef wtPrimeDataTx;
+                    if (!CreateWTPrimeTx(chainActive.Height() + 1, wtPrimeTx, wtPrimeDataTx))
+                        return state.Error("Invalid WT^ - failed to create replicant WT^!");
 
+                    if (*wtPrimeTx != CTransaction(wtPrime->wtPrime)) {
+                        return state.Error("Invalid WT^ - replicated WT^ does not match!");
+                    }
                     bmmCache.SetLatestWTPrime(wtPrime->wtPrime.GetHash());
 
                     // Update the status of wt(s) included in the WT^
@@ -5056,13 +5059,13 @@ int GetBlocksVerificationPeriod(int nMainchainHeight)
 }
 
 /** Create joined WT^ to be sent to the mainchain */
-CTransaction CreateWTPrimeTx(uint32_t nHeight)
+bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx)
 {
     // Get WT(s) from psidechaintree
     const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
     if (vWT.empty()) {
         LogPrintf("%s: No wt(s) to create WT^\n", __func__);
-        return CTransaction();
+        return false;
     }
 
     // Get the mainchain's chain height
@@ -5070,7 +5073,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     int nMainchainHeight = 0;
     if (!client.GetBlockCount(nMainchainHeight)) {
         LogPrintf("%s: Failed to request mainchain block count!");
-        return CTransaction();
+        return false;
     }
 
     // Check if remaining mainchain WT^ verification period blocks are enough
@@ -5078,14 +5081,14 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     int nBlocksRemaining = GetBlocksVerificationPeriod(nMainchainHeight);
     if (nBlocksRemaining < MAINCHAIN_WTPRIME_MIN_WORKSCORE) {
         LogPrintf("%s: Not enough blocks left in mainchain verification period to achieve minimim workscore\n", __func__);
-        return CTransaction();
+        return false;
     }
 
     // Check for existing WT^ in mainchain SCDB for this sidechain
     std::vector<uint256> vHashWTPrime;
     if (client.ListWTPrimes(vHashWTPrime)) {
         LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
-        return CTransaction();
+        return false;
     }
 
     // Check the status / zone of wt(s) before including them in a WT^
@@ -5130,7 +5133,7 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     // Did anything make it into the WT^?
     if (!wjtx.vout.size()) {
         LogPrintf("%s: ERROR: WT^ empty!\n", __func__);
-        return CTransaction();
+        return false;
     }
 
     // TODO deterministic WT^ creation will need to handle fees another way
@@ -5162,18 +5165,24 @@ CTransaction CreateWTPrimeTx(uint32_t nHeight)
     std::string strReason = "";
     if (!CoreIsStandardTx(wjtx, true, dust, strReason)) {
         LogPrintf("%s: ERROR: WT^ failed core standardness tests! Reason: %s\n", __func__, strReason);
-        return CTransaction();
+        return false;
     }
 
     // Add WT^ transaction to the WT^ database object
     wtPrime.wtPrime = wjtx;
 
+    // Return the WT^ transaction itself by reference
+    wtPrimeTx = MakeTransactionRef(wjtx);
+
     // Output data
     CMutableTransaction mtx;
     mtx.vout.push_back(CTxOut(0, wtPrime.GetScript()));
 
+    // Return the WT^ data transaction by reference
+    wtPrimeDataTx = MakeTransactionRef(mtx);
+
     LogPrintf("%s: WT^ created! Hash: %s\n", __func__, wjtx.GetHash().ToString());
-    return mtx;
+    return true;
 }
 
 //! Guess how far we are in the verification process at the given block index
