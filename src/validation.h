@@ -509,4 +509,7 @@ void DumpBMMCache();
 /** Load the BMM cache from disk. */
 void LoadBMMCache();
 
+/** Create joined WT^ to be sent to the mainchain */
+CTransaction CreateWTPrimeTx(uint32_t nHeight);
+
 #endif // BITCOIN_VALIDATION_H
