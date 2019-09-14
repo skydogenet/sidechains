@@ -2177,7 +2177,13 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
                     // Check WT^ weight
                     if (GetTransactionWeight(wtPrime->wtPrime) > MAX_WTPRIME_WEIGHT)
-                        return state.Error("Invalid WT^ - too large");
+                        return state.Error("Invalid WT^ - too large!");
+
+                    // Verify that we can replicate this WT^
+                    const CMutableTransaction wtPrimeTx = CreateWTPrimeTx(chainActive.Height() + 1);
+                    if (CTransaction(wtPrimeTx) != CTransaction(wtPrime->wtPrime)) {
+                        return state.Error("Invalid WT^ - failed to replicate!");
+                    }
 
                     bmmCache.SetLatestWTPrime(wtPrime->wtPrime.GetHash());
 
