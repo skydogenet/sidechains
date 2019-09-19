@@ -524,7 +524,7 @@ bool CSidechainTreeDB::GetCTIPAmount(const uint256& hash, const uint32_t n, CAmo
     bool fFound = false;
     for (const SidechainDeposit& d : vDeposit) {
         if (d.dtx.GetHash() == hash) {
-            if (d.dtx.vout.size() < n)
+            if (!(d.dtx.vout.size() > n))
                 return false;
 
             amtRet = d.dtx.vout[n].nValue;
