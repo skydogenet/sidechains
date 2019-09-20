@@ -148,8 +148,6 @@ public:
     bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
     bool GetWTPrime(const uint256 & /* WT^ ID */, SidechainWTPrime &wtPrime);
     bool GetDeposit(const uint256 & /* Deposit ID */, SidechainDeposit &deposit);
-    bool GetCTIPAmount(const uint256& hash, const uint32_t n, CAmount& amtRet, const std::vector<SidechainDeposit>& vDepositIn = {});
-
     bool HaveDeposits();
     bool HaveDepositNonAmount(const uint256& hash);
 

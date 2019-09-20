@@ -182,9 +182,11 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             coinbaseTx.vout.push_back(out);
     }
     // Create deposit transactions
-    CTransaction depositTx = CreateDepositTx();
-    for (const CTxOut& out : depositTx.vout)
-        coinbaseTx.vout.push_back(out);
+    CMutableTransaction depositTx;
+    if (CreateDepositTx(depositTx)) {
+        for (const CTxOut& out : depositTx.vout)
+            coinbaseTx.vout.push_back(out);
+    }
 
     // Signal the most recent WT^ created by this sidechain
     uint256 hashWTPrime = bmmCache.GetLatestWTPrime();
@@ -487,85 +489,236 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 }
 
-/** Create a payout transaction for any new deposits */
-CTransaction CreateDepositTx()
+/** Custom sort helper for CreateDepositTx */
+bool CompareCTIP(const SidechainDeposit& lhs, const SidechainDeposit& rhs)
 {
-    SidechainClient client;
-
-    // Find new deposits
-    std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES);
-    std::vector<SidechainDeposit> vDepositUniq;
-    for (const SidechainDeposit& d: vDeposit) {
-        if (!psidechaintree->HaveDepositNonAmount(d.GetNonAmountHash())) {
-            vDepositUniq.push_back(d);
+    for (const CTxIn& in : rhs.dtx.vin) {
+        if (in.prevout.hash == lhs.dtx.GetHash()
+                && lhs.dtx.vout.size() > in.prevout.n
+                && lhs.n == in.prevout.n) {
+            return true;
         }
     }
-    if (!vDepositUniq.size())
-        return CTransaction();
+    return false;
+}
 
-    bool fInitialDeposit = !psidechaintree->HaveDeposits();
+/** Create a payout transaction for any new deposits */
+bool CreateDepositTx(CMutableTransaction& depositTx)
+{
+    //
+    // Create the deposit payout transaction that takes deposit(s) from the
+    // mainchain and sends them to the sidechain address specified.
+    //
+    // * Get deposit list from the mainchain
+    //
+    // * Make a list of the deposits that are new (not in db already)
+    //
+    // * Sort the list of deposits by UTXO in - out order, so that they form a
+    // chain from last deposit back by input all the way to the first deposit.
+    // Each deposit in the list should spend the previous deposit.
+    //
+    // - First deposit in the list should have spent the sidechain CTIP that
+    // the sidechain already knows about (in db) if one exists.
+    //
+    // - Set the payout amount by subtracting the previous CTIP from the next.
+    //
+    // * Create and return the payout txn
+    //
 
-    // If there isn't a deposit yet, make sure there is only 1 initial deposit
-    // which does not spend a CTIP. This check only needs to happen one time.
-    if (fInitialDeposit) {
-        int nMissingCTIP = 0;
+    // Get list of deposits from the mainchain
+    SidechainClient client;
+    std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES);
+    if (!vDeposit.size())
+        return false;
 
-        for (const SidechainDeposit& deposit : vDepositUniq) {
+    // Find new deposits
+    std::vector<SidechainDeposit> vDepositNew;
+    for (const SidechainDeposit& d: vDeposit) {
+        // We look up the deposit using the hash of the deposit without the
+        // payout amount set because we do not know the payout amount at this
+        // point. Deposit objects include both the mainchain txn and txout proof
+        // meaning that there should not be any duplicates as it would be an
+        // invalid transaction.
+        if (!psidechaintree->HaveDepositNonAmount(d.GetNonAmountHash())) {
+            vDepositNew.push_back(d);
+        }
+    }
+    if (!vDepositNew.size())
+        return false;
+
+    // Sidechain client already checked the deposit output index 'n' but we will
+    // check it again here.
+    for (const SidechainDeposit& d : vDepositNew) {
+        if (!(d.dtx.vout.size() > d.n)) {
+            LogPrintf("%s: Error: new deposit has invalid n:\n%s\n", __func__, d.ToString());
+            return false;
+        }
+    }
+
+    // Make a copy of the new deposit list which we will sort using the CTIP
+    // comparison helper function.
+    std::vector<SidechainDeposit> vDepositSorted = vDepositNew;
+
+    // Sort the deposits into CTIP UTXO spend order
+    std::sort(vDepositSorted.begin(), vDepositSorted.end(), CompareCTIP);
+
+    // These log outputs can be re-enabled for debugging the sort
+    //LogPrintf("%s: List of new deposits (pre sort)\n", __func__);
+    //int nDep = 0;
+    //for (const SidechainDeposit& d : vDepositNew) {
+    //    LogPrintf("%u: %s\n", nDep, d.ToString());
+    //    nDep++;
+    //}
+    //LogPrintf("%s: List of new deposits (sorted)\n", __func__);
+    //nDep = 0;
+    //for (const SidechainDeposit& d : vDepositSorted) {
+    //    LogPrintf("%u: %s\n", nDep, d.ToString());
+    //    nDep++;
+    //}
+
+    // TODO needed / helpful?
+    // Check that all of the deposits were sorted
+    if (vDepositSorted.size() != vDepositNew.size()) {
+        // TODO return false?
+        LogPrintf("%s: Error: Failed to sort all deposit(s)!\n");
+    }
+
+    // Now loop through the sorted list and verify proper CTIP UTXO ordering.
+    // There should be only one deposit without a CTIP from the list, this
+    // deposit is spending a previous CTIP or is the very first sidechain
+    // deposit. There can only be one such transaction in the list.
+    //
+    // Loop backwards keeping track of the previous value and verify that the
+    // r-next item in the vector is the CTIP input for the previous value.
+    //
+    // We only have to do this if we have more than 1 new deposit.
+    if (vDepositSorted.size() > 1) {
+        std::vector<SidechainDeposit>::const_reverse_iterator rit;
+        rit = vDepositSorted.rbegin();
+        SidechainDeposit prev;
+        for (; rit != vDepositSorted.rend(); rit++) {
+            // For the last element in the list we track the value and move on
+            if (rit == vDepositSorted.rbegin())  {
+                prev = *rit;
+                continue;
+            }
+
+            // Check if the r-next item is the CTIP for the previous deposit
             bool fFound = false;
-            CAmount amtRet;
-            for (const CTxIn& in : deposit.dtx.vin) {
-                if (psidechaintree->GetCTIPAmount(in.prevout.hash, in.prevout.n, amtRet, vDepositUniq)) {
+            for (const CTxIn& in : prev.dtx.vin) {
+                if (in.prevout.hash == rit->dtx.GetHash()
+                    && rit->dtx.vout.size() > in.prevout.n
+                    && rit->n == in.prevout.n) {
                     fFound = true;
                     break;
                 }
             }
-            if (!fFound)
-                nMissingCTIP++;
+            if (!fFound) {
+                LogPrintf("%s: Error: Deposit in sorted list (not first) missing CTIP! Deposit: \n%s\n", __func__, rit->ToString());
+                return false;
+            }
+            // Update the previous object to this index before moving to r-next
+            prev = *rit;
         }
-
-        if (nMissingCTIP != 1)
-            return CTransaction(); // TODO log
     }
 
-    // Subtract CTIP input from user payout(s) and reject deposits (besides the
-    // initial deposit) for which we cannot look up the CTIP.
-    for (size_t i = 0; i < vDepositUniq.size(); i++) {
+    // Get the deposits in the database
+    std::vector<SidechainDeposit> vDepositDB = psidechaintree->GetDeposits(SIDECHAIN_TEST);
+
+    // Look up the CTIP for the first in the sorted list if we need to
+    if (vDepositDB.size()) {
+        // Find the CTIP that the first sorted deposit spent
         bool fFound = false;
-        CAmount amtRet = CAmount(0);
-        for (const CTxIn& in : vDepositUniq[i].dtx.vin) {
-            if (psidechaintree->GetCTIPAmount(in.prevout.hash, in.prevout.n, amtRet, vDepositUniq)) {
+        const SidechainDeposit& first = vDepositSorted.front();
+        for (const SidechainDeposit& d : vDepositDB) {
+            for (const CTxIn& in : first.dtx.vin) {
+                if (in.prevout.hash == d.dtx.GetHash()
+                        && d.dtx.vout.size() > in.prevout.n
+                        && d.n == in.prevout.n) {
+                    // Calculate payout amount
+                    CAmount ctipAmount = d.dtx.vout[d.n].nValue;
+                    if (first.amtUserPayout > ctipAmount)
+                        vDepositSorted.front().amtUserPayout -= ctipAmount;
+                    else
+                        vDepositSorted.front().amtUserPayout = CAmount(0);
+
+                    fFound = true;
+                    break;
+                }
+            }
+            if (fFound) break;
+        }
+        if (!fFound) {
+            LogPrintf("%s: Error: No CTIP found for first deposit in sorted list: %s (mainchain txid)\n", __func__, first.dtx.GetHash().ToString());
+            return false;
+        }
+    } else {
+        // This is the very first deposit for this sidechain so we don't need
+        // to look up the CTIP that it spent
+        LogPrintf("%s: The sidechain has received its first deposit!\n", __func__);
+    }
+
+    // Now that we have the value for the known CTIP that was spent for the
+    // first deposit in the sorted list and have calculated the payout amount
+    // for that deposit / CTIP update we can calculate the payout amount for the
+    // rest of the deposits in the list.
+    std::vector<SidechainDeposit>::iterator it = vDepositSorted.begin() + 1;
+    for (; it != vDepositSorted.end(); it++) {
+        // Points to the previous deposit in the sorted list
+        std::vector<SidechainDeposit>::iterator itPrev = it - 1;
+
+        // Find the output (ctip) this deposit spend and subract it from
+        // the user payout amount. Note that we've already sorted by CTIP so
+        // they all should exist but we are going to double check anyways.
+        bool fFound = false;
+        for (const CTxIn& in : it->dtx.vin) {
+            if (in.prevout.hash == itPrev->dtx.GetHash()
+                    && itPrev->dtx.vout.size() > in.prevout.n
+                    && itPrev->n == in.prevout.n) {
+                // Calculate payout amount
+                CAmount ctipAmount = itPrev->dtx.vout[itPrev->n].nValue;
+                if (it->amtUserPayout > ctipAmount)
+                    it->amtUserPayout -= ctipAmount;
+                else
+                    it->amtUserPayout = CAmount(0);
+
                 fFound = true;
                 break;
             }
         }
-        if (!fFound && fInitialDeposit) {
-            fInitialDeposit = false;
-            continue;
+        if (!fFound) {
+            LogPrintf("%s: Error: Failed to calculate payout amount - no CTIP found for deposit: %s (mainchain txid)\n", __func__, it->dtx.GetHash().ToString());
+            return false;
         }
-        if (!fFound)
-            return CTransaction(); // TODO log
-
-        // Subtract the CTIP input
-        if (vDepositUniq[i].amtUserPayout > amtRet)
-            vDepositUniq[i].amtUserPayout -= amtRet;
-        else
-            vDepositUniq[i].amtUserPayout = CAmount(0);
     }
 
+    // Create the deposit transaction
     CMutableTransaction mtx;
-    for (const SidechainDeposit& deposit : vDepositUniq) {
+    for (const SidechainDeposit& deposit : vDepositSorted) {
+        // Special case for WT^ change return - we don't want to pay anyone that
+        if (deposit.keyID == CKeyID(uint160(ParseHex("1111111111111111111111111111111111111111")))) {
+            mtx.vout.push_back(CTxOut(0, deposit.GetScript()));
+            continue;
+        }
+
+        // Perform a few repeat / backup checks and then add payout output
         for (const CTxOut& out : deposit.dtx.vout) {
             const CScript& scriptPubKey = out.scriptPubKey;
 
+            // Double check that keyID is not null
+            if (deposit.keyID.IsNull()) {
+                LogPrintf("%s: Error sidechain deposit null keyID! Deposit:\n%s\n", __func__, deposit.ToString());
+                return false;
+            }
+
+            // We are looking for the burn output so skip spendable outputs
             if (!scriptPubKey.IsUnspendable())
                 continue;
 
-            if (scriptPubKey.size() < 2)
-                continue;
-
-            // Double check that keyID is not null
-            if (deposit.keyID.IsNull())
-                continue;
+            if (scriptPubKey.size() < 2) {
+                LogPrintf("%s: Error sidechain deposit invalid scriptPubKey! Deposit:\n%s\n", __func__, deposit.ToString());
+                return false;
+            }
 
             // Payout
             if (deposit.amtUserPayout >= SIDECHAIN_DEPOSIT_FEE) {
@@ -588,7 +741,11 @@ CTransaction CreateDepositTx()
             mtx.vout.push_back(CTxOut(0, deposit.GetScript()));
         }
     }
-    return mtx;
+
+    LogPrintf("%s: Created deposit tx with %u outputs.\n", __func__, mtx.vout.size());
+
+    depositTx = mtx;
+    return true;
 }
 
 // TODO refactor : remove duplicate code from both versions of GenerateBMMBlock

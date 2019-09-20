@@ -123,5 +123,6 @@ std::string SidechainDeposit::ToString() const
     str << "keyID=" << keyID.ToString() << std::endl;
     str << "payout=" << FormatMoney(amtUserPayout) << std::endl;
     str << "mainchaintxid=" << dtx.GetHash().ToString() << std::endl;
+    str << "n" << std::to_string(n) << std::endl;
     return str.str();
 }

@@ -151,6 +151,7 @@ struct SidechainDeposit : public SidechainObj {
     CAmount amtUserPayout;
     CMutableTransaction dtx;
     CMainchainMerkleBlock proof;
+    uint32_t n;
 
     SidechainDeposit(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_DEPOSIT_OP; }
     virtual ~SidechainDeposit(void) { }
@@ -165,6 +166,7 @@ struct SidechainDeposit : public SidechainObj {
         READWRITE(amtUserPayout);
         READWRITE(dtx);
         READWRITE(proof);
+        READWRITE(n);
     }
 
     std::string ToString(void) const;

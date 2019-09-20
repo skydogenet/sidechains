@@ -133,11 +133,14 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
             }
         }
 
-        if (n >= deposit.dtx.vout.size())
+        if (!(deposit.dtx.vout.size() > n)) {
+            LogPrintf("%s: Error invalid deposit output index!\n", __func__);
             continue;
+        }
 
         // Get the user payout amount from the deposit output
         deposit.amtUserPayout = deposit.dtx.vout[n].nValue;
+        deposit.n = n;
 
         // TODO check the deposit output 'N' scriptPubKey (compare to THIS_SIDECHAIN)
 

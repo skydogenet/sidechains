@@ -210,6 +210,6 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 
 /** Create a payout transaction for any new deposits */
-CTransaction CreateDepositTx();
+bool CreateDepositTx(CMutableTransaction& depositTx);
 
 #endif // BITCOIN_MINER_H
