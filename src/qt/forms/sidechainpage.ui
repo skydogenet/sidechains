@@ -123,6 +123,20 @@
                 </property>
                </spacer>
               </item>
+              <item>
+               <widget class="QLabel" name="label_3">
+                <property name="text">
+                 <string>Next Train: </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="train">
+                <property name="text">
+                 <string>0 blocks</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
@@ -572,7 +586,7 @@
           <item>
            <widget class="QRadioButton" name="radioButtonHighlightMine">
             <property name="text">
-             <string>High&amp;light Mine</string>
+             <string>Highlight</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -582,7 +596,7 @@
           <item>
            <widget class="QRadioButton" name="radioButtonOnlyMine">
             <property name="text">
-             <string>Only &amp;Mine</string>
+             <string>Mine only</string>
             </property>
            </widget>
           </item>

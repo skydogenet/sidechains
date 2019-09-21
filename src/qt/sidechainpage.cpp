@@ -53,6 +53,12 @@ SidechainPage::SidechainPage(QWidget *parent) :
     bmmTimer = new QTimer(this);
     connect(bmmTimer, SIGNAL(timeout()), this, SLOT(RefreshBMM()));
 
+    // Iniitialize and start the train timer - refresh number of blocks left on
+    // mainchain until another WT^ can be proposed)
+    trainTimer = new QTimer(this);
+    connect(trainTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
+    trainTimer->start(10 * 1000); // ten seconds
+
     // TODO save & load the checkbox state
     // TODO save & load timer setting
     if (ui->checkBoxEnableAutomation->isChecked())
@@ -527,6 +533,32 @@ void SidechainPage::RefreshBMM()
 
     if (!hashConnected.IsNull())
         new QListWidgetItem(QString::fromStdString(hashConnected.ToString()), ui->listWidgetBMMConnected);
+}
+
+void SidechainPage::RefreshTrain()
+{
+    SidechainClient client;
+    int nMainchainBlocks = 0;
+    if (!client.GetBlockCount(nMainchainBlocks)) {
+        trainTimer->stop();
+
+        QMessageBox messageBox;
+        messageBox.setDefaultButton(QMessageBox::Ok);
+
+        messageBox.setWindowTitle("Train schedule update failed!");
+        std::string str;
+        str = "The sidechain has failed to connect to the mainchain!\n\n";
+        str += "This may be due to configuration issues.";
+        str += " Please check that you have set up configuration files.\n\n";
+        str += "Also make sure that the mainchain node is running!\n";
+        messageBox.setText(QString::fromStdString(str));
+        messageBox.exec();
+        return;
+    }
+
+    std::string str = std::to_string(GetBlocksVerificationPeriod(nMainchainBlocks)) + " blocks";
+
+    ui->train->setText(QString::fromStdString(str));
 }
 
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)

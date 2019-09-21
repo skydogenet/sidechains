@@ -512,4 +512,7 @@ void LoadBMMCache();
 /** Create joined WT^ to be sent to the mainchain */
 bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx);
 
+/** Get the number of blocks remaining in the current WT^ verification period */
+int GetBlocksVerificationPeriod(int nMainchainHeight);
+
 #endif // BITCOIN_VALIDATION_H

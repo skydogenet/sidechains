@@ -71,6 +71,8 @@ private Q_SLOTS:
 
     void RefreshBMM();
 
+    void RefreshTrain();
+
     void on_pushButtonConfigureBMM_clicked();
 
 private:
@@ -85,6 +87,7 @@ private:
     SidechainHistoryTableModel *outgoingTableModel;
 
     QTimer *bmmTimer;
+    QTimer *trainTimer;
 
     bool validateWTAmount();
 
