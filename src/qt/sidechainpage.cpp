@@ -560,6 +560,7 @@ void SidechainPage::RefreshTrain()
         messageBox.setText(QString::fromStdString(str));
         messageBox.exec();
         trainRetryTimer->start(30 * 1000);
+        ui->train->setText("? - not connected to mainchain");
         return;
     }
 
