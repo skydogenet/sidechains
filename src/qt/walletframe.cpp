@@ -159,6 +159,13 @@ void WalletFrame::gotoSidechainPage()
         i.value()->gotoSidechainPage();
 }
 
+void WalletFrame::refreshSidechainTrainSchedule()
+{
+    QMap<QString, WalletView*>::const_iterator i;
+    for (i = mapWalletViews.constBegin(); i != mapWalletViews.constEnd(); ++i)
+        i.value()->refreshSidechainTrainSchedule();
+}
+
 void WalletFrame::encryptWallet(bool status)
 {
     WalletView *walletView = currentWalletView();

@@ -133,7 +133,7 @@
               <item>
                <widget class="QLabel" name="train">
                 <property name="text">
-                 <string>0 blocks</string>
+                 <string>? - not connected to mainchain</string>
                 </property>
                </widget>
               </item>

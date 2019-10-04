@@ -59,6 +59,10 @@ SidechainPage::SidechainPage(QWidget *parent) :
     connect(trainTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
     trainTimer->start(10 * 1000); // ten seconds
 
+    // A timer to retry updating the train schedule if it fails
+    trainRetryTimer = new QTimer(this);
+    connect(trainRetryTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
+
     // TODO save & load the checkbox state
     // TODO save & load timer setting
     if (ui->checkBoxEnableAutomation->isChecked())
@@ -92,6 +96,7 @@ SidechainPage::SidechainPage(QWidget *parent) :
     ui->frameOutgoing->layout()->addWidget(outgoingTableView);
 
     generateAddress();
+    RefreshTrain();
 }
 
 SidechainPage::~SidechainPage()
@@ -550,15 +555,26 @@ void SidechainPage::RefreshTrain()
         str = "The sidechain has failed to connect to the mainchain!\n\n";
         str += "This may be due to configuration issues.";
         str += " Please check that you have set up configuration files.\n\n";
-        str += "Also make sure that the mainchain node is running!\n";
+        str += "Also make sure that the mainchain node is running!\n\n";
+        str += "Will retry in 30 seconds...\n";
         messageBox.setText(QString::fromStdString(str));
         messageBox.exec();
+        trainRetryTimer->start(30 * 1000);
         return;
     }
 
-    std::string str = std::to_string(GetBlocksVerificationPeriod(nMainchainBlocks)) + " blocks";
+    // If the retry timer was running we want to stop it now that a connection
+    // has been established
+    trainRetryTimer->stop();
 
-    ui->train->setText(QString::fromStdString(str));
+    int nBlocksLeft = GetBlocksVerificationPeriod(nMainchainBlocks);
+    std::string strTrain = "";
+    if (nBlocksLeft > 1)
+        strTrain = std::to_string(GetBlocksVerificationPeriod(nMainchainBlocks)) + " blocks";
+    else
+        strTrain = "Leaving now - all aboard!";
+
+    ui->train->setText(QString::fromStdString(strTrain));
 }
 
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)

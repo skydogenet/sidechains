@@ -514,6 +514,14 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
 #endif // ENABLE_WALLET
         unitDisplayControl->setOptionsModel(_clientModel->getOptionsModel());
 
+#ifdef ENABLE_WALLET
+        if (walletFrame) {
+            // Update the sidechain page train schedule when a new block arrives
+            connect(_clientModel, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)),
+                    walletFrame, SLOT(refreshSidechainTrainSchedule()));
+        }
+#endif
+
         OptionsModel* optionsModel = _clientModel->getOptionsModel();
         if(optionsModel)
         {

@@ -42,6 +42,8 @@ public Q_SLOTS:
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
 
+    void RefreshTrain();
+
 private Q_SLOTS:
     void on_pushButtonMainchain_clicked();
 
@@ -71,8 +73,6 @@ private Q_SLOTS:
 
     void RefreshBMM();
 
-    void RefreshTrain();
-
     void on_pushButtonConfigureBMM_clicked();
 
 private:
@@ -88,6 +88,7 @@ private:
 
     QTimer *bmmTimer;
     QTimer *trainTimer;
+    QTimer *trainRetryTimer;
 
     bool validateWTAmount();
 
