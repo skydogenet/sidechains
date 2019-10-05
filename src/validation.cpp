@@ -5264,8 +5264,10 @@ bool VerifyWTPrimes(std::string strFail, const std::vector<CTransactionRef>& vtx
 
         }
     }
-    std::string strReplicated = fReplicate ? "true" : "false";
-    LogPrintf("%s Verified WT^: %s.\n Replicated? %s\n", __func__, hashWTPrime.ToString(), strReplicated);
+    if (!hashWTPrime.IsNull()) {
+        std::string strReplicated = fReplicate ? "true" : "false";
+        LogPrintf("%s Verified WT^: %s.\n Replicated? %s\n", __func__, hashWTPrime.ToString(), strReplicated);
+    }
     return true;
 }
 
