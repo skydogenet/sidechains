@@ -107,6 +107,12 @@ private:
     uint256 SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain);
 
     bool SubmitBMMBlock(const CBlock& block);
+
+    // This function checks if the user has any optional verification settings
+    // enabled which require a connection to the mainchain and disables
+    // networking if fMainchainConnected is set to false. If fMainchainConnected
+    // is set to true - re enable networking.
+    void UpdateNetworkActive(bool fMainchainConnected);
 };
 
 #endif // SIDECHAINPAGE_H

@@ -43,6 +43,10 @@
 #include <qrencode.h>
 #endif
 
+static const int nTrainRefresh = 5 * 1000; // 5 seconds
+static const int nRetryRefresh = 5 * 1000; // 5 seconds
+static const int nTrainWarningSleep = 30 * 1000; // 30 seconds
+
 SidechainPage::SidechainPage(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SidechainPage)
@@ -57,7 +61,7 @@ SidechainPage::SidechainPage(QWidget *parent) :
     // mainchain until another WT^ can be proposed)
     trainTimer = new QTimer(this);
     connect(trainTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
-    trainTimer->start(10 * 1000); // ten seconds
+    trainTimer->start(nTrainRefresh);
 
     // A timer to retry updating the train schedule if it fails
     fSleepTrainWarning = false;
@@ -80,10 +84,15 @@ SidechainPage::SidechainPage(QWidget *parent) :
     trainErrorMessageBox->setWindowTitle("Train schedule update failed!");
     std::string str;
     str = "The sidechain has failed to connect to the mainchain!\n\n";
-    str += "This may be due to configuration issues.";
-    str += " Please check that you have set up configuration files.\n\n";
+    str += "This may be due to configuration issues. ";
+    str += "Please check that you have set up configuration files.\n\n";
     str += "Also make sure that the mainchain node is running!\n\n";
-    str += "Will retry in 30 seconds after you close this window...\n";
+    str += "Note: networking will be disabled if you have optional ";
+    str += "verification settings enabled which require a connection ";
+    str += "to the mainchain. Networking will automatically be re-enabled ";
+    str += "once the connection is restored.\n\n";
+    str += "Will retry in a few seconds after you close this window...\n";
+
     trainErrorMessageBox->setText(QString::fromStdString(str));
 
     // Initialize models and table views
@@ -533,6 +542,7 @@ void SidechainPage::RefreshBMM()
     uint256 hashCreated;
     uint256 hashConnected;
     if (!client.RefreshBMM(strError, hashCreated, hashConnected)) {
+        UpdateNetworkActive(false /* fMainchainConnected */);
         ui->checkBoxEnableAutomation->setChecked(false);
 
         QMessageBox messageBox;
@@ -545,11 +555,14 @@ void SidechainPage::RefreshBMM()
         str += " Please check that you have set up configuration files";
         str += " and re-enable automated BMM.\n\n";
         str += "Also make sure that the mainchain node is running!\n\n";
+        str += "Networking will be disabled until mainchain connected!\n\n";
         str += "Error message:\n" + strError + "\n";
         messageBox.setText(QString::fromStdString(str));
         messageBox.exec();
         return;
     }
+
+    UpdateNetworkActive(true /* fMainchainConnected */);
 
     // Update GUI
 
@@ -568,21 +581,25 @@ void SidechainPage::RefreshTrain()
     SidechainClient client;
     int nMainchainBlocks = 0;
     if (!client.GetBlockCount(nMainchainBlocks)) {
+        UpdateNetworkActive(false /* fMainchainConnected */);
         trainTimer->stop();
         if (!fSleepTrainWarning) {
             trainErrorMessageBox->close();
             trainErrorMessageBox->exec();
             fSleepTrainWarning = true;
-            trainWarningSleepTimer->start(25 * 1000);
+            trainWarningSleepTimer->start(nTrainWarningSleep);
         }
-        trainRetryTimer->start(30 * 1000);
+        trainRetryTimer->start(nRetryRefresh);
         ui->train->setText("? - not connected to mainchain");
         return;
     }
 
+    UpdateNetworkActive(true /* fMainchainConnected */);
+
     // If the retry timer was running we want to stop it now that a connection
     // has been established
     trainRetryTimer->stop();
+    trainTimer->start(nTrainRefresh);
 
     int nBlocksLeft = GetBlocksVerificationPeriod(nMainchainBlocks);
     std::string strTrain = "";
@@ -613,4 +630,30 @@ void SidechainPage::ResetTrainWarningSleep()
 {
     trainWarningSleepTimer->stop();
     fSleepTrainWarning = false;
+}
+
+void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
+    if (!g_connman)
+        return;
+
+    // If fMainchainConnected, re enable networking
+    if (fMainchainConnected) {
+        if (!g_connman->GetNetworkActive())
+            g_connman->SetNetworkActive(true);
+        return;
+    }
+
+    // If fMainchainConnected is false, check if we need to disable networking
+    bool fOptionalVerification =
+        gArgs.GetBoolArg("-verifybmmacceptblock", DEFAULT_VERIFY_BMM_ACCEPT_BLOCK) ||
+        gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER) ||
+        gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER) ||
+        gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK) ||
+        gArgs.GetBoolArg("-verifybmmreadblock", DEFAULT_VERIFY_BMM_READ_BLOCK) ||
+        gArgs.GetBoolArg("-verifywtprimeacceptblock", DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK);
+
+    // Disable networking if we need to
+    if (!fMainchainConnected && fOptionalVerification) {
+        g_connman->SetNetworkActive(false);
+    }
 }
