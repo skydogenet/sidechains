@@ -232,6 +232,8 @@ static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = false;
 static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = false;
 static const bool DEFAULT_VERIFY_BMM_ACCEPT_BLOCK = false;
 
+static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = false;
+
 extern BMMCache bmmCache;
 
 /**
@@ -515,5 +517,11 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
 
 /** Get the number of blocks remaining in the current WT^ verification period */
 int GetBlocksVerificationPeriod(int nMainchainHeight);
+
+/** If there are any WT^(s) (note the limit per block is 1) verify it, and
+ * optionally replicate it. This function will return by reference a vector of
+ * wt(s) spent by the WT^ if it has been validated - so that ConnectBlock can
+ * update their status */
+bool VerifyWTPrimes(std::string strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, bool fReplicate = false);
 
 #endif // BITCOIN_VALIDATION_H

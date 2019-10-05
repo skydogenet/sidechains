@@ -2092,7 +2092,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         }
 
         // Collect & verify sidechain objects
-        int nWTPrime = 0; // Keep track of new WT^ objects. Max = 1 per block
         std::vector<std::pair<uint256, const SidechainObj *> > vSidechainObjects;
         for (const CTransactionRef& tx : block.vtx) {
             for (const CTxOut& txout : tx->vout) {
@@ -2125,76 +2124,22 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     }
                 }
 
-                // Check validity of WT^
+                // If the block contains any WT^ objects, validate the WT^ and
+                // get a list of the wt(s) that it spent
+                std::vector<SidechainWT> vWT;
+                std::string strFail = "";
+                uint256 hashWTPrime;
                 if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
-                    nWTPrime++;
-                    if (nWTPrime > 1)
-                        return state.Error("Invalid WT^ - multiple in block!");
+                    if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime))
+                        return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
+                }
 
-                    // TODO for full determinism, check previous WT^ payout
-                    // proof before allowing a new WT^
+                // TODO this should probably happen at the same time as
+                // all of the other db updates - at the end
+                // Write updated wt status to ldb
+                if (!hashWTPrime.IsNull()) {
 
-                    const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
-
-                    // Check that every WT this WT^ has listed is in the db
-                    // and verify the status is not spent.
-                    std::vector<SidechainWT> vWT;
-                    for (const uint256& wtid : wtPrime->vWT) {
-                        SidechainWT wt;
-
-                        if (!psidechaintree->GetWT(wtid, wt))
-                            return state.Error("Invalid wt - does not exist!");
-                        if (wt.status != WT_UNSPENT)
-                            return state.Error("Invalid wt - spent!");
-
-                        vWT.push_back(wt);
-                    }
-
-                    // Check that the number of outputs equals the number of
-                    // WT(s) listed in the WT^
-                    if (wtPrime->wtPrime.vout.size() != vWT.size())
-                        return state.Error("Invalid WT^ - too many outputs!");
-
-                    // Check that every WT listed in the WT^ is included
-                    for (const SidechainWT& wt : vWT) {
-                        bool fFound = false;
-                        for (const CTxOut& out : wtPrime->wtPrime.vout) {
-                            if (out.nValue == wt.amount &&
-                                    GetScriptForDestination(DecodeDestination(wt.strDestination, true)) == out.scriptPubKey) {
-                                fFound = true;
-                                break;
-                            }
-                        }
-                        if (!fFound)
-                            return state.Error("Invalid WT^ - missing output!");
-                    }
-
-                    // Check if standard by mainchain bitcoin core standards
-                    CFeeRate dust = CFeeRate(DUST_RELAY_TX_FEE);
-                    std::string strReason = "";
-                    if (!CoreIsStandardTx(wtPrime->wtPrime, true, dust, strReason))
-                        return state.Error("Invalid WT^ - failed CoreIsStandardTx!");
-
-                    // Check WT^ weight
-                    if (GetTransactionWeight(wtPrime->wtPrime) > MAX_WTPRIME_WEIGHT)
-                        return state.Error("Invalid WT^ - too large!");
-
-                    // Verify that we can replicate this WT^
-                    CTransactionRef wtPrimeTx;
-                    CTransactionRef wtPrimeDataTx;
-                    if (!CreateWTPrimeTx(chainActive.Height() + 1, wtPrimeTx, wtPrimeDataTx))
-                        return state.Error("Invalid WT^ - failed to create replicant WT^!");
-
-                    if (*wtPrimeTx != CTransaction(wtPrime->wtPrime)) {
-                        return state.Error("Invalid WT^ - replicated WT^ does not match!");
-                    }
-                    bmmCache.SetLatestWTPrime(wtPrime->wtPrime.GetHash());
-
-                    // Update the status of wt(s) included in the WT^
-                    for (size_t i = 0; i < vWT.size(); i++)
-                        vWT[i].status = WT_IN_WTPRIME;
-
-                    // Write updated status to ldb
+                    bmmCache.SetLatestWTPrime(hashWTPrime);
                     psidechaintree->WriteWTUpdate(vWT);
                 }
 
@@ -3699,6 +3644,24 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         }
     }
 
+    bool fVerifyWTPrimeAcceptBlock = gArgs.GetBoolArg("-verifywtprimeacceptblock", DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK);
+    if (fVerifyWTPrimeAcceptBlock) {
+        // Note that here we call VerifyWTPrimes with fReplicate set so that we
+        // replicate the WT^ on our own and verify that it matches the WT^ in
+        // this new block if there are any.
+        //
+        // We don't do this in ConnectBlock.
+        //
+        std::string strFail = "";
+        std::vector<SidechainWT> vWT;
+        uint256 hashWTPrime;
+        if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, true /* fReplicate */)) {
+            state.Error(strprintf("%s: invalid-wtprime error: %s", __func__, strFail));
+            return error("%s: invalid WT^! Error: %s", __func__, strFail);
+        }
+    }
+
+
     // Header is valid/has work, merkle tree and segwit merkle tree are good...RELAY NOW
     // (but if it does not build on our best tip, let the SendMessages loop relay it)
     if (!fInitialBlockDownload && chainActive.Tip() == pindex->pprev)
@@ -5193,6 +5156,116 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
     wtPrimeDataTx = MakeTransactionRef(mtx);
 
     LogPrintf("%s: WT^ created! Hash: %s\n", __func__, wjtx.GetHash().ToString());
+    return true;
+}
+
+bool VerifyWTPrimes(std::string strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, bool fReplicate) {
+    // Keep track of how many WT^(s) are in the block, only 1 is allowed
+    int nWTPrime = 0;
+
+    // Loop through the blocks txns and look for WT^(s) to verify
+    for (const CTransactionRef& tx : vtx) {
+        for (const CTxOut& txout : tx->vout) {
+            const CScript& scriptPubKey = txout.scriptPubKey;
+            const size_t script_sz = scriptPubKey.size();
+            if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+                continue;
+
+            SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+            if (!obj)
+                continue;
+
+            if (obj->sidechainop != DB_SIDECHAIN_WTPRIME_OP)
+                continue;
+
+            nWTPrime++;
+            if (nWTPrime > 1) {
+                strFail = "Invalid WT^ - multiple in block!\n";
+                return false;
+            }
+
+            // TODO for full determinism, check previous WT^ payout
+            // proof before allowing a new WT^
+
+            const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
+
+            // Check that every WT this WT^ has listed is in the db
+            // and verify the status is not spent.
+            for (const uint256& wtid : wtPrime->vWT) {
+                SidechainWT wt;
+
+                if (!psidechaintree->GetWT(wtid, wt)) {
+                    strFail = "Invalid wt - does not exist!\n";
+                    return false;
+                }
+                if (wt.status != WT_UNSPENT) {
+                    strFail = "Invalid wt - spent!\n";
+                    return false;
+                }
+
+                vWT.push_back(wt);
+            }
+
+            // Check that the number of outputs equals the number of
+            // WT(s) listed in the WT^
+            if (wtPrime->wtPrime.vout.size() != vWT.size()) {
+                strFail = "Invalid WT^ - too many outputs!\n";
+                return false;
+            }
+
+            // Check that every WT listed in the WT^ is included
+            for (const SidechainWT& wt : vWT) {
+                bool fFound = false;
+                for (const CTxOut& out : wtPrime->wtPrime.vout) {
+                    if (out.nValue == wt.amount &&
+                            GetScriptForDestination(DecodeDestination(wt.strDestination, true)) == out.scriptPubKey) {
+                        fFound = true;
+                        break;
+                    }
+                }
+                if (!fFound) {
+                    strFail = "Invalid WT^ - missing output!\n";
+                    return false;
+                }
+            }
+
+            // Check if standard by mainchain bitcoin core standards
+            CFeeRate dust = CFeeRate(DUST_RELAY_TX_FEE);
+            std::string strReason = "";
+            if (!CoreIsStandardTx(wtPrime->wtPrime, true, dust, strReason)) {
+                strFail = "Invalid WT^ - failed CoreIsStandardTx!\n";
+                return false;
+            }
+
+            // Check WT^ weight
+            if (GetTransactionWeight(wtPrime->wtPrime) > MAX_WTPRIME_WEIGHT) {
+                strFail = "Invalid WT^ - too large!\n";
+                return false;
+            }
+
+            // Verify that we can replicate this WT^
+            CTransactionRef wtPrimeTx;
+            CTransactionRef wtPrimeDataTx;
+            if (!CreateWTPrimeTx(chainActive.Height() + 1, wtPrimeTx, wtPrimeDataTx)) {
+                strFail = "Invalid WT^ - failed to create replicant WT^!\n";
+                return false;
+            }
+
+            if (*wtPrimeTx != CTransaction(wtPrime->wtPrime)) {
+                strFail = "Invalid WT^ - replicated WT^ does not match!\n";
+                return false;
+            }
+
+            hashWTPrime = wtPrime->wtPrime.GetHash();
+
+            // Update the status of wt(s) included in the WT^
+            for (size_t i = 0; i < vWT.size(); i++)
+                vWT[i].status = WT_IN_WTPRIME;
+
+        }
+    }
+    std::string strReplicated = fReplicate ? "true" : "false";
+    LogPrintf("%s Verified WT^: %s.\n Replicated? %s\n", __func__, hashWTPrime.ToString(), strReplicated);
     return true;
 }
 
