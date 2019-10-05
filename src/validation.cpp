@@ -16,6 +16,7 @@
 #include <consensus/merkle.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
+#include <core_io.h>
 #include <cuckoocache.h>
 #include <hash.h>
 #include <init.h>
@@ -50,10 +51,6 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/thread.hpp>
-
-// TODO remove. See TODO note in ConnectBlock()
-#include "sidechainclient.h"
-#include "core_io.h"
 
 #if defined(NDEBUG)
 # error "Bitcoin cannot be compiled without assertions."
@@ -5159,7 +5156,7 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
     return true;
 }
 
-bool VerifyWTPrimes(std::string strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, bool fReplicate) {
+bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, bool fReplicate) {
     // Keep track of how many WT^(s) are in the block, only 1 is allowed
     int nWTPrime = 0;
 

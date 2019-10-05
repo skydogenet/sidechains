@@ -522,6 +522,6 @@ int GetBlocksVerificationPeriod(int nMainchainHeight);
  * optionally replicate it. This function will return by reference a vector of
  * wt(s) spent by the WT^ if it has been validated - so that ConnectBlock can
  * update their status */
-bool VerifyWTPrimes(std::string strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, bool fReplicate = false);
+bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, bool fReplicate = false);
 
 #endif // BITCOIN_VALIDATION_H
