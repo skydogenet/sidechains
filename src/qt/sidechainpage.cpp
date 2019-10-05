@@ -510,8 +510,8 @@ bool SidechainPage::SubmitBMMBlock(const CBlock& block)
 
 void SidechainPage::RefreshBMM()
 {
-    // Make sure the user has at least --verifybmmcheckblock set
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
+    // Make sure the user has at least --verifybmmacceptblock set
+    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptblock", DEFAULT_VERIFY_BMM_ACCEPT_BLOCK);
     if (!fVerifyBMM) {
         ui->checkBoxEnableAutomation->setChecked(false);
 
@@ -521,7 +521,7 @@ void SidechainPage::RefreshBMM()
         messageBox.setWindowTitle("Automated BMM failed - invalid settings detected!");
         std::string str;
         str = "No verification of BMM commitments configured!\n\n";
-        str += "Please restart with at least --verifybmmcheckblock to verify ";
+        str += "Please restart with at least --verifybmmacceptblock to verify ";
         str += "BMM blocks if you would like to BMM!";
         messageBox.setText(QString::fromStdString(str));
         messageBox.exec();

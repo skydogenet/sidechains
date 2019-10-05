@@ -3688,9 +3688,20 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         return error("%s: %s", __func__, FormatStateMessage(state));
     }
 
+    bool fInitialBlockDownload = IsInitialBlockDownload();
+
+    // Whether we want to verify BMM in this context
+    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptblock", DEFAULT_VERIFY_BMM_ACCEPT_BLOCK);
+    if (!fInitialBlockDownload && fVerifyBMM) {
+        if (!VerifyCriticalHashProof(block)) {
+            state.Error(strprintf("%s: bad-critical-hash", __func__));
+            return error("%s: bad-critical-hash", __func__);
+        }
+    }
+
     // Header is valid/has work, merkle tree and segwit merkle tree are good...RELAY NOW
     // (but if it does not build on our best tip, let the SendMessages loop relay it)
-    if (!IsInitialBlockDownload() && chainActive.Tip() == pindex->pprev)
+    if (!fInitialBlockDownload && chainActive.Tip() == pindex->pprev)
         GetMainSignals().NewPoWValidBlock(pindex, pblock);
 
     // Write block to history file
