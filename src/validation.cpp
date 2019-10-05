@@ -5240,17 +5240,20 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                 return false;
             }
 
-            // Verify that we can replicate this WT^
-            CTransactionRef wtPrimeTx;
-            CTransactionRef wtPrimeDataTx;
-            if (!CreateWTPrimeTx(chainActive.Height() + 1, wtPrimeTx, wtPrimeDataTx)) {
-                strFail = "Invalid WT^ - failed to create replicant WT^!\n";
-                return false;
-            }
-
-            if (*wtPrimeTx != CTransaction(wtPrime->wtPrime)) {
-                strFail = "Invalid WT^ - replicated WT^ does not match!\n";
-                return false;
+            // Verify that we can replicate this WT^ if fReplicate is set
+            if (fReplicate) {
+                // Try to create the same WT^
+                CTransactionRef wtPrimeTx;
+                CTransactionRef wtPrimeDataTx;
+                if (!CreateWTPrimeTx(chainActive.Height() + 1, wtPrimeTx, wtPrimeDataTx)) {
+                    strFail = "Invalid WT^ - failed to create replicant WT^!\n";
+                    return false;
+                }
+                // Verify that our WT^ matches the one in this block
+                if (*wtPrimeTx != CTransaction(wtPrime->wtPrime)) {
+                    strFail = "Invalid WT^ - replicated WT^ does not match!\n";
+                    return false;
+                }
             }
 
             hashWTPrime = wtPrime->wtPrime.GetHash();
