@@ -573,7 +573,7 @@ void SidechainPage::RefreshTrain()
             trainErrorMessageBox->close();
             trainErrorMessageBox->exec();
             fSleepTrainWarning = true;
-            trainWarningSleepTimer->start(30 * 1000);
+            trainWarningSleepTimer->start(25 * 1000);
         }
         trainRetryTimer->start(30 * 1000);
         ui->train->setText("? - not connected to mainchain");
