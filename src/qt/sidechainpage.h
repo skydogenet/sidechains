@@ -20,6 +20,7 @@ QT_END_NAMESPACE
 
 class CBlock;
 class WalletModel;
+class QMessageBox;
 
 namespace Ui {
 class SidechainPage;
@@ -75,6 +76,8 @@ private Q_SLOTS:
 
     void on_pushButtonConfigureBMM_clicked();
 
+    void ResetTrainWarningSleep();
+
 private:
     Ui::SidechainPage *ui;
 
@@ -89,6 +92,11 @@ private:
     QTimer *bmmTimer;
     QTimer *trainTimer;
     QTimer *trainRetryTimer;
+    QTimer *trainWarningSleepTimer;
+
+    bool fSleepTrainWarning;
+
+    QMessageBox *trainErrorMessageBox;
 
     bool validateWTAmount();
 

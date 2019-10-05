@@ -60,13 +60,31 @@ SidechainPage::SidechainPage(QWidget *parent) :
     trainTimer->start(10 * 1000); // ten seconds
 
     // A timer to retry updating the train schedule if it fails
+    fSleepTrainWarning = false;
     trainRetryTimer = new QTimer(this);
     connect(trainRetryTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
+
+    // A sleep timer for the train update warning so that it isn't displayed
+    // a bunch of times quickly when blocks are connected
+    trainWarningSleepTimer = new QTimer(this);
+    connect(trainWarningSleepTimer, SIGNAL(timeout()), this, SLOT(ResetTrainWarningSleep()));
 
     // TODO save & load the checkbox state
     // TODO save & load timer setting
     if (ui->checkBoxEnableAutomation->isChecked())
         bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
+
+    // Initialize the train error message box
+    trainErrorMessageBox = new QMessageBox(this);
+    trainErrorMessageBox->setDefaultButton(QMessageBox::Ok);
+    trainErrorMessageBox->setWindowTitle("Train schedule update failed!");
+    std::string str;
+    str = "The sidechain has failed to connect to the mainchain!\n\n";
+    str += "This may be due to configuration issues.";
+    str += " Please check that you have set up configuration files.\n\n";
+    str += "Also make sure that the mainchain node is running!\n\n";
+    str += "Will retry in 30 seconds after you close this window...\n";
+    trainErrorMessageBox->setText(QString::fromStdString(str));
 
     // Initialize models and table views
     incomingTableView = new QTableView(this);
@@ -97,6 +115,11 @@ SidechainPage::SidechainPage(QWidget *parent) :
 
     generateAddress();
     RefreshTrain();
+
+    // Set the fee label
+    QString strFee = "Note: this sidechain will collect its own fee of: ";
+    strFee += BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, SIDECHAIN_DEPOSIT_FEE);
+    ui->labelFee->setText(strFee);
 }
 
 SidechainPage::~SidechainPage()
@@ -546,19 +569,12 @@ void SidechainPage::RefreshTrain()
     int nMainchainBlocks = 0;
     if (!client.GetBlockCount(nMainchainBlocks)) {
         trainTimer->stop();
-
-        QMessageBox messageBox;
-        messageBox.setDefaultButton(QMessageBox::Ok);
-
-        messageBox.setWindowTitle("Train schedule update failed!");
-        std::string str;
-        str = "The sidechain has failed to connect to the mainchain!\n\n";
-        str += "This may be due to configuration issues.";
-        str += " Please check that you have set up configuration files.\n\n";
-        str += "Also make sure that the mainchain node is running!\n\n";
-        str += "Will retry in 30 seconds...\n";
-        messageBox.setText(QString::fromStdString(str));
-        messageBox.exec();
+        if (!fSleepTrainWarning) {
+            trainErrorMessageBox->close();
+            trainErrorMessageBox->exec();
+            fSleepTrainWarning = true;
+            trainWarningSleepTimer->start(30 * 1000);
+        }
         trainRetryTimer->start(30 * 1000);
         ui->train->setText("? - not connected to mainchain");
         return;
@@ -590,4 +606,10 @@ void SidechainPage::on_pushButtonConfigureBMM_clicked()
 {
     ConfGeneratorDialog *dialog = new ConfGeneratorDialog(this);
     dialog->exec();
+}
+
+void SidechainPage::ResetTrainWarningSleep()
+{
+    trainWarningSleepTimer->stop();
+    fSleepTrainWarning = false;
 }
