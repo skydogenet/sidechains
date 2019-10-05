@@ -640,6 +640,10 @@ void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
     if (fMainchainConnected) {
         if (!g_connman->GetNetworkActive())
             g_connman->SetNetworkActive(true);
+
+        // Close the connection warning popup if it is open
+        trainErrorMessageBox->close();
+
         return;
     }
 
