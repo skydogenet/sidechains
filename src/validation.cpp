@@ -2070,21 +2070,20 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         return false;
 
     if (fSidechainIndex) {
-        // TODO Cleanup
-        // Sending the lastest WT^ shouldn't take place here, and validation
-        // should not have to use or depend on the sidechain client.
-        // TODO we can also check with the mainchain to find out if it has
-        // received this WT^ and then stop re-broadcasting it.
-            // Send latest WT^ to the mainchain each block
-        std::vector<SidechainWTPrime> vWTPrime = psidechaintree->GetWTPrimes(SIDECHAIN_TEST);
-        if (vWTPrime.size()) {
-            SidechainClient client;
-            std::string strHex = EncodeHexTx(vWTPrime.back().wtPrime);
-            uint256 hashWTPrimeToBroadcast = vWTPrime.back().wtPrime.GetHash();
-            if (!bmmCache.HaveBroadcastedWTPrime(hashWTPrimeToBroadcast)) {
-                if (client.BroadcastWTPrime(EncodeHexTx(vWTPrime.back().wtPrime)))
-                    bmmCache.StoreBroadcastedWTPrime(vWTPrime.back().wtPrime.GetHash());
+        // Send latest WT^ to the mainchain if it hasn't been broadcasted yet
+        SidechainWTPrime wtPrime;
+        uint256 hashLatestWTPrime = bmmCache.GetLatestWTPrime();
+        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrime)) {
+            // If we haven't broadcasted the latest WT^ yet, do it now
+            if (!bmmCache.HaveBroadcastedWTPrime(hashLatestWTPrime)) {
+                SidechainClient client;
+                std::string strHex = EncodeHexTx(wtPrime.wtPrime);
+                if (client.BroadcastWTPrime(strHex)) {
+                    bmmCache.StoreBroadcastedWTPrime(hashLatestWTPrime);
+                }
             }
+        } else {
+            LogPrintf("%s: Failed to get latest WT^ from ldb: %s!", __func__, hashLatestWTPrime.ToString());
         }
 
         // Collect & verify sidechain objects
@@ -2136,7 +2135,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     id = obj->GetHash();
                 }
                 obj->txid = tx->GetHash();
-                vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
+                vSidechainObjects.push_back(std::make_pair(id, obj));
             }
         }
 
@@ -2145,14 +2144,15 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             std::string strFail = "";
             std::vector<SidechainWT> vWT;
             uint256 hashWTPrime;
+            uint256 hashWTPrimeID;
 
-            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, false /* fReplicate */))
+            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, false /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
                 return state.Error(strprintf("%s: hashWTPrime shouldn't be null if VerifyWTPrimes passed!\n", __func__));
 
-            bmmCache.SetLatestWTPrime(hashWTPrime);
+            bmmCache.SetLatestWTPrime(hashWTPrimeID);
             psidechaintree->WriteWTUpdate(vWT);
         }
 
@@ -3653,7 +3653,8 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         std::string strFail = "";
         std::vector<SidechainWT> vWT;
         uint256 hashWTPrime;
-        if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, true /* fReplicate */)) {
+        uint256 hashWTPrimeID;
+        if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, true /* fReplicate */)) {
             state.Error(strprintf("%s: invalid-wtprime error: %s", __func__, strFail));
             return error("%s: invalid WT^! Error: %s", __func__, strFail);
         }
@@ -5157,7 +5158,7 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
     return true;
 }
 
-bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, bool fReplicate) {
+bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate) {
     // Keep track of how many WT^(s) are in the block, only 1 is allowed
     int nWTPrime = 0;
 
@@ -5258,6 +5259,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
             }
 
             hashWTPrime = wtPrime->wtPrime.GetHash();
+            hashWTPrimeID = wtPrime->GetID();
 
             // Update the status of wt(s) included in the WT^ - returned by
             // reference and applied to the DB if needed

@@ -139,6 +139,12 @@ struct SidechainWTPrime: public SidechainObj {
         READWRITE(vWT);
     }
 
+    uint256 GetID() const {
+        SidechainWTPrime wtPrime(*this);
+        wtPrime.txid.SetNull();
+        return wtPrime.GetHash();
+    }
+
     std::string ToString(void) const;
 };
 

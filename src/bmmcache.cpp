@@ -1,6 +1,7 @@
-#include "bmmcache.h"
+#include <bmmcache.h>
 
-#include "primitives/block.h"
+#include <primitives/block.h>
+#include <util.h>
 
 BMMCache::BMMCache()
 {
@@ -108,6 +109,7 @@ uint256 BMMCache::GetLastMainBlockHash() const
 
 void BMMCache::SetLatestWTPrime(const uint256& hashWTPrime)
 {
+    LogPrintf("%s Set latest WT^ to: %s", __func__, hashWTPrime.ToString());
     hashLatestWTPrime = hashWTPrime;
 }
 
