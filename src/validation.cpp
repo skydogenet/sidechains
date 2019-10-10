@@ -590,7 +590,6 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         return state.Invalid(false, REJECT_DUPLICATE, "txn-already-in-mempool");
     }
 
-    // TODO update the status / zone of the WT when included in WT^
     // If this is a wt check that it is valid
     for (const CTxOut& txout : tx.vout) {
         const CScript& scriptPubKey = txout.scriptPubKey;
@@ -2090,6 +2089,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
         // Collect & verify sidechain objects
         std::vector<std::pair<uint256, const SidechainObj *> > vSidechainObjects;
+        bool fFoundWTPrime = false;
         for (const CTransactionRef& tx : block.vtx) {
             for (const CTxOut& txout : tx->vout) {
                 const CScript& scriptPubKey = txout.scriptPubKey;
@@ -2121,24 +2121,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     }
                 }
 
-                // If the block contains any WT^ objects, validate the WT^ and
-                // get a list of the wt(s) that it spent
-                std::vector<SidechainWT> vWT;
-                std::string strFail = "";
-                uint256 hashWTPrime;
-                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
-                    if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime))
-                        return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
-                }
-
-                // TODO this should probably happen at the same time as
-                // all of the other db updates - at the end
-                // Write updated wt status to ldb
-                if (!hashWTPrime.IsNull()) {
-
-                    bmmCache.SetLatestWTPrime(hashWTPrime);
-                    psidechaintree->WriteWTUpdate(vWT);
-                }
+                // If we find a WT^ we will call VerifyWTPrimes later
+                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP)
+                    fFoundWTPrime = true;
 
                 // If the object is a wt we do not want the ID to change when
                 // the wt status is changed so that we can update the status
@@ -2153,6 +2138,22 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 obj->txid = tx->GetHash();
                 vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
             }
+        }
+
+        // Handle WT^ verification & wt status update
+        if (fFoundWTPrime) {
+            std::string strFail = "";
+            std::vector<SidechainWT> vWT;
+            uint256 hashWTPrime;
+
+            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, false /* fReplicate */))
+                return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
+
+            if (hashWTPrime.IsNull())
+                return state.Error(strprintf("%s: hashWTPrime shouldn't be null if VerifyWTPrimes passed!\n", __func__));
+
+            bmmCache.SetLatestWTPrime(hashWTPrime);
+            psidechaintree->WriteWTUpdate(vWT);
         }
 
         // Write sidechain objects to db
@@ -5089,7 +5090,7 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
         wjtx.vout.push_back(CTxOut(amountWTBurn, GetScriptForDestination(dest)));
 
         // Add WT objid to WT^ obj
-        wtPrime.vWT.push_back(wt.GetHash());
+        wtPrime.vWT.push_back(wt.GetNonStatusHash());
 
         // Make sure we have room for more outputs
         if (GetTransactionWeight(wjtx) > MAX_WTPRIME_WEIGHT) {
@@ -5258,10 +5259,10 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
 
             hashWTPrime = wtPrime->wtPrime.GetHash();
 
-            // Update the status of wt(s) included in the WT^
+            // Update the status of wt(s) included in the WT^ - returned by
+            // reference and applied to the DB if needed
             for (size_t i = 0; i < vWT.size(); i++)
                 vWT[i].status = WT_IN_WTPRIME;
-
         }
     }
     if (!hashWTPrime.IsNull()) {
