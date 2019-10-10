@@ -327,7 +327,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Deposit to this address from the mainchain </string>
+                 <string>Deposit to this address from the mainchain.</string>
                 </property>
                </widget>
               </item>
@@ -340,7 +340,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Note: This sidechain will collect a fee of: </string>
+                 <string>This sidechain will collect a fee of: </string>
                 </property>
                </widget>
               </item>
@@ -576,7 +576,7 @@
           <item>
            <widget class="QLineEdit" name="lineEditWTtxid">
             <property name="placeholderText">
-             <string>Enter WT^ TXID</string>
+             <string>Enter WT^ TxID</string>
             </property>
            </widget>
           </item>
@@ -694,14 +694,14 @@
               <item row="0" column="0">
                <widget class="QLabel" name="label_18">
                 <property name="text">
-                 <string>BMM Requests Created:</string>
+                 <string>Your attempts (Mainchain TxID):</string>
                 </property>
                </widget>
               </item>
               <item row="0" column="1">
                <widget class="QLabel" name="label_19">
                 <property name="text">
-                 <string>BMM Blocks Connected:</string>
+                 <string>Blocks found (SC block hash):</string>
                 </property>
                </widget>
               </item>
@@ -714,7 +714,7 @@
               <enum>Qt::Vertical</enum>
              </property>
              <property name="sizeType">
-              <enum>QSizePolicy::Minimum</enum>
+              <enum>QSizePolicy::Maximum</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
