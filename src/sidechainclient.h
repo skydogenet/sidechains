@@ -17,8 +17,8 @@
 class SidechainDeposit;
 class SidechainBMMProof;
 
-// TODO refactor: doesn't need to be a class anymore as the
-// client isn't tracking any data anymore.
+// TODO if this class doesn't end up needing to track data or become a global
+// object, consider making it not a class anymore.
 
 class SidechainClient
 {
@@ -78,7 +78,7 @@ public:
 
     bool GetWorkScore(const uint256& hashWTPrime, int& nWorkScore);
 
-    bool ListWTPrimes(std::vector<uint256>& vHashWTPrime);
+    bool ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime);
 
 private:
     /*

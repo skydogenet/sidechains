@@ -542,7 +542,6 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     json.append("\"");
     json.append("] }");
 
-    // Try to request mainchain block count
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
         LogPrintf("ERROR Sidechain client failed to request workscore\n");
@@ -555,20 +554,23 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     return nWorkScore > 0;
 }
 
-bool SidechainClient::ListWTPrimes(std::vector<uint256>& vHashWTPrime)
+bool SidechainClient::ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime)
 {
-    // JSON for 'listwtprimes' mainchain HTTP-RPC
+    // TODO for now this function is only being used to see if there are any
+    // WT^(s) for nSidechain. The rest of the results could be useful for the
+    // GUI though.
+
+    // JSON for 'listwtprimestatus' mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"listwtprimes\", \"params\": ");
+    json.append("\"method\": \"listwtprimestatus\", \"params\": ");
     json.append("[");
     json.append(std::to_string(SIDECHAIN_TEST));
     json.append("] }");
 
-    // Try to request mainchain block count
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
-        LogPrintf("ERROR Sidechain client failed to request WT^(s)\n");
+        LogPrintf("ERROR Sidechain client failed to request WT^ status\n");
         return false;
     }
 

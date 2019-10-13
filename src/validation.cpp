@@ -5059,7 +5059,7 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
 
     // Check for existing WT^ in mainchain SCDB for this sidechain
     std::vector<uint256> vHashWTPrime;
-    if (client.ListWTPrimes(vHashWTPrime)) {
+    if (client.ListWTPrimeStatus(vHashWTPrime)) {
         LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
         return false;
     }
