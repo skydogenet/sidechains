@@ -177,6 +177,20 @@ struct SidechainDeposit : public SidechainObj {
 
     std::string ToString(void) const;
 
+    bool operator==(const SidechainDeposit& d) const
+    {
+        if (sidechainop == d.sidechainop &&
+                nSidechain == d.nSidechain &&
+                keyID == d.keyID &&
+                amtUserPayout == d.amtUserPayout &&
+                dtx == d.dtx &&
+                proof == d.proof &&
+                n == d.n) {
+            return true;
+        }
+        return false;
+    }
+
     uint256 GetNonAmountHash() const
     {
         SidechainDeposit deposit(*this);

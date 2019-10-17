@@ -115,6 +115,16 @@ public:
      * returns the merkle root, or 0 in case of failure
      */
     uint256 ExtractMatches(std::vector<uint256> &vMatch, std::vector<unsigned int> &vnIndex);
+
+    bool operator==(const CPartialMerkleTree& t) const
+    {
+        if (nTransactions == t.nTransactions &&
+               vHash == t.vHash &&
+               vBits == t.vBits) {
+            return true;
+        }
+        return false;
+    }
 };
 
 
@@ -171,6 +181,14 @@ public:
     /** Public only for unit testing */
     CMainchainBlockHeader header;
     CPartialMerkleTree txn;
+
+    bool operator==(const CMainchainMerkleBlock& b) const
+    {
+        if (header == b.header && txn == b.txn)
+            return true;
+        else
+            return false;
+    }
 
     /**
      * Public only for unit testing and relay testing (not relayed).

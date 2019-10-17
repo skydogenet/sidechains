@@ -524,4 +524,7 @@ int GetBlocksVerificationPeriod(int nMainchainHeight);
  * update their status */
 bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate = false);
 
+/** Sort deposits by CTIP spend order */
+bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);
+
 #endif // BITCOIN_VALIDATION_H

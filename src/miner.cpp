@@ -489,19 +489,6 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 }
 
-/** Custom sort helper for CreateDepositTx */
-bool CompareCTIP(const SidechainDeposit& lhs, const SidechainDeposit& rhs)
-{
-    for (const CTxIn& in : rhs.dtx.vin) {
-        if (in.prevout.hash == lhs.dtx.GetHash()
-                && lhs.dtx.vout.size() > in.prevout.n
-                && lhs.n == in.prevout.n) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /** Create a payout transaction for any new deposits */
 bool CreateDepositTx(CMutableTransaction& depositTx)
 {
@@ -555,12 +542,12 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
         }
     }
 
-    // Make a copy of the new deposit list which we will sort using the CTIP
-    // comparison helper function.
-    std::vector<SidechainDeposit> vDepositSorted = vDepositNew;
-
     // Sort the deposits into CTIP UTXO spend order
-    std::sort(vDepositSorted.begin(), vDepositSorted.end(), CompareCTIP);
+    std::vector<SidechainDeposit> vDepositSorted;
+    if (!SortDeposits(vDepositNew, vDepositSorted)) {
+        LogPrintf("%s: Error: Failed to sort deposits!\n", __func__);
+        return false;
+    }
 
     // These log outputs can be re-enabled for debugging the sort
     //LogPrintf("%s: List of new deposits (pre sort)\n", __func__);

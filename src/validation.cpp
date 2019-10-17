@@ -5274,6 +5274,96 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
     return true;
 }
 
+bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted)
+{
+    if (vDeposit.size() == 1) {
+        vDepositSorted = vDeposit;
+        return true;
+    }
+
+    // Find the first deposit in the list by looking for the deposit which
+    // spends a CTIP not in the list. There can only be one. We are also going
+    // to check that there is only one missing CTIP input here.
+    int nMissingCTIP = 0;
+    for (size_t x = 0; x < vDeposit.size(); x++) {
+        const SidechainDeposit dx = vDeposit[x];
+
+        // Look for the input of this deposit
+        bool fFound = false;
+        for (size_t y = 0; y < vDeposit.size(); y++) {
+            const SidechainDeposit dy = vDeposit[y];
+
+            // The CTIP output of the deposit that might be the input
+            const COutPoint prevout(dy.dtx.GetHash(), dy.n);
+
+            // Look for the CTIP output
+            for (const CTxIn& in : dx.dtx.vin) {
+                if (in.prevout == prevout) {
+                    fFound = true;
+                    break;
+                }
+            }
+            if (fFound)
+                break;
+        }
+
+        // If we didn't find the CTIP input, this should be the first and only
+        // deposit without one.
+        if (!fFound) {
+            nMissingCTIP++;
+            if (nMissingCTIP > 1) {
+                LogPrintf("%s: Error: Multiple missing CTIP!\n", __func__);
+                return false;
+            }
+            // Add the first deposit to the result
+            vDepositSorted.push_back(dx);
+            // We found the first deposit but do not stop the loop here
+            // because we are also checking to make sure there aren't any
+            // other deposits missing a CTIP input from the list.
+        }
+    }
+
+    // Now that we know which deposit is first in the list we can add the rest
+    // in CTIP spend order.
+
+    // Track the CTIP output of the latest deposit we have sorted
+    COutPoint prevout(vDepositSorted.back().dtx.GetHash(), vDepositSorted.back().n);
+
+    // Look for the deposit that spends the last sorted CTIP output and sort it.
+    // If we cannot find a deposit spending the CTIP, that should mean we
+    // reached the end of sorting.
+    std::vector<SidechainDeposit>::const_iterator it = vDeposit.begin();
+    while (it != vDeposit.end()) {
+        bool fFound = false;
+        for (const CTxIn& in : it->dtx.vin) {
+            if (in.prevout == prevout) {
+                // Add the sorted deposit to the list
+                vDepositSorted.push_back(*it);
+
+                // Update the CTIP output we are looking for
+                const SidechainDeposit deposit = vDepositSorted.back();
+                prevout = COutPoint(deposit.dtx.GetHash(), deposit.n);
+
+                // Start from begin() again
+                fFound = true;
+                it = vDeposit.begin();
+
+                break;
+            }
+        }
+        if (!fFound)
+            it++;
+    }
+
+    if (vDeposit.size() != vDepositSorted.size()) {
+        LogPrintf("%s: Error: Invalid result size! In: %u Out: %u\n", __func__,
+                vDeposit.size(), vDepositSorted.size());
+        return false;
+    }
+
+    return true;
+}
+
 //! Guess how far we are in the verification process at the given block index
 //! require cs_main if pindex has not been validated yet (because nChainTx might be unset)
 double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex *pindex) {

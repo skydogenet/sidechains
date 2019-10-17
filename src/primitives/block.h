@@ -191,6 +191,19 @@ public:
     {
         return (int64_t)nTime;
     }
+
+    bool operator==(const CMainchainBlockHeader& h) const
+    {
+        if (nVersion == h.nVersion &&
+                hashPrevBlock == h.hashPrevBlock &&
+                hashMerkleRoot == h.hashMerkleRoot &&
+                nTime == h.nTime &&
+                nBits == h.nBits &&
+                nNonce == h.nNonce) {
+            return true;
+        }
+        return false;
+    }
 };
 
 
