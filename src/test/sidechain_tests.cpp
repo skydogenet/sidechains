@@ -383,7 +383,7 @@ std::vector<SidechainDeposit> Get25TestDeposits()
     return vDeposit;
 }
 
-BOOST_AUTO_TEST_CASE(sidechain_ctip_comparator_10_deposits)
+BOOST_AUTO_TEST_CASE(sidechain_deposit_sort_10_deposits)
 {
     // This test is testing 10 deposits which all spend different transactions
 
@@ -414,7 +414,7 @@ BOOST_AUTO_TEST_CASE(sidechain_ctip_comparator_10_deposits)
     BOOST_CHECK(vDepositSorted == vD);
 }
 
-BOOST_AUTO_TEST_CASE(sidechain_ctip_comparator_25_deposits)
+BOOST_AUTO_TEST_CASE(sidechain_deposit_sort_25_deposits)
 {
     // This test is testing 25 deposits some of which spend different outputs
     // of the same transaction

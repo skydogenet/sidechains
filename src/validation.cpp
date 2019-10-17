@@ -5276,6 +5276,9 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
 
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted)
 {
+    if (vDeposit.empty())
+        return true;
+
     if (vDeposit.size() == 1) {
         vDepositSorted = vDeposit;
         return true;
@@ -5325,6 +5328,11 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
 
     // Now that we know which deposit is first in the list we can add the rest
     // in CTIP spend order.
+
+    if (vDepositSorted.empty()) {
+        LogPrintf("%s: Error: Coult not find first deposit in list!\n", __func__);
+        return false;
+    }
 
     // Track the CTIP output of the latest deposit we have sorted
     COutPoint prevout(vDepositSorted.back().dtx.GetHash(), vDepositSorted.back().n);
