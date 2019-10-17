@@ -51,7 +51,7 @@ bool SidechainClient::BroadcastWTPrime(const std::string& hex)
 }
 
 // TODO return bool & state / fail string
-std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strBuildHash)
+std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strAddressBytes)
 {
     // List of deposits in sidechain format for DB
     std::vector<SidechainDeposit> incoming;
@@ -61,7 +61,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listsidechaindeposits\", \"params\": ");
     json.append("[\"");
-    json.append(strBuildHash);
+    json.append(strAddressBytes);
     json.append("\"");
     json.append("] }");
 

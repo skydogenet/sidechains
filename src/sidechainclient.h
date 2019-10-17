@@ -33,7 +33,7 @@ public:
     /*
      * Ask for an updated list of recent deposits
      */
-    std::vector<SidechainDeposit> UpdateDeposits(const std::string& strBuildHash);
+    std::vector<SidechainDeposit> UpdateDeposits(const std::string& strAddressBytes);
 
     /*
      * Note: true return value indicates the request to verify the
