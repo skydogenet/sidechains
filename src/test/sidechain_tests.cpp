@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
     // Test CheckBlock a block with valid BMM when -verifybmmcheckblock = false
     const CChainParams chainparams = Params();
 
-    BOOST_CHECK(chainActive.Height() == 100);
+    BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
     // Set -verifybmmcheckblock arg to false
     gArgs.ForceSetArg("-verifybmmcheckblock", "0");
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     BOOST_CHECK(ProcessNewBlock(chainparams, shared_pblock, true, nullptr));
 
-    BOOST_CHECK(chainActive.Height() == 101);
+    BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY + 1);
 }
 
 BOOST_AUTO_TEST_CASE(sidechain_bmm_valid)
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
     // Test CheckBlock without valid BMM when -verifybmmcheckblock = true
     const CChainParams chainparams = Params();
 
-    BOOST_CHECK(chainActive.Height() == 100);
+    BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
     // Set -verifybmmcheckblock arg to true
     gArgs.ForceSetArg("-verifybmmcheckblock", "1");
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     BOOST_CHECK(!ProcessNewBlock(chainparams, shared_pblock, true, nullptr));
 
-    BOOST_CHECK(chainActive.Height() == 100);
+    BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
     // Set -verifybmmcheckblock arg back to default (gArgs effect all tests)
     gArgs.ForceSetArg("-verifybmmcheckblock", "0");
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(sidechain_deposit)
 
     const CChainParams chainparams = Params();
 
-    BOOST_CHECK(chainActive.Height() == 100);
+    BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 /*
     // Generate BMM block
     CScript scriptPubKey;
