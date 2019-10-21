@@ -99,6 +99,7 @@ std::string SidechainWT::ToString() const
     str << "destination=" << strDestination << std::endl;
     str << "amount=" << FormatMoney(amount) << std::endl;
     str << "status=" << status << std::endl;
+    str << "hashBlindWTX=" << hashBlindWTX.ToString() << std::endl;
     return str.str();
 }
 

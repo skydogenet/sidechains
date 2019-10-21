@@ -4284,19 +4284,34 @@ bool CWallet::CreateWT(const CAmount& nAmount, const std::string& strDestination
     // WT burn output
     CRecipient burnRecipient = {CScript() << OP_RETURN, nAmount, false};
 
-    // WT data ouput
-    SidechainWT wt;
-    wt.nSidechain = SIDECHAIN_TEST;
-    wt.strDestination = strDestination;
-    wt.amount = burnRecipient.nAmount;
-    CRecipient dataRecipient = {wt.GetScript(), CENT, false};
-
     CWalletTx wtx;
     CReserveKey reserve(this);
     CAmount nFee;
     int nChangePos = -1;
     CCoinControl control;
     std::string strError;
+    if (!CreateTransaction(std::vector<CRecipient>{ burnRecipient }, wtx,
+                reserve, nFee, nChangePos, strError, control))
+    {
+        strFail = strError + " blind version.\n";
+        return false;
+    }
+
+    // We add the hash of the transaction before we've added the data output
+    // to the WT object to ensure its uniqueness
+
+    // WT data ouput
+    SidechainWT wt;
+    wt.nSidechain = SIDECHAIN_TEST;
+    wt.strDestination = strDestination;
+    wt.amount = burnRecipient.nAmount;
+    wt.hashBlindWTX = wtx.GetHash();
+    CRecipient dataRecipient = {wt.GetScript(), CENT, false};
+
+    // This is the actual transaction that will be committed
+
+    nChangePos = -1;
+    strError.clear();
     if (!CreateTransaction(std::vector<CRecipient>{ burnRecipient, dataRecipient }, wtx,
                 reserve, nFee, nChangePos, strError, control))
     {
