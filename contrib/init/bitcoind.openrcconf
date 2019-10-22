@@ -1,31 +1,31 @@
-# /etc/conf.d/testchainplusd: config file for /etc/init.d/testchainplusd
+# /etc/conf.d/testchaind: config file for /etc/init.d/testchaind
 
 # Config file location
 #BITCOIND_CONFIGFILE="/etc/bitcoin/bitcoin.conf"
 
 # What directory to write pidfile to?  (created and owned by $BITCOIND_USER)
-#BITCOIND_PIDDIR="/var/run/testchainplusd"
+#BITCOIND_PIDDIR="/var/run/testchaind"
 
 # What filename to give the pidfile
-#BITCOIND_PIDFILE="${BITCOIND_PIDDIR}/testchainplusd.pid"
+#BITCOIND_PIDFILE="${BITCOIND_PIDDIR}/testchaind.pid"
 
-# Where to write testchainplusd data (be mindful that the blockchain is large)
-#BITCOIND_DATADIR="/var/lib/testchainplusd"
+# Where to write testchaind data (be mindful that the blockchain is large)
+#BITCOIND_DATADIR="/var/lib/testchaind"
 
-# User and group to own testchainplusd process
+# User and group to own testchaind process
 #BITCOIND_USER="bitcoin"
 #BITCOIND_GROUP="bitcoin"
 
-# Path to testchainplusd executable
-#BITCOIND_BIN="/usr/bin/testchainplusd"
+# Path to testchaind executable
+#BITCOIND_BIN="/usr/bin/testchaind"
 
-# Nice value to run testchainplusd under
+# Nice value to run testchaind under
 #BITCOIND_NICE=0
 
 # Additional options (avoid -conf and -datadir, use flags above)
 #BITCOIND_OPTS=""
 
-# The timeout in seconds OpenRC will wait for testchainplusd to terminate
+# The timeout in seconds OpenRC will wait for testchaind to terminate
 # after a SIGTERM has been raised.
 # Note that this will be mapped as argument to start-stop-daemon's
 # '--retry' option, which means you can specify a retry schedule

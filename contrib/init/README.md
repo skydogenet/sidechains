@@ -1,11 +1,11 @@
 Sample configuration files for:
 ```
-SystemD: testchainplusd.service
-Upstart: testchainplusd.conf
-OpenRC:  testchainplusd.openrc
-         testchainplusd.openrcconf
-CentOS:  testchainplusd.init
-OS X:    org.bitcoin.testchainplusd.plist
+SystemD: testchaind.service
+Upstart: testchaind.conf
+OpenRC:  testchaind.openrc
+         testchaind.openrcconf
+CentOS:  testchaind.init
+OS X:    org.bitcoin.testchaind.plist
 ```
 have been made available to assist packagers in creating node packages here.
 

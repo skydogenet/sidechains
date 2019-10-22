@@ -1,2 +1,2 @@
-usr/local/bin/testchainplusd usr/bin
-usr/local/bin/testchainplus-cli usr/bin
+usr/local/bin/testchaind usr/bin
+usr/local/bin/testchain-cli usr/bin
