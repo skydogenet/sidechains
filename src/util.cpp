@@ -83,7 +83,7 @@
 // Application startup time (used for uptime calculation)
 const int64_t nStartupTime = GetTime();
 
-const char * const BITCOIN_CONF_FILENAME = "testchaind.conf";
+const char * const BITCOIN_CONF_FILENAME = "testchain.conf";
 const char * const BITCOIN_PID_FILENAME = "testchaind.pid";
 const char * const DEFAULT_DEBUGLOGFILE = "debug.log";
 
@@ -593,7 +593,7 @@ fs::path GetDefaultDataDir()
     return pathRet / "Library/Application Support/Testchain";
 #else
     // Unix
-    return pathRet / ".testchaind";
+    return pathRet / ".testchain";
 #endif
 #endif
 }
