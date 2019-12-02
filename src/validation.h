@@ -230,9 +230,9 @@ static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b
 static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = false;
 static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = false;
 static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = false;
-static const bool DEFAULT_VERIFY_BMM_ACCEPT_BLOCK = false;
+static const bool DEFAULT_VERIFY_BMM_ACCEPT_BLOCK = true;
 
-static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = false;
+static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
 
 extern BMMCache bmmCache;
 
