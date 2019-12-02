@@ -23,7 +23,10 @@
 static const std::string SIDECHAIN_ADDRESS_BYTES = "0186ff51f527ffdcf2413d50bdf8fab1feb20e5f82815dad48c73cf462b8b313";
 
 //! Sidechain build commit hash
-static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "e0da09fcc3db3715e52f236ba1d849b36496e86c";
+static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "84065aa5e0ab0dba138fecafa18fda13cdf8088e";
+
+//! Sidechain build tar hash
+static const std::string SIDECHAIN_BUILD_TAR_HASH = "176b7d2dddb0ec51c7989e9acf77e77cd9cf889738d17dd6b4678b27ec5c3f8e";
 
 static const int MAINCHAIN_WTPRIME_VERIFICATION_PERIOD = 300;
 static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 140;
