@@ -526,7 +526,7 @@ bool SidechainClient::GetBlockCount(int& nBlocks)
     // Process result
     nBlocks = ptree.get("result", 0);
 
-    return nBlocks > 0;
+    return nBlocks >= 0;
 }
 
 bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
