@@ -11,11 +11,18 @@
 #include <QMessageBox>
 #include <QTextStream>
 
-ConfGeneratorDialog::ConfGeneratorDialog(QWidget *parent) :
+ConfGeneratorDialog::ConfGeneratorDialog(QWidget *parent, bool fDialogIn) :
     QDialog(parent),
     ui(new Ui::ConfGeneratorDialog)
 {
     ui->setupUi(this);
+
+    fDialog = fDialogIn;
+
+    // Configure for non-dialog use
+    if (!fDialog) {
+        ui->pushButtonClose->close();
+    }
 }
 
 ConfGeneratorDialog::~ConfGeneratorDialog()
@@ -56,7 +63,12 @@ void ConfGeneratorDialog::on_pushButtonApply_clicked()
         messageBox.setText(str);
         messageBox.exec();
 
-        this->close();
+        // Close if dialog, otherwise signal that apply was pushed
+        if (fDialog) {
+            this->close();
+        } else {
+            Q_EMIT Applied();
+        }
     }
 }
 

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>574</width>
-    <height>510</height>
+    <width>586</width>
+    <height>528</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,754 +15,413 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <widget class="QTabWidget" name="tabWidget">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
+    <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="tabTransfer">
-      <attribute name="icon">
-       <iconset resource="../bitcoin.qrc">
-        <normaloff>:/icons/tx_inout</normaloff>:/icons/tx_inout</iconset>
-      </attribute>
-      <attribute name="title">
-       <string>Transfer</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout">
-       <item row="3" column="0" colspan="2">
-        <widget class="QTabWidget" name="tabWidgetTransfer">
-         <property name="autoFillBackground">
-          <bool>false</bool>
-         </property>
-         <property name="tabPosition">
-          <enum>QTabWidget::North</enum>
-         </property>
-         <property name="tabShape">
-          <enum>QTabWidget::Rounded</enum>
-         </property>
-         <property name="currentIndex">
-          <number>0</number>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>32</width>
-           <height>32</height>
-          </size>
-         </property>
-         <property name="tabBarAutoHide">
+     <widget class="QWidget" name="pageSidechain">
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QTabWidget" name="tabWidget">
+         <property name="enabled">
           <bool>true</bool>
          </property>
-         <widget class="QWidget" name="Withdraw">
-          <attribute name="icon">
-           <iconset resource="../bitcoin.qrc">
-            <normaloff>:/icons/left</normaloff>:/icons/left</iconset>
-          </attribute>
-          <attribute name="title">
-           <string>Withdraw from Sidechain</string>
-          </attribute>
-          <attribute name="toolTip">
-           <string>Withdraw from the Sidechain to the parent chain (DriveNetTESTDRIVE)</string>
-          </attribute>
-          <layout class="QVBoxLayout" name="verticalLayout_11">
-           <item>
-            <widget class="QFrame" name="frame_7">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_2">
-              <item>
-               <widget class="QLabel" name="label_7">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Available to withdraw:</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="available">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>0.0</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="horizontalSpacer_2">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::MinimumExpanding</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_3">
-                <property name="text">
-                 <string>Next Train: </string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="train">
-                <property name="text">
-                 <string>? - not connected to mainchain</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QFrame" name="frame_8">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_5">
-              <item row="1" column="0">
-               <layout class="QHBoxLayout" name="payToLayout">
-                <property name="spacing">
-                 <number>0</number>
-                </property>
-                <item>
-                 <widget class="QValidatedLineEdit" name="payTo">
-                  <property name="toolTip">
-                   <string>The Bitcoin address to send the payment to</string>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="placeholderText">
-                   <string>Mainchain Bitcoin Address</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="pasteButton">
-                  <property name="toolTip">
-                   <string>Paste address from clipboard</string>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="icon">
-                   <iconset resource="../bitcoin.qrc">
-                    <normaloff>:/icons/editpaste</normaloff>:/icons/editpaste</iconset>
-                  </property>
-                  <property name="iconSize">
-                   <size>
-                    <width>22</width>
-                    <height>22</height>
-                   </size>
-                  </property>
-                  <property name="shortcut">
-                   <string>Alt+P</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="deleteButton">
-                  <property name="toolTip">
-                   <string>Remove this entry</string>
-                  </property>
-                  <property name="text">
-                   <string/>
-                  </property>
-                  <property name="icon">
-                   <iconset resource="../bitcoin.qrc">
-                    <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
-                  </property>
-                  <property name="iconSize">
-                   <size>
-                    <width>22</width>
-                    <height>22</height>
-                   </size>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_9">
-                <property name="text">
-                 <string>Withdraw Address:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <layout class="QHBoxLayout" name="horizontalLayoutAmount" stretch="0">
-                <item>
-                 <widget class="BitcoinAmountField" name="payAmount"/>
-                </item>
-               </layout>
-              </item>
-              <item row="1" column="1" rowspan="2">
-               <widget class="QPushButton" name="pushButtonWT">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Withdraw</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="Deposit">
-          <attribute name="icon">
-           <iconset resource="../bitcoin.qrc">
-            <normaloff>:/icons/right</normaloff>:/icons/right</iconset>
-          </attribute>
-          <attribute name="title">
-           <string>Deposit to Sidechain</string>
-          </attribute>
-          <attribute name="toolTip">
-           <string>Get an address to make a deposit from the parent chain to this Sidechain</string>
-          </attribute>
-          <layout class="QHBoxLayout" name="horizontalLayout_9">
-           <item>
-            <widget class="QFrame" name="frame_6">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_8">
-              <item row="5" column="0">
-               <widget class="QPushButton" name="pushButtonNew">
-                <property name="text">
-                 <string>New</string>
-                </property>
-                <property name="icon">
-                 <iconset resource="../bitcoin.qrc">
-                  <normaloff>:/movies/spinner-035</normaloff>:/movies/spinner-035</iconset>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0" colspan="2">
-               <widget class="QLineEdit" name="lineEditDepositAddress">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="placeholderText">
-                 <string>Sidechain Deposit Address</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="1">
-               <widget class="QPushButton" name="pushButtonCopy">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Copy</string>
-                </property>
-                <property name="icon">
-                 <iconset resource="../bitcoin.qrc">
-                  <normaloff>:/icons/editcopy</normaloff>:/icons/editcopy</iconset>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0" colspan="2">
-               <widget class="QLabel" name="labelDepositAddress">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Deposit to this address from the mainchain.</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QLabel" name="labelFee">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>This sidechain will collect a fee of: </string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QRImageWidget" name="QRCode">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>180</width>
-               <height>180</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>180</width>
-               <height>180</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>QR Code</string>
-             </property>
-             <property name="textFormat">
-              <enum>Qt::PlainText</enum>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-             <property name="wordWrap">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QFrame" name="frame_2">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Sidechain: Testchain</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="pushButtonSidechain">
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset resource="../bitcoin.qrc">
-              <normaloff>:/icons/bitcoin</normaloff>:/icons/bitcoin</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>96</width>
-              <height>96</height>
-             </size>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0" colspan="2">
-        <spacer name="verticalSpacer_4">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Minimum</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="0" column="0">
-        <widget class="QFrame" name="frame">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_2">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>Parent Chain: DriveNetTESTDRIVE</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="pushButtonMainchain">
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset resource="../bitcoin.qrc">
-              <normaloff>:/icons/drivenet</normaloff>:/icons/drivenet</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>96</width>
-              <height>96</height>
-             </size>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="2">
-        <spacer name="verticalSpacer_5">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Maximum</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>5</width>
-           <height>5</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tabHistory">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <attribute name="icon">
-       <iconset resource="../bitcoin.qrc">
-        <normaloff>:/icons/history</normaloff>:/icons/history</iconset>
-      </attribute>
-      <attribute name="title">
-       <string>History</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_6">
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_10">
-         <property name="text">
-          <string>WT^ Explorer:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QFrame" name="frame_10">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_7">
-          <item row="2" column="2">
-           <widget class="QFrame" name="frameOutgoing">
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_8"/>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLabel" name="label_11">
-            <property name="text">
-             <string>Incoming </string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QFrame" name="frameIncoming">
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_6"/>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_12">
-            <property name="text">
-             <string>Outgoing</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QFrame" name="frame_9">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
-          <item>
-           <widget class="QLineEdit" name="lineEditWTtxid">
-            <property name="placeholderText">
-             <string>Enter WT^ TxID</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QTreeView" name="treeView">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QFrame" name="frame_11">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <item>
-           <widget class="QRadioButton" name="radioButtonHighlightMine">
-            <property name="text">
-             <string>Highlight</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioButtonOnlyMine">
-            <property name="text">
-             <string>Mine only</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_3">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <spacer name="verticalSpacer_7">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tabBMM">
-      <attribute name="icon">
-       <iconset resource="../bitcoin.qrc">
-        <normaloff>:/icons/tx_mined</normaloff>:/icons/tx_mined</iconset>
-      </attribute>
-      <attribute name="title">
-       <string>BMM</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_13">
-       <item row="0" column="0">
-        <widget class="QTabWidget" name="tabWidget_2">
          <property name="currentIndex">
           <number>0</number>
          </property>
-         <widget class="QWidget" name="Automated">
-          <attribute name="title">
-           <string>Automated</string>
+         <widget class="QWidget" name="tabTransfer">
+          <attribute name="icon">
+           <iconset resource="../bitcoin.qrc">
+            <normaloff>:/icons/tx_inout</normaloff>:/icons/tx_inout</iconset>
           </attribute>
-          <layout class="QGridLayout" name="gridLayout_14">
-           <item row="2" column="0" colspan="2">
-            <widget class="Line" name="line_2">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
+          <attribute name="title">
+           <string>Transfer</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout">
+           <item row="3" column="0" colspan="2">
+            <widget class="QTabWidget" name="tabWidgetTransfer">
+             <property name="autoFillBackground">
+              <bool>false</bool>
              </property>
-            </widget>
-           </item>
-           <item row="9" column="0" colspan="2">
-            <widget class="QFrame" name="frame_13">
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
+             <property name="tabPosition">
+              <enum>QTabWidget::North</enum>
              </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
+             <property name="tabShape">
+              <enum>QTabWidget::Rounded</enum>
              </property>
-             <layout class="QGridLayout" name="gridLayout_11">
-              <item row="1" column="1">
-               <widget class="QListWidget" name="listWidgetBMMConnected"/>
-              </item>
-              <item row="1" column="0">
-               <widget class="QListWidget" name="listWidgetBMMCreated"/>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_18">
-                <property name="text">
-                 <string>Your attempts (Mainchain TxID):</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="label_19">
-                <property name="text">
-                 <string>Blocks found (SC block hash):</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="10" column="0" colspan="2">
-            <spacer name="verticalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
+             <property name="currentIndex">
+              <number>0</number>
              </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Maximum</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
+             <property name="iconSize">
               <size>
-               <width>20</width>
-               <height>40</height>
+               <width>32</width>
+               <height>32</height>
               </size>
              </property>
-            </spacer>
-           </item>
-           <item row="4" column="1">
-            <widget class="QSpinBox" name="spinBoxRefreshInterval">
-             <property name="suffix">
-              <string> Seconds</string>
+             <property name="tabBarAutoHide">
+              <bool>true</bool>
              </property>
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>600</number>
-             </property>
-             <property name="value">
-              <number>21</number>
-             </property>
+             <widget class="QWidget" name="Withdraw">
+              <attribute name="icon">
+               <iconset resource="../bitcoin.qrc">
+                <normaloff>:/icons/left</normaloff>:/icons/left</iconset>
+              </attribute>
+              <attribute name="title">
+               <string>Withdraw from Sidechain</string>
+              </attribute>
+              <attribute name="toolTip">
+               <string>Withdraw from the Sidechain to the parent chain (DriveNetTESTDRIVE)</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_11">
+               <item>
+                <widget class="QFrame" name="frame_7">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <item>
+                   <widget class="QLabel" name="label_7">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Available to withdraw:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="available">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>0.0</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <spacer name="horizontalSpacer_2">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeType">
+                     <enum>QSizePolicy::MinimumExpanding</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="label_3">
+                    <property name="text">
+                     <string>Next Train: </string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="train">
+                    <property name="text">
+                     <string>? - not connected to mainchain</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QFrame" name="frame_8">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_5">
+                  <item row="1" column="0">
+                   <layout class="QHBoxLayout" name="payToLayout">
+                    <property name="spacing">
+                     <number>0</number>
+                    </property>
+                    <item>
+                     <widget class="QValidatedLineEdit" name="payTo">
+                      <property name="toolTip">
+                       <string>The Bitcoin address to send the payment to</string>
+                      </property>
+                      <property name="text">
+                       <string/>
+                      </property>
+                      <property name="placeholderText">
+                       <string>Mainchain Bitcoin Address</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QToolButton" name="pasteButton">
+                      <property name="toolTip">
+                       <string>Paste address from clipboard</string>
+                      </property>
+                      <property name="text">
+                       <string/>
+                      </property>
+                      <property name="icon">
+                       <iconset resource="../bitcoin.qrc">
+                        <normaloff>:/icons/editpaste</normaloff>:/icons/editpaste</iconset>
+                      </property>
+                      <property name="iconSize">
+                       <size>
+                        <width>22</width>
+                        <height>22</height>
+                       </size>
+                      </property>
+                      <property name="shortcut">
+                       <string>Alt+P</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QToolButton" name="deleteButton">
+                      <property name="toolTip">
+                       <string>Remove this entry</string>
+                      </property>
+                      <property name="text">
+                       <string/>
+                      </property>
+                      <property name="icon">
+                       <iconset resource="../bitcoin.qrc">
+                        <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
+                      </property>
+                      <property name="iconSize">
+                       <size>
+                        <width>22</width>
+                        <height>22</height>
+                       </size>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_9">
+                    <property name="text">
+                     <string>Withdraw Address:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <layout class="QHBoxLayout" name="horizontalLayoutAmount" stretch="0">
+                    <item>
+                     <widget class="BitcoinAmountField" name="payAmount"/>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="1" column="1" rowspan="2">
+                   <widget class="QPushButton" name="pushButtonWT">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Withdraw</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="Deposit">
+              <attribute name="icon">
+               <iconset resource="../bitcoin.qrc">
+                <normaloff>:/icons/right</normaloff>:/icons/right</iconset>
+              </attribute>
+              <attribute name="title">
+               <string>Deposit to Sidechain</string>
+              </attribute>
+              <attribute name="toolTip">
+               <string>Get an address to make a deposit from the parent chain to this Sidechain</string>
+              </attribute>
+              <layout class="QHBoxLayout" name="horizontalLayout_9">
+               <item>
+                <widget class="QFrame" name="frame_6">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_8">
+                  <item row="5" column="0">
+                   <widget class="QPushButton" name="pushButtonNew">
+                    <property name="text">
+                     <string>New</string>
+                    </property>
+                    <property name="icon">
+                     <iconset resource="../bitcoin.qrc">
+                      <normaloff>:/movies/spinner-035</normaloff>:/movies/spinner-035</iconset>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0" colspan="2">
+                   <widget class="QLineEdit" name="lineEditDepositAddress">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="placeholderText">
+                     <string>Sidechain Deposit Address</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QPushButton" name="pushButtonCopy">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Copy</string>
+                    </property>
+                    <property name="icon">
+                     <iconset resource="../bitcoin.qrc">
+                      <normaloff>:/icons/editcopy</normaloff>:/icons/editcopy</iconset>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0" colspan="2">
+                   <widget class="QLabel" name="labelDepositAddress">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Deposit to this address from the mainchain.</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0" colspan="2">
+                   <widget class="QLabel" name="labelFee">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>This sidechain will collect a fee of: </string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRImageWidget" name="QRCode">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>180</width>
+                   <height>180</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>180</width>
+                   <height>180</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>QR Code</string>
+                 </property>
+                 <property name="textFormat">
+                  <enum>Qt::PlainText</enum>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
-           <item row="5" column="0" colspan="2">
-            <widget class="QFrame" name="frame_14">
+           <item row="0" column="1">
+            <widget class="QFrame" name="frame_2">
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
              <property name="frameShadow">
               <enum>QFrame::Raised</enum>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout">
-              <item>
-               <widget class="QLabel" name="label_15">
+             <layout class="QGridLayout" name="gridLayout_3">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_2">
                 <property name="text">
-                 <string>Hash of last mainchain block seen: </string>
+                 <string>Sidechain: Testchain</string>
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QPushButton" name="pushButtonHashBlockLastSeen">
-                <property name="cursor">
-                 <cursorShape>ArrowCursor</cursorShape>
-                </property>
+              <item row="1" column="0">
+               <widget class="QPushButton" name="pushButtonSidechain">
                 <property name="text">
-                 <string>0000000000000000000000000000000000000000000000000000000000000000</string>
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="../bitcoin.qrc">
+                  <normaloff>:/icons/bitcoin</normaloff>:/icons/bitcoin</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>96</width>
+                  <height>96</height>
+                 </size>
                 </property>
                 <property name="flat">
                  <bool>true</bool>
@@ -772,106 +431,164 @@
              </layout>
             </widget>
            </item>
-           <item row="4" column="0">
-            <widget class="QDoubleSpinBox" name="doubleSpinBoxBMMAmount">
-             <property name="prefix">
-              <string/>
+           <item row="4" column="0" colspan="2">
+            <spacer name="verticalSpacer_4">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
              </property>
-             <property name="suffix">
-              <string> BTC</string>
+             <property name="sizeType">
+              <enum>QSizePolicy::Minimum</enum>
              </property>
-             <property name="decimals">
-              <number>2</number>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
              </property>
-             <property name="minimum">
-              <double>0.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>1.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.001000000000000</double>
-             </property>
-             <property name="value">
-              <double>0.010000000000000</double>
-             </property>
-            </widget>
+            </spacer>
            </item>
-           <item row="3" column="1">
-            <widget class="QLabel" name="label_14">
-             <property name="text">
-              <string>Refresh Interval</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_13">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Critical Transaction Amount</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QCheckBox" name="checkBoxEnableAutomation">
-             <property name="statusTip">
-              <string/>
-             </property>
-             <property name="whatsThis">
-              <string/>
-             </property>
-             <property name="text">
-              <string>Enable Automated BMM</string>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QPushButton" name="pushButtonConfigureBMM">
-             <property name="text">
-              <string>Configure BMM</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="Manual">
-          <attribute name="title">
-           <string>Manual</string>
-          </attribute>
-          <layout class="QHBoxLayout" name="horizontalLayout">
-           <item>
-            <widget class="QFrame" name="frame_12">
+           <item row="0" column="0">
+            <widget class="QFrame" name="frame">
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
              <property name="frameShadow">
               <enum>QFrame::Raised</enum>
              </property>
-             <layout class="QGridLayout" name="gridLayout_10">
+             <layout class="QGridLayout" name="gridLayout_2">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>Parent Chain: DriveNetTESTDRIVE</string>
+                </property>
+               </widget>
+              </item>
               <item row="1" column="0">
-               <widget class="QLabel" name="label_8">
+               <widget class="QPushButton" name="pushButtonMainchain">
                 <property name="text">
-                 <string>Create BMM Block</string>
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="../bitcoin.qrc">
+                  <normaloff>:/icons/drivenet</normaloff>:/icons/drivenet</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>96</width>
+                  <height>96</height>
+                 </size>
+                </property>
+                <property name="flat">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QPushButton" name="pushButtonCreateBlock">
+             </layout>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <spacer name="verticalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Maximum</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>5</width>
+               <height>5</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tabHistory">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <attribute name="icon">
+           <iconset resource="../bitcoin.qrc">
+            <normaloff>:/icons/history</normaloff>:/icons/history</iconset>
+          </attribute>
+          <attribute name="title">
+           <string>History</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_6">
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_10">
+             <property name="text">
+              <string>WT^ Explorer:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QFrame" name="frame_10">
+             <property name="frameShape">
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Raised</enum>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_7">
+              <item row="2" column="2">
+               <widget class="QFrame" name="frameOutgoing">
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_8"/>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_11">
                 <property name="text">
-                 <string>Generate BMM Block</string>
+                 <string>Incoming </string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="0" colspan="2">
-               <widget class="QTextBrowser" name="textBrowser">
+              <item row="2" column="1">
+               <widget class="QFrame" name="frameIncoming">
+                <property name="frameShape">
+                 <enum>QFrame::StyledPanel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_6"/>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="label_12">
+                <property name="text">
+                 <string>Outgoing</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QFrame" name="frame_9">
+             <property name="frameShape">
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Raised</enum>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_7">
+              <item>
+               <widget class="QLineEdit" name="lineEditWTtxid">
+                <property name="placeholderText">
+                 <string>Enter WT^ TxID</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTreeView" name="treeView">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
                   <horstretch>0</horstretch>
@@ -880,114 +597,408 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
-               <widget class="QPushButton" name="pushButtonSendCriticalRequest">
-                <property name="text">
-                 <string>Send BMM Request to Mainchain</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QLineEdit" name="lineEditManualBMMHash">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>BMM Block Blind Hash (h*)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0" colspan="2">
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="3" column="0" colspan="2">
-               <widget class="QLineEdit" name="lineEditManualMainchainBlockHash">
-                <property name="placeholderText">
-                 <string>Block hash of mainchain chain tip</string>
-                </property>
-               </widget>
-              </item>
              </layout>
             </widget>
            </item>
-           <item>
-            <widget class="QFrame" name="frameManualBMM">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
+           <item row="1" column="0">
+            <widget class="QFrame" name="frame_11">
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
              <property name="frameShadow">
               <enum>QFrame::Raised</enum>
              </property>
-             <layout class="QGridLayout" name="gridLayout_15">
-              <item row="4" column="0">
-               <widget class="Line" name="line">
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <item>
+               <widget class="QRadioButton" name="radioButtonHighlightMine">
+                <property name="text">
+                 <string>Highlight</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="radioButtonOnlyMine">
+                <property name="text">
+                 <string>Mine only</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_3">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLineEdit" name="lineEditCoinbaseHex">
-                <property name="placeholderText">
-                 <string>Coinbase Hex</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLineEdit" name="lineEditProof">
-                <property name="placeholderText">
-                 <string>TxOut Proof</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0">
-               <widget class="QPushButton" name="pushButtonSubmitBlock">
-                <property name="text">
-                 <string>Submit Block</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLineEdit" name="lineEditBMMHash">
-                <property name="placeholderText">
-                 <string>BMM Block Hash</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_6">
-                <property name="text">
-                 <string>Submit BMM Block</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0">
-               <spacer name="verticalSpacer_2">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
                 <property name="sizeHint" stdset="0">
                  <size>
-                  <width>20</width>
-                  <height>40</height>
+                  <width>40</width>
+                  <height>20</height>
                  </size>
                 </property>
                </spacer>
               </item>
              </layout>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <spacer name="verticalSpacer_7">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tabBMM">
+          <attribute name="icon">
+           <iconset resource="../bitcoin.qrc">
+            <normaloff>:/icons/tx_mined</normaloff>:/icons/tx_mined</iconset>
+          </attribute>
+          <attribute name="title">
+           <string>BMM</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_13">
+           <item row="0" column="0">
+            <widget class="QTabWidget" name="tabWidget_2">
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="Automated">
+              <attribute name="title">
+               <string>Automated</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_14">
+               <item row="2" column="0" colspan="2">
+                <widget class="Line" name="line_2">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="9" column="0" colspan="2">
+                <widget class="QFrame" name="frame_13">
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_11">
+                  <item row="1" column="1">
+                   <widget class="QListWidget" name="listWidgetBMMConnected"/>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QListWidget" name="listWidgetBMMCreated"/>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_18">
+                    <property name="text">
+                     <string>Your attempts (Mainchain TxID):</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="label_19">
+                    <property name="text">
+                     <string>Blocks found (SC block hash):</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="10" column="0" colspan="2">
+                <spacer name="verticalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Maximum</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="4" column="1">
+                <widget class="QSpinBox" name="spinBoxRefreshInterval">
+                 <property name="suffix">
+                  <string> Seconds</string>
+                 </property>
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>600</number>
+                 </property>
+                 <property name="value">
+                  <number>21</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="5" column="0" colspan="2">
+                <widget class="QFrame" name="frame_14">
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout">
+                  <item>
+                   <widget class="QLabel" name="label_15">
+                    <property name="text">
+                     <string>Hash of last mainchain block seen: </string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButtonHashBlockLastSeen">
+                    <property name="cursor">
+                     <cursorShape>ArrowCursor</cursorShape>
+                    </property>
+                    <property name="text">
+                     <string>0000000000000000000000000000000000000000000000000000000000000000</string>
+                    </property>
+                    <property name="flat">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="4" column="0">
+                <widget class="QDoubleSpinBox" name="doubleSpinBoxBMMAmount">
+                 <property name="prefix">
+                  <string/>
+                 </property>
+                 <property name="suffix">
+                  <string> BTC</string>
+                 </property>
+                 <property name="decimals">
+                  <number>2</number>
+                 </property>
+                 <property name="minimum">
+                  <double>0.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>1.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.001000000000000</double>
+                 </property>
+                 <property name="value">
+                  <double>0.010000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="1">
+                <widget class="QLabel" name="label_14">
+                 <property name="text">
+                  <string>Refresh Interval</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="0">
+                <widget class="QLabel" name="label_13">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>Critical Transaction Amount</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QCheckBox" name="checkBoxEnableAutomation">
+                 <property name="statusTip">
+                  <string/>
+                 </property>
+                 <property name="whatsThis">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string>Enable Automated BMM</string>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QPushButton" name="pushButtonConfigureBMM">
+                 <property name="text">
+                  <string>Redo Mainchain Connection</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="Manual">
+              <attribute name="title">
+               <string>Manual</string>
+              </attribute>
+              <layout class="QHBoxLayout" name="horizontalLayout">
+               <item>
+                <widget class="QFrame" name="frame_12">
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_10">
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_8">
+                    <property name="text">
+                     <string>Create BMM Block</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="0">
+                   <widget class="QPushButton" name="pushButtonCreateBlock">
+                    <property name="text">
+                     <string>Generate BMM Block</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0" colspan="2">
+                   <widget class="QTextBrowser" name="textBrowser">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QPushButton" name="pushButtonSendCriticalRequest">
+                    <property name="text">
+                     <string>Send BMM Request to Mainchain</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0" colspan="2">
+                   <widget class="QLineEdit" name="lineEditManualBMMHash">
+                    <property name="readOnly">
+                     <bool>true</bool>
+                    </property>
+                    <property name="placeholderText">
+                     <string>BMM Block Blind Hash (h*)</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0" colspan="2">
+                   <spacer name="verticalSpacer">
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>20</width>
+                      <height>40</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item row="3" column="0" colspan="2">
+                   <widget class="QLineEdit" name="lineEditManualMainchainBlockHash">
+                    <property name="placeholderText">
+                     <string>Block hash of mainchain chain tip</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QFrame" name="frameManualBMM">
+                 <property name="enabled">
+                  <bool>true</bool>
+                 </property>
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_15">
+                  <item row="4" column="0">
+                   <widget class="Line" name="line">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLineEdit" name="lineEditCoinbaseHex">
+                    <property name="placeholderText">
+                     <string>Coinbase Hex</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLineEdit" name="lineEditProof">
+                    <property name="placeholderText">
+                     <string>TxOut Proof</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="0">
+                   <widget class="QPushButton" name="pushButtonSubmitBlock">
+                    <property name="text">
+                     <string>Submit Block</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLineEdit" name="lineEditBMMHash">
+                    <property name="placeholderText">
+                     <string>BMM Block Hash</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_6">
+                    <property name="text">
+                     <string>Submit BMM Block</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <spacer name="verticalSpacer_2">
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>20</width>
+                      <height>40</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
           </layout>
@@ -996,7 +1007,193 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="pageRestart">
+      <layout class="QGridLayout" name="gridLayout_9">
+       <item row="0" column="1">
+        <widget class="QLabel" name="label_16">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Restart the Sidechain and DriveNet to apply settings!&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>64</width>
+           <height>64</height>
+          </size>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="pixmap">
+          <pixmap resource="../bitcoin.qrc">:/movies/spinner-000</pixmap>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QLabel" name="label_21">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>You need to restart this sidechain and DriveNet for the configuration to be applied and a connection established.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QFrame" name="frame_3">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_12">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_22">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>512</width>
+              <height>256</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap resource="../bitcoin.qrc">:/icons/closeboth</pixmap>
+            </property>
+            <property name="scaledContents">
+             <bool>true</bool>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="wordWrap">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="pageConnectionError">
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="1">
+        <widget class="QLabel" name="label_17">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Mainchain connection error!&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>64</width>
+           <height>64</height>
+          </size>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="pixmap">
+          <pixmap resource="../bitcoin.qrc">:/icons/warning</pixmap>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QPushButton" name="pushButtonRetryConnection">
+         <property name="text">
+          <string>Retry connection</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QLabel" name="label_20">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;You have configuration files for the mainchain and this sidechain, but have failed to connect to the mainchain. &lt;/span&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Please check that the mainchain is running! &lt;/span&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;You also may have not restarted this sidechain (Testchain) or the mainchain (DriveNet) to apply configuration or have changed configuration settings incorrectly.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <spacer name="verticalSpacer_6">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
     </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_8">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

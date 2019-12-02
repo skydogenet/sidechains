@@ -47,11 +47,22 @@ static const int nTrainRefresh = 5 * 1000; // 5 seconds
 static const int nRetryRefresh = 5 * 1000; // 5 seconds
 static const int nTrainWarningSleep = 30 * 1000; // 30 seconds
 
+static const int PAGE_DEFAULT_INDEX = 0;
+static const int PAGE_RESTART_INDEX = 1;
+static const int PAGE_CONNERR_INDEX = 2;
+static const int PAGE_CONFIG_INDEX = 3;
+
 SidechainPage::SidechainPage(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SidechainPage)
 {
     ui->setupUi(this);
+
+    // Initialize configuration generator dialog - only for the conf page of
+    // the stacked widget. Clicking on "redo mainchain connection" will spawn
+    // its own instance.
+    confGeneratorDialog = new ConfGeneratorDialog(this, false /* fDialog */);
+    connect(confGeneratorDialog, SIGNAL(Applied()), this, SLOT(ShowRestartPage()));
 
     // Initialize the BMM Automation refresh timer
     bmmTimer = new QTimer(this);
@@ -87,10 +98,7 @@ SidechainPage::SidechainPage(QWidget *parent) :
     str += "This may be due to configuration issues. ";
     str += "Please check that you have set up configuration files.\n\n";
     str += "Also make sure that the mainchain node is running!\n\n";
-    str += "Note: networking will be disabled if you have optional ";
-    str += "verification settings enabled which require a connection ";
-    str += "to the mainchain. Networking will automatically be re-enabled ";
-    str += "once the connection is restored.\n\n";
+    str += "Networking will be disabled until the connection is restored\n\n";
     str += "Will retry in a few seconds after you close this window...\n";
 
     trainErrorMessageBox->setText(QString::fromStdString(str));
@@ -129,6 +137,24 @@ SidechainPage::SidechainPage(QWidget *parent) :
     QString strFee = "Note: this sidechain will collect its own fee of: ";
     strFee += BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, SIDECHAIN_DEPOSIT_FEE);
     ui->labelFee->setText(strFee);
+
+    // Check configuration & connection - set page to configuration
+    // page if configuration / connection check fails
+    bool fConfiguration = false;
+    bool fConnection = false;
+    CheckConfiguration(fConfiguration, fConnection);
+
+    // Display the configuration widget if we need to - hide sidechain page
+    if (!fConfiguration) {
+        ui->stackedWidget->addWidget(confGeneratorDialog);
+        ui->stackedWidget->setCurrentIndex(PAGE_CONFIG_INDEX);
+    }
+    else
+    if (!fConnection) {
+        ui->stackedWidget->setCurrentIndex(PAGE_CONNERR_INDEX);
+    } else {
+        ui->stackedWidget->setCurrentIndex(PAGE_DEFAULT_INDEX);
+    }
 }
 
 SidechainPage::~SidechainPage()
@@ -583,7 +609,8 @@ void SidechainPage::RefreshTrain()
     if (!client.GetBlockCount(nMainchainBlocks)) {
         UpdateNetworkActive(false /* fMainchainConnected */);
         trainTimer->stop();
-        if (!fSleepTrainWarning) {
+        if (!fSleepTrainWarning && ui->stackedWidget->currentIndex() != PAGE_CONFIG_INDEX
+                && ui->stackedWidget->currentIndex() != PAGE_RESTART_INDEX) {
             trainErrorMessageBox->close();
             trainErrorMessageBox->exec();
             fSleepTrainWarning = true;
@@ -632,32 +659,76 @@ void SidechainPage::ResetTrainWarningSleep()
     fSleepTrainWarning = false;
 }
 
+void SidechainPage::ShowRestartPage()
+{
+    ui->stackedWidget->setCurrentIndex(PAGE_RESTART_INDEX);
+}
+
+void SidechainPage::on_pushButtonRetryConnection_clicked()
+{
+    bool fConfig = false;
+    bool fConnection = false;
+    CheckConfiguration(fConfig, fConnection);
+    UpdateNetworkActive(fConnection);
+}
+
 void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
     if (!g_connman)
         return;
 
-    // If fMainchainConnected, re enable networking
+    // Enable or disable networking based on connection to mainchain
     if (fMainchainConnected) {
         if (!g_connman->GetNetworkActive())
             g_connman->SetNetworkActive(true);
 
         // Close the connection warning popup if it is open
         trainErrorMessageBox->close();
-
-        return;
-    }
-
-    // If fMainchainConnected is false, check if we need to disable networking
-    bool fOptionalVerification =
-        gArgs.GetBoolArg("-verifybmmacceptblock", DEFAULT_VERIFY_BMM_ACCEPT_BLOCK) ||
-        gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER) ||
-        gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER) ||
-        gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK) ||
-        gArgs.GetBoolArg("-verifybmmreadblock", DEFAULT_VERIFY_BMM_READ_BLOCK) ||
-        gArgs.GetBoolArg("-verifywtprimeacceptblock", DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK);
-
-    // Disable networking if we need to
-    if (!fMainchainConnected && fOptionalVerification) {
+    } else {
         g_connman->SetNetworkActive(false);
     }
+
+    // Update the GUI to show or hide the network connection warning.
+    // Only switch to the network warning if the configuration warning isn't
+    // currently displayed.
+    if (!fMainchainConnected && ui->stackedWidget->currentIndex() != PAGE_CONFIG_INDEX &&
+            ui->stackedWidget->currentIndex() != PAGE_RESTART_INDEX) {
+        ui->stackedWidget->setCurrentIndex(PAGE_CONNERR_INDEX);
+    }
+    else
+    if (fMainchainConnected && ui->stackedWidget->currentIndex() != PAGE_CONFIG_INDEX){
+        ui->stackedWidget->setCurrentIndex(PAGE_DEFAULT_INDEX);
+    }
+}
+
+void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
+{
+    fConfig = false;
+    fConnection = false;
+
+    // Does the sidechain directory exist?
+    fs::path pathSide = GetDefaultDataDir();
+    if (!fs::exists(pathSide))
+        return;
+
+    // Get ~/
+    fs::path pathHome = GetHomeDir();
+
+    // Does the drivenet directory exist?
+    fs::path pathDrivechain = pathHome / ".drivenet";
+    if (!fs::exists(pathDrivechain))
+        return;
+
+    fs::path pathConfMain = pathDrivechain / "drivenet.conf";
+    fs::path pathConfSide = pathSide / "testchain.conf";
+
+    // Do drivenet.conf & side.conf exist?
+    if (fs::exists(pathConfMain) && fs::exists(pathConfSide))
+        fConfig = true;
+
+    // Check if we can connect to the mainchain
+    SidechainClient client;
+    int nMainchainBlocks = 0;
+    fConnection = client.GetBlockCount(nMainchainBlocks);
+
+    UpdateNetworkActive(fConnection /* fMainchainConnected */);
 }

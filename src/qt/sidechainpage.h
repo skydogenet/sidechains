@@ -21,6 +21,7 @@ QT_END_NAMESPACE
 class CBlock;
 class WalletModel;
 class QMessageBox;
+class ConfGeneratorDialog;
 
 namespace Ui {
 class SidechainPage;
@@ -78,6 +79,10 @@ private Q_SLOTS:
 
     void ResetTrainWarningSleep();
 
+    void ShowRestartPage();
+
+    void on_pushButtonRetryConnection_clicked();
+
 private:
     Ui::SidechainPage *ui;
 
@@ -88,6 +93,8 @@ private:
 
     SidechainHistoryTableModel *incomingTableModel;
     SidechainHistoryTableModel *outgoingTableModel;
+
+    ConfGeneratorDialog *confGeneratorDialog;
 
     QTimer *bmmTimer;
     QTimer *trainTimer;
@@ -113,6 +120,9 @@ private:
     // networking if fMainchainConnected is set to false. If fMainchainConnected
     // is set to true - re enable networking.
     void UpdateNetworkActive(bool fMainchainConnected);
+
+    // Check if configuration files are setup and connection works
+    void CheckConfiguration(bool& fConfig, bool& fConnection);
 };
 
 #endif // SIDECHAINPAGE_H
