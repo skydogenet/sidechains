@@ -117,6 +117,12 @@ TestingSetup::~TestingSetup()
 
 TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
 {
+    // Disable default enabled BMM checks for testchain generation - otherwise
+    // these blocks would need valid BMM and a mainchain connection for unit
+    // testing
+    gArgs.ForceSetArg("-verifybmmacceptblock", "0");
+    gArgs.ForceSetArg("-verifywtprimeacceptblock", "0");
+
     // CreateAndProcessBlock() does not support building SegWit blocks, so don't activate in these tests.
     // TODO: fix the code to support SegWit blocks.
     UpdateVersionBitsParameters(Consensus::DEPLOYMENT_SEGWIT, 0, Consensus::BIP9Deployment::NO_TIMEOUT);
@@ -128,6 +134,10 @@ TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
         CBlock b = CreateAndProcessBlock(scriptPubKey);
         coinbaseTxns.push_back(*b.vtx[0]);
     }
+
+    // Reset the gArgs we set
+    gArgs.ForceSetArg("-verifybmmacceptblock", "1");
+    gArgs.ForceSetArg("-verifywtprimeacceptblock", "1");
 }
 
 // TODO refactor

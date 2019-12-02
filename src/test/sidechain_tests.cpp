@@ -42,6 +42,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
 
     // Set -verifybmmcheckblock arg to false
     gArgs.ForceSetArg("-verifybmmcheckblock", "0");
+    gArgs.ForceSetArg("-verifybmmacceptblock", "0");
 
     // Generate BMM block
     CScript scriptPubKey;
