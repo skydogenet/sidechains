@@ -43,6 +43,8 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
     // Set -verifybmmcheckblock arg to false
     gArgs.ForceSetArg("-verifybmmcheckblock", "0");
     gArgs.ForceSetArg("-verifybmmacceptblock", "0");
+    gArgs.ForceSetArg("-verifybmmacceptheader", "0");
+    gArgs.ForceSetArg("-verifybmmreadblock", "0");
 
     // Generate BMM block
     CScript scriptPubKey;
@@ -94,13 +96,29 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid)
 
 BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
 {
+    // TODO
+    //
+    // Figure out a way of running tests with valid / invalid BMM where BMM
+    // is verified as usual. This is complicated because the code to verify BMM
+    // requires a connection to the mainchain. This can be tested as part of the
+    // integration script but would also be helpful to simulate a mainchain
+    // providing / not providing the merkle proof of a BMM commitment in a
+    // mainchain block.
+    //
+    // One sort of hacky option would be to add a parameter to ProcessNewBlock
+    // which accepts the BMM proof. If the proof is passed in we can make the
+    // code use that proof instead of asking for it from the mainchain, and skip
+    // the mainchain connection checks.
+    //
+    // Right now this test is doing nothing helpful.
+
     // Test CheckBlock without valid BMM when -verifybmmcheckblock = true
     const CChainParams chainparams = Params();
 
     BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
     // Set -verifybmmcheckblock arg to true
-    gArgs.ForceSetArg("-verifybmmcheckblock", "1");
+    //gArgs.ForceSetArg("-verifybmmcheckblock", "1");
 
     // Generate BMM block
     CScript scriptPubKey;
@@ -114,7 +132,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
     BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
     // Set -verifybmmcheckblock arg back to default (gArgs effect all tests)
-    gArgs.ForceSetArg("-verifybmmcheckblock", "0");
+    //gArgs.ForceSetArg("-verifybmmcheckblock", "0");
 }
 
 // TODO although more complicated than it may seem at first, it would be nice

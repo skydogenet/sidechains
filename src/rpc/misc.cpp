@@ -472,6 +472,9 @@ UniValue refreshbmm(const JSONRPCRequest& request)
             "txid  (boolean) If the signature is verified or not.\n"
         );
 
+    if (!CheckMainchainConnection())
+        throw JSONRPCError(RPC_MISC_ERROR, "Must be connected to mainchain (not connected)!");
+
     bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
     if (!fVerifyBMM)
         throw JSONRPCError(RPC_MISC_ERROR, "Please enable BMM verification (at least --verifybmmcheckblock)!");

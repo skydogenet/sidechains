@@ -120,8 +120,11 @@ TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
     // Disable default enabled BMM checks for testchain generation - otherwise
     // these blocks would need valid BMM and a mainchain connection for unit
     // testing
+
+    gArgs.ForceSetArg("-verifybmmcheckblock", "0");
     gArgs.ForceSetArg("-verifybmmacceptblock", "0");
-    gArgs.ForceSetArg("-verifywtprimeacceptblock", "0");
+    gArgs.ForceSetArg("-verifybmmacceptheader", "0");
+    gArgs.ForceSetArg("-verifybmmreadblock", "0");
 
     // CreateAndProcessBlock() does not support building SegWit blocks, so don't activate in these tests.
     // TODO: fix the code to support SegWit blocks.

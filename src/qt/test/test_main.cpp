@@ -49,6 +49,12 @@ extern void noui_connect();
 // This is all you need to run all the tests
 int main(int argc, char *argv[])
 {
+    // Disable BMM / mainchain connection tests that would make unit tests fail
+    gArgs.ForceSetArg("-verifybmmcheckblock", "0");
+    gArgs.ForceSetArg("-verifybmmacceptblock", "0");
+    gArgs.ForceSetArg("-verifybmmacceptheader", "0");
+    gArgs.ForceSetArg("-verifybmmreadblock", "0");
+
     SetupEnvironment();
     SetupNetworking();
     SelectParams(CBaseChainParams::MAIN);

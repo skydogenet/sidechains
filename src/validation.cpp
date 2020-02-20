@@ -20,6 +20,7 @@
 #include <cuckoocache.h>
 #include <hash.h>
 #include <init.h>
+#include <net.h>
 #include <policy/fees.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
@@ -1144,15 +1145,21 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
         return error("%s: Deserialize or I/O error - %s at %s", __func__, e.what(), pos.ToString());
     }
 
-    // Check the header
-    bool fCoinbase = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
-    if (!CheckProofOfWork((fCoinbase ? block.GetHash() : block.GetBlindHash()), block.nBits, consensusParams))
-        return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+    bool fGenesis = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
 
     // Do we want to verify BMM in this context?
     bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmreadblock", DEFAULT_VERIFY_BMM_READ_BLOCK);
 
-    // Optionally verify that block has a valid h* proof
+    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
+        SetNetworkActive(false, "Failed to connect to mainchain when reading block from disk!");
+        return error("%s: Failed due to lack of mainchain connection required to verify BMM!\n", __func__);
+    }
+
+    // Check the header
+    if (!CheckProofOfWork((fGenesis ? block.GetHash() : block.GetBlindHash()), block.nBits, consensusParams))
+        return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+
+    // Verify that block has a valid h* proof
     if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
         return error("%s: ReadBlockFromDisk: bad-critical-hash", __func__);
     }
@@ -3146,6 +3153,17 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 {
     // These are checks that are independent of context.
 
+    bool fGenesis = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
+
+    // Do we want to verify BMM in this context?
+    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
+
+    // Check for mainchain connection
+    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
+        SetNetworkActive(false, "Failed to connect to mainchain when checking block!");
+        return false;
+    }
+
     if (block.fChecked)
         return true;
 
@@ -3201,9 +3219,6 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     if (fCheckPOW && fCheckMerkleRoot)
         block.fChecked = true;
-
-    // Do we want to verify BMM in this context?
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
 
     // Check h* for BMM block
     if (!fSkipBMMChecks && fVerifyBMM && !VerifyCriticalHashProof(block)) {
@@ -3473,8 +3488,21 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
 bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex)
 {
     AssertLockHeld(cs_main);
-    // Check for duplicate
+
     uint256 hash = block.GetHash();
+
+    bool fGenesis = (hash == Params().GetConsensus().hashGenesisBlock);
+
+    // Do we want to verify BMM in this context?
+    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER);
+
+    // Check for mainchain connection
+    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
+        SetNetworkActive(false, "Failed to connect to mainchain when checking block header!");
+        return false;
+    }
+
+    // Check for duplicate
     BlockMap::iterator miSelf = mapBlockIndex.find(hash);
     CBlockIndex *pindex = nullptr;
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
@@ -3492,8 +3520,6 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
         if (!CheckBlockHeader(block, state, chainparams.GetConsensus()))
             return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
-        // Do we want to verify BMM in this context?
-        bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER);
         if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
             return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof A");
         }
@@ -5370,6 +5396,36 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
     }
 
     return true;
+}
+
+bool CheckMainchainConnection()
+{
+    SidechainClient client;
+
+    int nMainchainBlocks = 0;
+    if (!client.GetBlockCount(nMainchainBlocks)) {
+        LogPrintf("%s: Mainchain connection not detected!\n", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+void SetNetworkActive(bool fActive, const std::string& strReason)
+{
+    if (!g_connman)
+        return;
+
+    bool fCurrentState = g_connman->GetNetworkActive();
+    if (fActive == fCurrentState)
+        return;
+
+    g_connman->SetNetworkActive(fActive);
+
+    LogPrintf("%s: Network activity set to: %s\n", __func__, fActive ? "Enabled" : "Disabled");
+    if (strReason.size()) {
+        LogPrintf("Reason for network activity change: %s\n", strReason);
+    }
 }
 
 //! Guess how far we are in the verification process at the given block index

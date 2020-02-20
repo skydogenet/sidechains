@@ -673,20 +673,13 @@ void SidechainPage::on_pushButtonRetryConnection_clicked()
 }
 
 void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
-    if (!g_connman)
-        return;
-
     // Enable or disable networking based on connection to mainchain
-    if (fMainchainConnected) {
-        if (!g_connman->GetNetworkActive())
-            g_connman->SetNetworkActive(true);
+    SetNetworkActive(fMainchainConnected, "Sidechain page update.");
 
+    if (fMainchainConnected) {
         // Close the connection warning popup if it is open
         trainErrorMessageBox->close();
-    } else {
-        g_connman->SetNetworkActive(false);
     }
-
     // Update the GUI to show or hide the network connection warning.
     // Only switch to the network warning if the configuration warning isn't
     // currently displayed.

@@ -227,9 +227,9 @@ static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc59115285
 static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
 
 /** Blind merged mining */
-static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = false;
-static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = false;
-static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = false;
+static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = true;
+static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = true;
+static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = true;
 static const bool DEFAULT_VERIFY_BMM_ACCEPT_BLOCK = true;
 
 static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
@@ -526,5 +526,11 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
 
 /** Sort deposits by CTIP spend order */
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);
+
+/** Check for RPC connection to mainchain node */
+bool CheckMainchainConnection();
+
+/** Enable or disable networking and print log message */
+void SetNetworkActive(bool fActive, const std::string& strReason = "");
 
 #endif // BITCOIN_VALIDATION_H
