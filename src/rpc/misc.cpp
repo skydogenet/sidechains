@@ -475,6 +475,8 @@ UniValue refreshbmm(const JSONRPCRequest& request)
     if (!CheckMainchainConnection())
         throw JSONRPCError(RPC_MISC_ERROR, "Must be connected to mainchain (not connected)!");
 
+    SetNetworkActive(true, "refreshbmm RPC command issued");
+
     bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
     if (!fVerifyBMM)
         throw JSONRPCError(RPC_MISC_ERROR, "Please enable BMM verification (at least --verifybmmcheckblock)!");

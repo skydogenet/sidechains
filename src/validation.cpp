@@ -5426,6 +5426,12 @@ void SetNetworkActive(bool fActive, const std::string& strReason)
     if (strReason.size()) {
         LogPrintf("Reason for network activity change: %s\n", strReason);
     }
+
+    if (!fActive) {
+        LogPrintf("If you are using the GUI please follow prompts on screen about mainchain connection!\n");
+        LogPrintf("If you are running the daemon check mainchain & sidechain configuration files.\n");
+        LogPrintf("To retry connection, use the 'refreshbmm' RPC command.\n");
+    }
 }
 
 //! Guess how far we are in the verification process at the given block index
