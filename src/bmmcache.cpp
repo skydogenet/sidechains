@@ -100,6 +100,7 @@ void BMMCache::UpdateMainBlocks(const std::vector<uint256>& vMainBlockHashIn)
 {
     vMainBlockHash = vMainBlockHashIn;
     hashMainBlockLastSeen = vMainBlockHash.back();
+    LogPrintf("%s Set latest mainchain tip: %s", __func__, hashMainBlockLastSeen.ToString());
 }
 
 uint256 BMMCache::GetLastMainBlockHash() const
@@ -109,8 +110,8 @@ uint256 BMMCache::GetLastMainBlockHash() const
 
 void BMMCache::SetLatestWTPrime(const uint256& hashWTPrime)
 {
-    LogPrintf("%s Set latest WT^ to: %s", __func__, hashWTPrime.ToString());
     hashLatestWTPrime = hashWTPrime;
+    LogPrintf("%s Set latest WT^ to: %s", __func__, hashWTPrime.ToString());
 }
 
 uint256 BMMCache::GetLatestWTPrime() const
