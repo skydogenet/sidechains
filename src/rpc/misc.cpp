@@ -469,7 +469,9 @@ UniValue refreshbmm(const JSONRPCRequest& request)
             "refreshbmm\n"
             "\nRefresh automated BMM. Basic testing implementation\n"
             "\nResult:\n"
-            "txid  (boolean) If the signature is verified or not.\n"
+            "hash_last_main_block  (string) Hash of mainchain tip.\n"
+            "bmm_block_created     (string) Hash of new BMM block created.\n"
+            "bmm_block_submitted   (string) Hash of BMM block connected to sidechain.\n"
         );
 
     if (!CheckMainchainConnection())
