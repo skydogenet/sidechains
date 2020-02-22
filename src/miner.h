@@ -161,11 +161,11 @@ public:
      * then be commited to on the parent chain. Once the parent chain commits
      * the BMM hash of this block, a BMM proof can be used to actually connect
      * this block to the chain.
+     *
+     * If an optional vector of transactions is passed in, all but the coinbase
+     * will be replaced with those transactions.
      */
-    bool GenerateBMMBlock(const CScript& scriptPubkey, CBlock& block, std::string& strError);
-
-    /* Generate BMM block but only include coinbase & passed in transactions */
-    bool GenerateBMMBlock(const CScript& scriptPubkey, CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx);
+    bool GenerateBMMBlock(const CScript& scriptPubkey, CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx = std::vector<CMutableTransaction>());
 
 private:
     // Note: this is private because we should use GenerateBMMBlock() always.

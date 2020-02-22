@@ -735,54 +735,6 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
     return true;
 }
 
-// TODO refactor : remove duplicate code from both versions of GenerateBMMBlock
-
-bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block, std::string& strError)
-{
-    std::unique_ptr<CBlockTemplate> pblocktemplate(
-                BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true));
-
-    if (!pblocktemplate.get()) {
-        // No block template error message
-        strError = "Failed to get block template!\n";
-        return false;
-    }
-
-    unsigned int nExtraNonce = 0;
-    CBlock *pblock = &pblocktemplate->block;
-    {
-        LOCK(cs_main);
-        IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
-    }
-
-    int nMaxTries = 1000;
-    while (true) {
-        if (pblock->nNonce == 0)
-            pblock->nTime++;
-
-        if (CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
-            break;
-        }
-
-        if (nMaxTries == 0) {
-            strError = "Couldn't generate PoW, try again!\n";
-            break;
-        }
-
-        pblock->nNonce++;
-        nMaxTries--;
-    }
-
-    if (!CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
-        strError = "Invalid PoW!\n";
-        return false;
-    }
-
-    block = *pblock;
-
-    return true;
-}
-
 bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx)
 {
     std::unique_ptr<CBlockTemplate> pblocktemplate(
@@ -794,11 +746,14 @@ bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block
         return false;
     }
 
-    // Replace all transactions besides coinbase.
-    pblock->vtx.resize(1);
-    for (const CMutableTransaction& m : vtx)
-        pblock->vtx.push_back(MakeTransactionRef(m));
-
+    // If an optional vector of transactions was passed in, we replace all
+    // but the coinbase with them.
+    if (vtx.size()) {
+        // Replace all transactions besides coinbase.
+        pblock->vtx.resize(1);
+        for (const CMutableTransaction& m : vtx)
+            pblock->vtx.push_back(MakeTransactionRef(m));
+    }
 
     unsigned int nExtraNonce = 0;
     CBlock *pblock = &pblocktemplate->block;
