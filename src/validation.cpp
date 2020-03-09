@@ -2090,7 +2090,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 }
             }
         } else {
-            LogPrintf("%s: Failed to get latest WT^ from ldb: %s!", __func__, hashLatestWTPrime.ToString());
+            LogPrintf("%s: Failed to get latest WT^ from ldb: %s!\n", __func__, hashLatestWTPrime.ToString());
         }
 
         // Collect & verify sidechain objects
@@ -3746,10 +3746,12 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
     return true;
 }
 
-bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot, bool fSkipBMMChecks)
+bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot, bool fSkipBMMChecks, bool fReorg)
 {
     AssertLockHeld(cs_main);
-    assert(pindexPrev && pindexPrev == chainActive.Tip());
+    assert(pindexPrev);
+    if (!fReorg)
+        assert(pindexPrev == chainActive.Tip());
     CCoinsViewCache viewNew(pcoinsTip.get());
     CBlockIndex indexDummy(block);
     indexDummy.pprev = pindexPrev;
@@ -3762,8 +3764,12 @@ bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams,
         return error("%s: Consensus::CheckBlock: %s", __func__, FormatStateMessage(state));
     if (!ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindexPrev))
         return error("%s: Consensus::ContextualCheckBlock: %s", __func__, FormatStateMessage(state));
-    if (!g_chainstate.ConnectBlock(block, state, &indexDummy, viewNew, chainparams, true, fSkipBMMChecks))
-        return false;
+
+    if (!fReorg) {
+        if (!g_chainstate.ConnectBlock(block, state, &indexDummy, viewNew, chainparams, true, fSkipBMMChecks))
+            return false;
+    }
+
     assert(state.IsValid());
 
     return true;

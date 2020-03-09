@@ -114,7 +114,7 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool fSkipBMMChecks)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool fSkipBMMChecks, const uint256& hashPrevBlock)
 {
     int64_t nTimeStart = GetTimeMicros();
 
@@ -132,7 +132,18 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->vTxSigOpsCost.push_back(-1); // updated at end
 
     LOCK2(cs_main, mempool.cs);
-    CBlockIndex* pindexPrev = chainActive.Tip();
+
+    CBlockIndex* pindexPrev;
+    if (hashPrevBlock.IsNull()) {
+        pindexPrev = chainActive.Tip();
+    } else {
+        if (mapBlockIndex.count(hashPrevBlock) == 0) {
+            LogPrintf("%s: Specified prevblock: %s does not exist!\n", __func__, hashPrevBlock.ToString());
+            return nullptr;
+        }
+        pindexPrev = mapBlockIndex[hashPrevBlock];
+    }
+
     assert(pindexPrev != nullptr);
     nHeight = pindexPrev->nHeight + 1;
 
@@ -181,7 +192,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         for (const CTxOut& out : wtPrimeDataTx->vout)
             coinbaseTx.vout.push_back(out);
     }
-    // Create deposit transactions
+    // Create deposit payout output(s)
     CMutableTransaction depositTx;
     if (CreateDepositTx(depositTx)) {
         for (const CTxOut& out : depositTx.vout)
@@ -210,7 +221,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // We have to skip BMM checks when first creating a block as we haven't
     // received BMM proof from the mainchain yet.
     CValidationState state;
-    if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false, fSkipBMMChecks)) {
+    if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false,
+                false, fSkipBMMChecks, hashPrevBlock.IsNull() ? false : true)) {
         throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
     }
     int64_t nTime2 = GetTimeMicros();
@@ -735,16 +747,22 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
     return true;
 }
 
-bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx)
+bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx, const uint256& hashPrevBlock)
 {
     std::unique_ptr<CBlockTemplate> pblocktemplate(
-                BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true));
+                BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true, hashPrevBlock));
 
     if (!pblocktemplate.get()) {
         // No block template error message
         strError = "Failed to get block template!\n";
         return false;
     }
+
+    if (mapBlockIndex.count(pblocktemplate->block.hashPrevBlock) == 0) {
+        strError = "Invalid hashPrevBlock!\n";
+        return false;
+    }
+
 
     // If an optional vector of transactions was passed in, we replace all
     // but the coinbase with them.
@@ -757,9 +775,10 @@ bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block
 
     unsigned int nExtraNonce = 0;
     CBlock *pblock = &pblocktemplate->block;
+    CBlockIndex* prevBlock = mapBlockIndex[pblock->hashPrevBlock];
     {
         LOCK(cs_main);
-        IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
+        IncrementExtraNonce(pblock, prevBlock, nExtraNonce);
     }
 
     int nMaxTries = 1000;
