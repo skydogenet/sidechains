@@ -149,6 +149,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "createwt", 1, "namount"},
     { "getaveragemainchainfees", 0, "blockcount" },
     { "getaveragemainchainfees", 1, "startheight" },
+    { "refreshbmm", 0, "createnew" },
 
 };
 

@@ -66,9 +66,9 @@ public:
      * Automatically check our BMM requests on the mainchain and create new BMM
      * requests if needed.
      */
-    bool RefreshBMM(std::string& strError, uint256& hashCreated, uint256& hashConnected);
+    bool RefreshBMM(std::string& strError, uint256& hashCreated, uint256& hashConnected, bool fCreateNew = true, const uint256& hashPrevBlock = uint256());
 
-    bool CreateBMMBlock(CBlock& block, std::string& strError);
+    bool CreateBMMBlock(CBlock& block, std::string& strError, const uint256& hashPrevBlock = uint256());
 
     bool SubmitBMMBlock(const CBlock& block);
 

@@ -464,15 +464,39 @@ static UniValue getinfo_deprecated(const JSONRPCRequest& request)
 
 UniValue refreshbmm(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size())
+    if (request.fHelp || request.params.size() > 2)
         throw std::runtime_error(
             "refreshbmm\n"
             "\nRefresh automated BMM. Basic testing implementation\n"
+            "\nArguments:\n"
+            "1. \"createnew\" true|false  (bool) Create a new BMM block if possible\n (optional, default: true)\n"
+            "2. \"prevblock\"             (string) Hash of sidechain block to build on (optional, default: chaintip)\n"
             "\nResult:\n"
             "hash_last_main_block  (string) Hash of mainchain tip.\n"
             "bmm_block_created     (string) Hash of new BMM block created.\n"
             "bmm_block_submitted   (string) Hash of BMM block connected to sidechain.\n"
+            "error                 (string) Output from sidechain client.\n"
         );
+
+    // Whether or not to create a new BMM block / request if possible. If set
+    // false, we will only check for BMM commits in the mainchain and try to
+    // connect those blocks but not generate a new BMM block and request.
+    bool fCreateNew = request.params[0].isNull() ? true : request.params[0].get_bool();
+
+    // If hashPrevBlock is set, we will build a block on top of that block
+    // instead of the current sidechain tip.
+    uint256 hashPrevBlock;
+    if (request.params.size() == 2) {
+        LOCK(cs_main);
+
+        hashPrevBlock = uint256S(request.params[1].get_str());
+        if (hashPrevBlock.IsNull())
+            throw JSONRPCError(RPC_MISC_ERROR, "Invalid prev block hash (null)!");
+
+        // Check if the prevblock is in the side: chain
+        if (mapBlockIndex.count(hashPrevBlock) == 0)
+            throw JSONRPCError(RPC_MISC_ERROR, "Prev block does not exist!");
+    }
 
     if (!CheckMainchainConnection())
         throw JSONRPCError(RPC_MISC_ERROR, "Must be connected to mainchain (not connected)!");
@@ -487,13 +511,14 @@ UniValue refreshbmm(const JSONRPCRequest& request)
     std::string strError = "";
     uint256 hashCreated;
     uint256 hashConnected;
-    if (!client.RefreshBMM(strError, hashCreated, hashConnected))
+    if (!client.RefreshBMM(strError, hashCreated, hashConnected, fCreateNew, hashPrevBlock))
         throw JSONRPCError(RPC_MISC_ERROR, strError);
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("hash_last_main_block", bmmCache.GetLastMainBlockHash().ToString());
     result.pushKV("bmm_block_created", hashCreated.ToString());
     result.pushKV("bmm_block_submitted", hashConnected.ToString());
+    result.pushKV("error", strError);
 
     return result;
 }

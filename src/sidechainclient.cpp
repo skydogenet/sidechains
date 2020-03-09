@@ -369,7 +369,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     return true;
 }
 
-bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, uint256& hashConnected)
+bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, uint256& hashConnected, bool fCreateNew, const uint256& hashPrevBlock)
 {
     //
     // A cache of recent mainchain block hashes and the mainchain tip is created
@@ -409,10 +409,10 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
 
     // Get our cached BMM blocks
     std::vector<CBlock> vBMMCache = bmmCache.GetBMMBlockCache();
-    if (vBMMCache.empty()) {
+    if (vBMMCache.empty() && fCreateNew) {
         // If we don't have any existing BMM requests cached, create our first
         CBlock block;
-        if (CreateBMMBlock(block, strError)) {
+        if (CreateBMMBlock(block, strError, hashPrevBlock)) {
             // TODO check return value
             hashCreated = block.GetBlindHash();
             SendBMMCriticalDataRequest(hashCreated, vHashMainBlockNew.back(), 0, 0);
@@ -457,22 +457,30 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
 
         // Create a new BMM request (old ones have expired)
         CBlock block;
-        if (CreateBMMBlock(block, strError)) {
+        if (fCreateNew && CreateBMMBlock(block, strError, hashPrevBlock)) {
             // Create BMM critical data request
+            if (!hashPrevBlock.IsNull())
+                CBlockIndex* pindexPrev = mapBlockIndex[block.hashPrevBlock];
             hashCreated = block.GetBlindHash();
             SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlockNew.back());
         } else {
-            strError = "Failed to create a new BMM request!";
-            return false;
+            if (fCreateNew) {
+                strError = "Failed to create a new BMM request!";
+                return false;
+            }
         }
+    } else {
+        if (fCreateNew)
+            strError = "Can't create new BMM request - already created for current mainchain tip!";
     }
     return true;
 }
 
-bool SidechainClient::CreateBMMBlock(CBlock& block, std::string& strError)
+bool SidechainClient::CreateBMMBlock(CBlock& block, std::string& strError, const uint256& hashPrevBlock)
 {
     CScript scriptPubKey;
-    if (!BlockAssembler(Params()).GenerateBMMBlock(scriptPubKey, block, strError)) {
+    if (!BlockAssembler(Params()).GenerateBMMBlock(scriptPubKey, block,
+                strError, std::vector<CMutableTransaction>(), hashPrevBlock)) {
         return false;
     }
 
