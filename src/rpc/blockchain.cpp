@@ -132,6 +132,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.pushKV("versionHex", strprintf("%08x", block.nVersion));
     result.pushKV("merkleroot", block.hashMerkleRoot.GetHex());
     result.pushKV("hashwtprime", block.hashWTPrime.GetHex());
+    result.pushKV("hashmainblock", blockindex->hashMainBlock.GetHex());
     UniValue txs(UniValue::VARR);
     for(const auto& tx : block.vtx)
     {

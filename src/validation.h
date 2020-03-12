@@ -533,4 +533,7 @@ bool CheckMainchainConnection();
 /** Enable or disable networking and print log message */
 void SetNetworkActive(bool fActive, const std::string& strReason = "");
 
+/** Get the mainchain block hash from the BMM block's critical h* proof hex */
+uint256 GetMainBlockHash(const CBlockHeader& block);
+
 #endif // BITCOIN_VALIDATION_H

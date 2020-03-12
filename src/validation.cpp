@@ -2978,6 +2978,10 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
 
     // Construct new block index object
     CBlockIndex* pindexNew = new CBlockIndex(block);
+
+    // Add mainchain block hash to index
+    pindexNew->hashMainBlock = GetMainBlockHash(block);
+
     // We assign the sequence id to blocks only when the full data is available,
     // to avoid miners withholding blocks but broadcasting headers, to get a
     // competitive advantage.
@@ -5438,6 +5442,22 @@ void SetNetworkActive(bool fActive, const std::string& strReason)
         LogPrintf("If you are running the daemon check mainchain & sidechain configuration files.\n");
         LogPrintf("To retry connection, use the 'refreshbmm' RPC command.\n");
     }
+}
+
+uint256 GetMainBlockHash(const CBlockHeader& block)
+{
+    if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
+        return uint256();
+
+    if (!block.criticalProof.size())
+        return uint256();
+
+    // Get the mainchain block header from the BMM critical proof
+    CDataStream ssMB(ParseHex(block.criticalProof), SER_NETWORK, PROTOCOL_VERSION);
+    CMainchainMerkleBlock mb;
+    ssMB >> mb;
+
+    return mb.header.GetHash();
 }
 
 //! Guess how far we are in the verification process at the given block index

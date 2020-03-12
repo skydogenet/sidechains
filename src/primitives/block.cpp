@@ -6,6 +6,7 @@
 #include <primitives/block.h>
 
 #include <hash.h>
+#include <streams.h>
 #include <tinyformat.h>
 #include <utilstrencodings.h>
 #include <crypto/common.h>
@@ -38,3 +39,9 @@ std::string CBlock::ToString() const
     }
     return s.str();
 }
+
+uint256 CMainchainBlockHeader::GetHash() const
+{
+    return SerializeHash(*this);
+}
+

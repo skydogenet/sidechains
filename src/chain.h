@@ -216,7 +216,9 @@ public:
     //! BMM
     std::string criticalProof;
     CMutableTransaction criticalTx;
+    uint256 hashMainBlock;
 
+    //! The current / most recent WT^ hash is part of sidechain block headers
     uint256 hashWTPrime;
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
@@ -250,6 +252,7 @@ public:
         criticalProof = "";
         criticalTx = CMutableTransaction();
         hashWTPrime = uint256();
+        hashMainBlock = uint256();
     }
 
     CBlockIndex()
@@ -433,6 +436,7 @@ public:
         // BMM part of block header
         READWRITE(criticalProof);
         READWRITE(criticalTx);
+        READWRITE(hashMainBlock);
 
         READWRITE(hashWTPrime);
     }
