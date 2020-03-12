@@ -150,6 +150,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "getaveragemainchainfees", 0, "blockcount" },
     { "getaveragemainchainfees", 1, "startheight" },
     { "refreshbmm", 0, "createnew" },
+    { "getmainchainblockhash", 0, "height" },
 
 };
 

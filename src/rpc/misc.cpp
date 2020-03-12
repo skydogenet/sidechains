@@ -572,6 +572,31 @@ UniValue getmainchainblockcount(const JSONRPCRequest& request)
     return result;
 }
 
+UniValue getmainchainblockhash(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 1)
+        throw std::runtime_error(
+            "getmainchainblockhash\n"
+            "\nArguments:\n"
+            "1. \"height (numeric, required) the mainchain block height\"\n"
+            "\nGet the mainchain block hash\n"
+            "\nResult:\n"
+            "hashblock  (string)\n"
+        );
+
+    int nHeight = request.params[0].get_int();
+
+    SidechainClient client;
+    uint256 hashBlock;
+    if (!client.GetBlockHash(nHeight, hashBlock))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to request mainchain block hash!");
+
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("blockhash", hashBlock.ToString());
+
+    return result;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           argNames
   //  --------------------- ------------------------    -----------------------    ----------
@@ -592,6 +617,7 @@ static const CRPCCommand commands[] =
     { "sidechain",          "refreshbmm",               &refreshbmm,               {}},
     { "sidechain",          "getaveragemainchainfees",  &getaveragemainchainfees,  {"blockcount", "startheight"}},
     { "sidechain",          "getmainchainblockcount",   &getmainchainblockcount,   {}},
+    { "sidechain",          "getmainchainblockhash",    &getmainchainblockhash,    {"height"}},
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)

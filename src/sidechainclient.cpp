@@ -625,6 +625,29 @@ bool SidechainClient::ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime)
     return vHashWTPrime.size() > 0;
 }
 
+bool SidechainClient::GetBlockHash(int nHeight, uint256& hashBlock)
+{
+    // JSON for 'getblockhash' mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"getblockhash\", \"params\": ");
+    json.append("[");
+    json.append(std::to_string(nHeight));
+    json.append("] }");
+
+    // Try to request mainchain block hash
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request block hash!\n");
+        return false;
+    }
+
+    std::string strHash = ptree.get("result", "");
+    hashBlock = uint256S(strHash);
+
+    return (!hashBlock.IsNull());
+}
+
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)
 {
     // Format user:pass for authentication

@@ -80,6 +80,8 @@ public:
 
     bool ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime);
 
+    bool GetBlockHash(int nHeight, uint256& hashBlock);
+
 private:
     /*
      * Send json request to local node
