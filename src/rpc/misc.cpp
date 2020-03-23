@@ -478,6 +478,14 @@ UniValue refreshbmm(const JSONRPCRequest& request)
             "error                 (string) Output from sidechain client.\n"
         );
 
+    bool fReorg = false;
+    std::vector<uint256> vDisconnected;
+    if (!UpdateMainBlockHashCache(fReorg, vDisconnected))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to update mainchain block cache!");
+
+    if (fReorg)
+        HandleMainchainReorg(vDisconnected);
+
     // Whether or not to create a new BMM block / request if possible. If set
     // false, we will only check for BMM commits in the mainchain and try to
     // connect those blocks but not generate a new BMM block and request.
