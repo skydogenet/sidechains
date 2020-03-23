@@ -545,13 +545,13 @@ bool SidechainPage::SubmitBMMBlock(const CBlock& block)
 
 void SidechainPage::RefreshBMM()
 {
+    QMessageBox messageBox;
+    messageBox.setDefaultButton(QMessageBox::Ok);
+
     // Make sure the user has at least --verifybmmacceptblock set
     bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptblock", DEFAULT_VERIFY_BMM_ACCEPT_BLOCK);
     if (!fVerifyBMM) {
         ui->checkBoxEnableAutomation->setChecked(false);
-
-        QMessageBox messageBox;
-        messageBox.setDefaultButton(QMessageBox::Ok);
 
         messageBox.setWindowTitle("Automated BMM failed - invalid settings detected!");
         std::string str;
@@ -563,6 +563,36 @@ void SidechainPage::RefreshBMM()
         return;
     }
 
+    if (!CheckMainchainConnection()) {
+        UpdateNetworkActive(false /* fMainchainConnected */);
+        ui->checkBoxEnableAutomation->setChecked(false);
+
+        messageBox.setWindowTitle("Automated BMM failed - mainchain connection failed!");
+        std::string str;
+        str = "The sidechain has failed to connect to the mainchain!\n\n";
+        str += "Please check configuration file settings and verify that the ";
+        str += "mainchain is running!";
+        messageBox.setText(QString::fromStdString(str));
+        messageBox.exec();
+        return;
+    }
+
+    bool fReorg = false;
+    std::vector<uint256> vOrphan;
+    if (!UpdateMainBlockHashCache(fReorg, vOrphan))
+    {
+        messageBox.setWindowTitle("Automated BMM failed - couldn't update mainchain block cache!");
+        std::string str;
+        str = "The sidechain has failed to update the mainchain block cache!\n\n";
+        str += "Please check configuration file settings and verify that the ";
+        str += "mainchain is running!";
+        messageBox.setText(QString::fromStdString(str));
+        messageBox.exec();
+        return;
+    }
+    if (fReorg)
+        HandleMainchainReorg(vOrphan);
+
     SidechainClient client;
     std::string strError = "";
     uint256 hashCreated;
@@ -570,9 +600,6 @@ void SidechainPage::RefreshBMM()
     if (!client.RefreshBMM(strError, hashCreated, hashConnected)) {
         UpdateNetworkActive(false /* fMainchainConnected */);
         ui->checkBoxEnableAutomation->setChecked(false);
-
-        QMessageBox messageBox;
-        messageBox.setDefaultButton(QMessageBox::Ok);
 
         messageBox.setWindowTitle("Automated BMM failed!");
         std::string str;
@@ -719,9 +746,6 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
         fConfig = true;
 
     // Check if we can connect to the mainchain
-    SidechainClient client;
-    int nMainchainBlocks = 0;
-    fConnection = client.GetBlockCount(nMainchainBlocks);
-
-    UpdateNetworkActive(fConnection /* fMainchainConnected */);
+    fConnection = CheckMainchainConnection();
+    UpdateNetworkActive(fConnection);
 }
