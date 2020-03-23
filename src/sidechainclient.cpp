@@ -284,46 +284,6 @@ uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical,
     return txid;
 }
 
-std::vector<uint256> SidechainClient::RequestMainBlockHashes()
-{
-    std::vector<uint256> vHash;
-
-    // JSON for sending critical data request to mainchain via mainchain HTTP-RPC
-    std::string json;
-    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"listpreviousblockhashes\", \"params\": ");
-    json.append("[]");
-    json.append("}");
-
-    // Try to request main:block hashes from mainchain
-    boost::property_tree::ptree ptree;
-    if (!SendRequestToMainchain(json, ptree)) {
-        LogPrintf("ERROR Sidechain client failed to request main:block hashes\n");
-        return vHash; // TODO boolean
-    }
-
-    // Process result
-    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
-        BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
-            // Looping through members
-            if (v.first == "hash") {
-                // Read txid
-                std::string data = v.second.data();
-                if (!data.length())
-                    continue;
-
-                uint256 hashBlock = uint256S(data);
-                if (!hashBlock.IsNull())
-                    vHash.push_back(hashBlock);
-            }
-        }
-    }
-    // Can be enabled for debug -- too noisy
-    //LogPrintf("Sidechain client received %d main:block hashes.\n", vHash.size());
-
-    return vHash;
-}
-
 bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
 {
     // JSON for requesting sidechain CTIP via mainchain HTTP-RPC
