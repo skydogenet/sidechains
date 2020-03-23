@@ -158,7 +158,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const CScript& scriptPubKey)
     BlockAssembler(chainparams).GenerateBMMBlock(scriptPubKey, block, strError);
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    ProcessNewBlock(chainparams, shared_pblock, true, nullptr);
+    ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */);
 
     CBlock result = block;
     return result;
@@ -173,7 +173,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransa
     BlockAssembler(chainparams).GenerateBMMBlock(scriptPubKey, block, strError, vtx);
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    ProcessNewBlock(chainparams, shared_pblock, true, nullptr);
+    ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */);
 
     CBlock result = block;
     return result;

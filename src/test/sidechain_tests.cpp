@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
     BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(scriptPubKey, block, strError));
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    BOOST_CHECK(ProcessNewBlock(chainparams, shared_pblock, true, nullptr));
+    BOOST_CHECK(ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */));
 
     BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY + 1);
 }
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
     BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(scriptPubKey, block, strError));
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    BOOST_CHECK(!ProcessNewBlock(chainparams, shared_pblock, true, nullptr));
+    BOOST_CHECK(!ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */));
 
     BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
