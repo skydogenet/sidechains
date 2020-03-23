@@ -354,18 +354,13 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
     // to our BMM block and then it will be submitted to the sidechain.
     //
 
-    // Get updated list of recent main:blocks
-    std::vector<uint256> vHashMainBlockNew = RequestMainBlockHashes();
+    // Get list of the most recent mainchain blocks from the cache
+    std::vector<uint256> vHashMainBlock = bmmCache.GetRecentMainBlockHashes();
 
-    if (vHashMainBlockNew.empty()) {
+    if (vHashMainBlock.empty()) {
         strError = "Failed to request new mainchain block hashes!";
         return false;
     }
-
-    // Update cached list of recent mainchain block hashes. Create a temporary
-    // backup up the previous chain tip for later in this function.
-    uint256 hashMainBlockLastSeenOld = bmmCache.GetLastMainBlockHash();
-    bmmCache.UpdateMainBlocks(vHashMainBlockNew);
 
     // Get our cached BMM blocks
     std::vector<CBlock> vBMMCache = bmmCache.GetBMMBlockCache();
@@ -375,7 +370,8 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
         if (CreateBMMBlock(block, strError, hashPrevBlock)) {
             // TODO check return value
             hashCreated = block.GetBlindHash();
-            SendBMMCriticalDataRequest(hashCreated, vHashMainBlockNew.back(), 0, 0);
+            SendBMMCriticalDataRequest(hashCreated, vHashMainBlock.back(), 0, 0);
+            bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
             return true;
         } else {
             strError = "Failed to create our first BMM request!";
@@ -385,7 +381,7 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
 
     // TODO this could be more efficient
     // Check new main:blocks for our bmm requests
-    for (const uint256& u : vHashMainBlockNew) {
+    for (const uint256& u : vHashMainBlock) {
         // Check main:block for any of our current BMM requests
         for (const CBlock& b : vBMMCache) {
             const uint256& hashBMMBlock = b.GetBlindHash();
@@ -410,7 +406,7 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
     }
 
     // Was there a new mainchain block?
-    if (hashMainBlockLastSeenOld != vHashMainBlockNew.back()) {
+    if (!bmmCache.HaveBMMRequestForPrevBlock(vHashMainBlock.back())) {
         // Clear out the bmm cache, the old requests are invalid now as they
         // were created for the old mainchain tip.
         bmmCache.ClearBMMBlocks();
@@ -419,10 +415,9 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
         CBlock block;
         if (fCreateNew && CreateBMMBlock(block, strError, hashPrevBlock)) {
             // Create BMM critical data request
-            if (!hashPrevBlock.IsNull())
-                CBlockIndex* pindexPrev = mapBlockIndex[block.hashPrevBlock];
             hashCreated = block.GetBlindHash();
-            SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlockNew.back());
+            SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlock.back());
+            bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
         } else {
             if (fCreateNew) {
                 strError = "Failed to create a new BMM request!";

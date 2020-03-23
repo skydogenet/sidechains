@@ -52,6 +52,25 @@ std::vector<uint256> BMMCache::GetBMMWTPrimeCache() const
     return vHash;
 }
 
+std::vector<uint256> BMMCache::GetMainBlockHashCache() const
+{
+    return vMainBlockHash;
+}
+
+std::vector<uint256> BMMCache::GetRecentMainBlockHashes() const
+{
+    // Return up to three of the most recent mainchain block hashes
+    std::vector<uint256> vHash;
+    std::vector<uint256>::const_reverse_iterator rit = vMainBlockHash.rbegin();
+    for (; rit != vMainBlockHash.rend(); rit++) {
+        vHash.push_back(*rit);
+        if (vHash.size() == 3)
+            break;
+    }
+    std::reverse(vHash.begin(), vHash.end());
+    return vHash;
+}
+
 void BMMCache::ClearBMMBlocks()
 {
     mapBMMBlocks.clear();
@@ -60,6 +79,11 @@ void BMMCache::ClearBMMBlocks()
 void BMMCache::StoreBroadcastedWTPrime(const uint256& hashWTPrime)
 {
     setWTPrimeBroadcasted.insert(hashWTPrime);
+}
+
+void BMMCache::StorePrevBlockBMMCreated(const uint256& hashPrevBlock)
+{
+    setPrevBlockBMMCreated.insert(hashPrevBlock);
 }
 
 bool BMMCache::HaveBroadcastedWTPrime(const uint256& hashWTPrime) const
@@ -96,16 +120,86 @@ void BMMCache::CacheBMMProof(const uint256& hashBlock, const uint256& hashCritic
     mapBMMCache.insert(std::make_pair(hashBlock, hashCritical));
 }
 
-void BMMCache::UpdateMainBlocks(const std::vector<uint256>& vMainBlockHashIn)
+void BMMCache::CacheMainBlockHash(const uint256& hash)
 {
-    vMainBlockHash = vMainBlockHashIn;
-    hashMainBlockLastSeen = vMainBlockHash.back();
-    LogPrintf("%s Set latest mainchain tip: %s\n", __func__, hashMainBlockLastSeen.ToString());
+    // Don't re-cache the genesis block
+    if (vMainBlockHash.size() == 1 && hash == vMainBlockHash.front())
+        return;
+
+    // Add to ordered vector of main block hashes
+    vMainBlockHash.push_back(hash);
+
+    // Add to index of hashes
+    MainBlockIndex index;
+    index.hash = hash;
+    index.index = vMainBlockHash.size() - 1;
+
+    mapMainBlock[hash] = index;
+}
+
+bool BMMCache::UpdateMainBlockCache(std::deque<uint256>& deqHashNew, bool& fReorg, std::vector<uint256>& vOrphan)
+{
+    if (deqHashNew.empty()) {
+        LogPrintf("%s: Error - called with empty list of new block hashes!\n", __func__);
+        return false;
+    }
+
+    // If the main block cache doesn't have the genesis block yet, add it first
+    if (vMainBlockHash.empty())
+        CacheMainBlockHash(deqHashNew.front());
+
+    // Figure out the block in our cache that we will append the new blocks to
+    MainBlockIndex index;
+    if (mapMainBlock.count(deqHashNew.front())) {
+        index = mapMainBlock[deqHashNew.front()];
+    } else {
+        index.index = vMainBlockHash.size() - 1;
+        index.hash = deqHashNew.front();
+    }
+
+    // If there were any blocks in our cache after the block we will be building
+    // on, remove them, add them to vOrphan as they were disconnected, set
+    // fReorg true.
+    if (index.index != vMainBlockHash.size() - 1) {
+        LogPrintf("%s: Mainchain reorg detected!\n", __func__);
+        fReorg = true;
+    }
+
+    for (size_t i = vMainBlockHash.size() - 1; i > index.index; i--) {
+        vOrphan.push_back(vMainBlockHash[i]);
+        vMainBlockHash.pop_back();
+    }
+
+    // Remove disconnected blocks from index map
+    for (const uint256& u : vOrphan)
+        mapMainBlock.erase(u);
+
+    // It's possible that the first block in the list of new blocks (which
+    // connects to our cached chain by a prevblock) was already cached.
+    // The first block that connected by prevblock to one of our cached blocks
+    // could either be a new different block or a block we already know
+    // depending on how the fork / reorg happened.
+    //
+    // Check if we already know the first block in the deque and remove it if
+    // we do.
+    if (HaveMainBlock(deqHashNew.front()))
+        deqHashNew.pop_front();
+
+    // Append new blocks
+    for (const uint256& u : deqHashNew)
+        CacheMainBlockHash(u);
+
+    LogPrintf("%s: Updated cached mainchain tip to: %s.\n", __func__, deqHashNew.back().ToString());
+
+    return true;
 }
 
 uint256 BMMCache::GetLastMainBlockHash() const
 {
-    return hashMainBlockLastSeen;
+    if (vMainBlockHash.empty())
+        return uint256();
+
+    return vMainBlockHash.back();
 }
 
 void BMMCache::SetLatestWTPrime(const uint256& hashWTPrime)
@@ -117,4 +211,19 @@ void BMMCache::SetLatestWTPrime(const uint256& hashWTPrime)
 uint256 BMMCache::GetLatestWTPrime() const
 {
     return hashLatestWTPrime;
+}
+
+int BMMCache::GetCachedBlockCount() const
+{
+    return vMainBlockHash.size();
+}
+
+bool BMMCache::HaveMainBlock(const uint256& hash) const
+{
+    return mapMainBlock.count(hash);
+}
+
+bool BMMCache::HaveBMMRequestForPrevBlock(const uint256& hashPrevBlock) const
+{
+    return setPrevBlockBMMCreated.count(hashPrevBlock);
 }

@@ -163,6 +163,7 @@ extern CBlockPolicyEstimator feeEstimator;
 extern CTxMemPool mempool;
 typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
 extern BlockMap& mapBlockIndex;
+extern std::map<uint256, CBlockIndex*>& mapBlockMainHashIndex;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockWeight;
 extern const std::string strMessageMagic;
@@ -255,7 +256,7 @@ extern BMMCache bmmCache;
  * @param[out]  fNewBlock A boolean which is set to indicate if the block was first received via this call
  * @return True if state.IsValid()
  */
-bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool* fNewBlock);
+bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool* fNewBlock, bool fUnitTest = false);
 
 /**
  * Process incoming block headers.
@@ -506,11 +507,20 @@ bool DumpMempool();
 /** Load the mempool from disk. */
 bool LoadMempool();
 
-/** Dump the BMM cache to disk. */
+//
+// TODO
+// RENAME: this is dumping/loading broadcasted WT^ hash cache...
+/** Dump the BMM caches to disk. */
 void DumpBMMCache();
 
-/** Load the BMM cache from disk. */
+/** Load the BMM caches from disk. */
 void LoadBMMCache();
+
+/** Dump the cache of mainchain block hashes to disk */
+void DumpMainBlockCache();
+
+/** Load the cache of mainchain block hashes from disk */
+void LoadMainBlockCache();
 
 /** Create joined WT^ to be sent to the mainchain */
 bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx);
@@ -518,10 +528,12 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
 /** Get the number of blocks remaining in the current WT^ verification period */
 int GetBlocksVerificationPeriod(int nMainchainHeight);
 
-/** If there are any WT^(s) (note the limit per block is 1) verify it, and
+/**
+ * If there are any WT^(s) (note the limit per block is 1) verify it, and
  * optionally replicate it. This function will return by reference a vector of
  * wt(s) spent by the WT^ if it has been validated - so that ConnectBlock can
- * update their status */
+ * update their status
+ */
 bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate = false);
 
 /** Sort deposits by CTIP spend order */
@@ -535,5 +547,14 @@ void SetNetworkActive(bool fActive, const std::string& strReason = "");
 
 /** Get the mainchain block hash from the BMM block's critical h* proof hex */
 uint256 GetMainBlockHash(const CBlockHeader& block);
+
+/**
+ * Update the BMM cache of mainchain blocks. Detect mainchain reorg & return
+ * list of disconnected mainchain blocks if a reorg was detected.
+ */
+bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected);
+
+/** Disconnect blocks with a BMM commit from an orphan mainchain block */
+void HandleMainchainReorg(const std::vector<uint256>& vOrphan);
 
 #endif // BITCOIN_VALIDATION_H

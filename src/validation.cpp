@@ -153,6 +153,7 @@ private:
 public:
     CChain chainActive;
     BlockMap mapBlockIndex;
+    std::map<uint256, CBlockIndex*> mapBlockMainHashIndex;
     std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;
     CBlockIndex *pindexBestInvalid = nullptr;
 
@@ -190,7 +191,7 @@ private:
 
     CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
     /** Create a new block index entry for a given block hash */
-    CBlockIndex * InsertBlockIndex(const uint256& hash);
+    CBlockIndex * InsertBlockIndex(const uint256& hash, const uint256& hashMainBlock);
     void CheckBlockIndex(const Consensus::Params& consensusParams);
 
     void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state);
@@ -208,6 +209,7 @@ CCriticalSection cs_main;
 BMMCache bmmCache;
 
 BlockMap& mapBlockIndex = g_chainstate.mapBlockIndex;
+std::map<uint256, CBlockIndex*>& mapBlockMainHashIndex = g_chainstate.mapBlockMainHashIndex;
 CChain& chainActive = g_chainstate.chainActive;
 CBlockIndex *pindexBestHeader = nullptr;
 CWaitableCriticalSection csBestBlock;
@@ -2980,7 +2982,8 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
     CBlockIndex* pindexNew = new CBlockIndex(block);
 
     // Add mainchain block hash to index
-    pindexNew->hashMainBlock = GetMainBlockHash(block);
+    uint256 hashMainBlock = GetMainBlockHash(block);
+    pindexNew->hashMainBlock = hashMainBlock;
 
     // We assign the sequence id to blocks only when the full data is available,
     // to avoid miners withholding blocks but broadcasting headers, to get a
@@ -3000,6 +3003,9 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
     if (pindexBestHeader == nullptr || pindexBestHeader->nChainWork < pindexNew->nChainWork)
         pindexBestHeader = pindexNew;
+
+    // Add to index of blocks tracked by their mainchain commitment block hash
+    mapBlockMainHashIndex[hashMainBlock] = pindexNew;
 
     setDirtyBlockIndex.insert(pindexNew);
 
@@ -3568,6 +3574,15 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
 // Exposed wrapper for AcceptBlockHeader
 bool ProcessNewBlockHeaders(const std::vector<CBlockHeader>& headers, CValidationState& state, const CChainParams& chainparams, const CBlockIndex** ppindex, CBlockHeader *first_invalid)
 {
+    bool fReorg = false;
+    std::vector<uint256> vOrphan;
+    if (!UpdateMainBlockHashCache(fReorg, vOrphan)) {
+        LogPrintf("%s: Failed to update main block hash cache!\n", __func__);
+        return false;
+    }
+    if (fReorg)
+        HandleMainchainReorg(vOrphan);
+
     if (first_invalid != nullptr) first_invalid->SetNull();
     {
         LOCK(cs_main);
@@ -3717,9 +3732,19 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     return true;
 }
 
-bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock)
+bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock, bool fUnitTest)
 {
     AssertLockNotHeld(cs_main);
+
+    bool fReorg = false;
+    std::vector<uint256> vOrphan;
+    if (!UpdateMainBlockHashCache(fReorg, vOrphan)) {
+        LogPrintf("%s: Failed to update main block hash cache!\n", __func__);
+        if (!fUnitTest)
+            return false;
+    }
+    if (fReorg)
+        HandleMainchainReorg(vOrphan);
 
     {
         CBlockIndex *pindex = nullptr;
@@ -3980,7 +4005,7 @@ fs::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix)
     return GetDataDir() / "blocks" / strprintf("%s%05u.dat", prefix, pos.nFile);
 }
 
-CBlockIndex * CChainState::InsertBlockIndex(const uint256& hash)
+CBlockIndex * CChainState::InsertBlockIndex(const uint256& hash, const uint256& hashMainBlock)
 {
     if (hash.IsNull())
         return nullptr;
@@ -3995,12 +4020,16 @@ CBlockIndex * CChainState::InsertBlockIndex(const uint256& hash)
     mi = mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
     pindexNew->phashBlock = &((*mi).first);
 
+    // Also track by mainchain commitment block hash
+    if (!hashMainBlock.IsNull())
+        mapBlockMainHashIndex[hashMainBlock] = pindexNew;
+
     return pindexNew;
 }
 
 bool CChainState::LoadBlockIndex(const Consensus::Params& consensus_params, CBlockTreeDB& blocktree)
 {
-    if (!blocktree.LoadBlockIndexGuts(consensus_params, [this](const uint256& hash){ return this->InsertBlockIndex(hash); }))
+    if (!blocktree.LoadBlockIndexGuts(consensus_params, [this](const uint256& hash, const uint256& hashMainBlock){ return this->InsertBlockIndex(hash, hashMainBlock); }))
         return false;
 
     boost::this_thread::interruption_point();
@@ -4464,6 +4493,7 @@ void UnloadBlockIndex()
         delete entry.second;
     }
     mapBlockIndex.clear();
+    mapBlockMainHashIndex.clear();
     fHavePruned = false;
 
     g_chainstate.UnloadBlockIndex();
@@ -5052,6 +5082,72 @@ void DumpBMMCache()
     }
 }
 
+void LoadMainBlockCache()
+{
+    fs::path path = GetDataDir() / "mainblockhash.dat";
+    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    if (filein.IsNull()) {
+        return;
+    }
+
+    // TODO log this
+    uint64_t fileSize = fs::file_size(path);
+
+    std::vector<uint256> vHash;
+    try {
+        int nVersionRequired, nVersionThatWrote;
+        filein >> nVersionRequired;
+        filein >> nVersionThatWrote;
+        if (nVersionRequired > CLIENT_VERSION) {
+            return;
+        }
+
+        int count = 0;
+        filein >> count;
+        for (int i = 0; i < count; i++) {
+            uint256 hash;
+            filein >> hash;
+            vHash.push_back(hash);
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Error reading main block cache: %s", __func__, e.what());
+        return;
+    }
+
+    for (const uint256& u : vHash)
+        bmmCache.CacheMainBlockHash(u);
+}
+
+void DumpMainBlockCache()
+{
+    std::vector<uint256> vHash = bmmCache.GetMainBlockHashCache();
+    if (vHash.empty())
+        return;
+
+    int count = vHash.size();
+
+    fs::path path = GetDataDir() / "mainblockhash.dat";
+    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    if (fileout.IsNull()) {
+        return;
+    }
+
+    try {
+        fileout << 160000; // version required to read: 0.16.00 or later
+        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << count; // Number of WT^ hashes in file
+
+        for (const uint256& u : vHash) {
+            fileout << u;
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Error writing main block cache: %s", __func__, e.what());
+        return;
+    }
+}
+
 int GetBlocksVerificationPeriod(int nMainchainHeight)
 {
     if (nMainchainHeight % MAINCHAIN_WTPRIME_VERIFICATION_PERIOD == 0)
@@ -5460,6 +5556,104 @@ uint256 GetMainBlockHash(const CBlockHeader& block)
     return mb.header.GetHash();
 }
 
+bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
+{
+    //
+    // Note: bitcoin core does not count genesis block towards block count but
+    // we will cache it.
+    //
+
+    SidechainClient client;
+
+    // Get the current mainchain block height
+    int nMainBlocks = 0;
+    if (!client.GetBlockCount(nMainBlocks)) {
+        LogPrintf("%s: Failed to update - cannot get block count from mainchain. (connection issue?)\n", __func__);
+        return false;
+    }
+
+    uint256 hashMainTip;
+    if (!client.GetBlockHash(nMainBlocks, hashMainTip)) {
+        LogPrintf("%s: Failed to get to mainchain tip block hash!\n", __func__);
+        return false;
+    }
+
+    uint256 hashCachedTip = bmmCache.GetLastMainBlockHash();
+
+    // If the block height hasn't changed, check that if cached chain tip is the
+    // same as the current mainchain tip. If it is we don't need to do anything
+    // else. If it isn't we will continue to update / reorg handling.
+    int nCachedBlocks = bmmCache.GetCachedBlockCount();
+    if (nMainBlocks + 1 == nCachedBlocks && hashCachedTip == hashMainTip)
+        return true;
+
+    // Otherwise;
+    // From the new mainchain tip, start looping back through mainchain blocks
+    // while keeping track of them in order until we find one that connects to
+    // one of our cached blocks by prevblock.
+    uint256 hashPrevBlock;
+    std::deque<uint256> deqHashNew;
+    for (int i = nMainBlocks; i > 0; i--) {
+        // Get the prevblockhash
+        if (!client.GetBlockHash(i - 1, hashPrevBlock)) {
+            LogPrintf("%s: Failed to get to mainchain block: %u\n", __func__, i - 1);
+            return false;
+        }
+
+        // Check if the prevblock is in our cache. Once we find a prevblock in
+        // our cache we can update our cache from that block up to the new
+        // mainchain tip.
+        if (bmmCache.HaveMainBlock(hashPrevBlock)) {
+            break;
+        }
+
+        deqHashNew.push_front(hashPrevBlock);
+    }
+    // Also add the new mainchain tip
+    deqHashNew.push_back(hashMainTip);
+
+    return bmmCache.UpdateMainBlockCache(deqHashNew, fReorg, vDisconnected);
+}
+
+void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
+{
+    //
+    // For mainchain blocks that were orphaned - invalidate bmm blocks with
+    // commitments from them.
+    //
+    // vOrphan contains a list of mainchain block hashes that were orphaned
+    //
+
+    {
+        LOCK(cs_main);
+        // Check if any BMM blocks were created from commitments in this
+        // orphaned mainchain block
+        for (const uint256& u : vOrphan) {
+            // Check our map of blocks based on their mainchain BMM commit block
+            if (!mapBlockMainHashIndex.count(u))
+                continue;
+
+            CBlockIndex* pindex = mapBlockMainHashIndex[u];
+
+            CValidationState state;
+            InvalidateBlock(state, Params(), pindex);
+
+            LogPrintf("%s: Invalidated block: %s because mainchain block: %s was orphaned!\n", __func__, pindex->GetBlockHash().ToString(), u.ToString());
+
+            if (!state.IsValid()) {
+                LogPrintf("%s: Error while invalidating blocks: %s\n", __func__, FormatStateMessage(state));
+                return;
+            }
+        }
+    }
+
+    CValidationState state;
+    ActivateBestChain(state, Params());
+    if (!state.IsValid()) {
+        LogPrintf("%s: Error activating best chain: %s\n", __func__, FormatStateMessage(state));
+    }
+}
+
 //! Guess how far we are in the verification process at the given block index
 //! require cs_main if pindex has not been validated yet (because nChainTx might be unset)
 double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex *pindex) {
@@ -5489,5 +5683,6 @@ public:
         for (; it1 != mapBlockIndex.end(); it1++)
             delete (*it1).second;
         mapBlockIndex.clear();
+        mapBlockMainHashIndex.clear();
     }
 } instance_of_cmaincleanup;

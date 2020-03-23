@@ -212,8 +212,11 @@ void Shutdown()
         DumpMempool();
     }
 
-
+    // Write the BMM cache to disk
     DumpBMMCache();
+
+    // Write the mainchain block hash cache to disk
+    DumpMainBlockCache();
 
     if (fFeeEstimatesInitialized)
     {
@@ -1608,7 +1611,11 @@ bool AppInitMain()
         ::feeEstimator.Read(est_filein);
     fFeeEstimatesInitialized = true;
 
+    // Load the BMM cache from disk
     LoadBMMCache();
+
+    // Load the mainchain block hash cache from disk
+    LoadMainBlockCache();
 
     // ********************************************************* Step 8: load wallet
 #ifdef ENABLE_WALLET
@@ -1677,6 +1684,24 @@ bool AppInitMain()
 
     if (ShutdownRequested()) {
         return false;
+    }
+
+    // Try to sync mainchain block cache - may not work if RPC connection hasn't
+    // been setup yet. Don't exit if the update fails.
+    bool fUpdateCache = gArgs.GetBoolArg("-updatemainblockcache", true);
+    uiInterface.InitMessage(_("Updating mainchain block cache..."));
+    bool fReorg;
+    std::vector<uint256> vOrphan;
+    if (fUpdateCache && UpdateMainBlockHashCache(fReorg, vOrphan))
+    {
+        LogPrintf("%s: Updated mainchain block hash cache.\n", __func__);
+        if (fReorg) {
+            LogPrintf("%s: Mainchain reorg detected. Orphans: %u\n", __func__, vOrphan.size());
+            HandleMainchainReorg(vOrphan);
+        }
+    } else {
+        if (fUpdateCache)
+            LogPrintf("%s: Failed to update mainchain block hash cache!\n", __func__);
     }
 
     // ********************************************************* Step 11: start node

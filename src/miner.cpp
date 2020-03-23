@@ -763,7 +763,6 @@ bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block
         return false;
     }
 
-
     // If an optional vector of transactions was passed in, we replace all
     // but the coinbase with them.
     if (vtx.size()) {
