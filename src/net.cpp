@@ -565,6 +565,9 @@ void CConnman::Ban(const CSubNet& subNet, const BanReason &banReason, int64_t ba
     }
     if(banReason == BanReasonManuallyAdded)
         DumpBanlist(); //store banlist to disk immediately if user requested ban
+
+    // Log the banning
+    LogPrintf("%s: banned: %s reason: %s\n", __func__, subNet.ToString(), banEntry.banReasonToString());
 }
 
 bool CConnman::Unban(const CNetAddr &addr) {
