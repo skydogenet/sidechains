@@ -3232,7 +3232,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     // Check h* for BMM block
     if (!fSkipBMMChecks && fVerifyBMM && !VerifyCriticalHashProof(block)) {
-        return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof B");
+        return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof B");
     }
 
     return true;
@@ -3531,7 +3531,7 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
             return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
         if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
-            return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof A");
+            return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof A");
         }
 
         // Get prev block index
@@ -3734,8 +3734,6 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 
 bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock, bool fUnitTest)
 {
-    AssertLockNotHeld(cs_main);
-
     bool fReorg = false;
     std::vector<uint256> vOrphan;
     if (!UpdateMainBlockHashCache(fReorg, vOrphan)) {
@@ -3745,6 +3743,8 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
     }
     if (fReorg)
         HandleMainchainReorg(vOrphan);
+
+    AssertLockNotHeld(cs_main);
 
     {
         CBlockIndex *pindex = nullptr;
