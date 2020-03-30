@@ -522,7 +522,7 @@ void DumpMainBlockCache();
 void LoadMainBlockCache();
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx);
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false);
 
 /** Get the number of blocks remaining in the current WT^ verification period */
 int GetBlocksVerificationPeriod(int nMainchainHeight);

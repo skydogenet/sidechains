@@ -5154,7 +5154,7 @@ int GetBlocksVerificationPeriod(int nMainchainHeight)
 }
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx)
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck)
 {
     // Get WT(s) from psidechaintree
     const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
@@ -5163,27 +5163,29 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx)
         return false;
     }
 
-    // Get the mainchain's chain height
-    SidechainClient client;
-    int nMainchainHeight = 0;
-    if (!client.GetBlockCount(nMainchainHeight)) {
-        LogPrintf("%s: Failed to request mainchain block count!");
-        return false;
-    }
+    if (!fReplicationCheck) {
+        // Get the mainchain's chain height
+        SidechainClient client;
+        int nMainchainHeight = 0;
+        if (!client.GetBlockCount(nMainchainHeight)) {
+            LogPrintf("%s: Failed to request mainchain block count!");
+            return false;
+        }
 
-    // Check if remaining mainchain WT^ verification period blocks are enough
-    // to get minimum workscore
-    int nBlocksRemaining = GetBlocksVerificationPeriod(nMainchainHeight);
-    if (nBlocksRemaining < MAINCHAIN_WTPRIME_MIN_WORKSCORE) {
-        LogPrintf("%s: Not enough blocks left in mainchain verification period to achieve minimim workscore\n", __func__);
-        return false;
-    }
+        // Check if remaining mainchain WT^ verification period blocks are enough
+        // to get minimum workscore
+        int nBlocksRemaining = GetBlocksVerificationPeriod(nMainchainHeight);
+        if (nBlocksRemaining < MAINCHAIN_WTPRIME_MIN_WORKSCORE) {
+            LogPrintf("%s: Not enough blocks left in mainchain verification period to achieve minimim workscore\n", __func__);
+            return false;
+        }
 
-    // Check for existing WT^ in mainchain SCDB for this sidechain
-    std::vector<uint256> vHashWTPrime;
-    if (client.ListWTPrimeStatus(vHashWTPrime)) {
-        LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
-        return false;
+        // Check for existing WT^ in mainchain SCDB for this sidechain
+        std::vector<uint256> vHashWTPrime;
+        if (client.ListWTPrimeStatus(vHashWTPrime)) {
+            LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
+            return false;
+        }
     }
 
     // Check the status / zone of wt(s) before including them in a WT^
@@ -5369,7 +5371,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                 // Try to create the same WT^
                 CTransactionRef wtPrimeTx;
                 CTransactionRef wtPrimeDataTx;
-                if (!CreateWTPrimeTx(wtPrimeTx, wtPrimeDataTx)) {
+                if (!CreateWTPrimeTx(wtPrimeTx, wtPrimeDataTx, true /* fReplicationCheck */ )) {
                     strFail = "Invalid WT^ - failed to create replicant WT^!\n";
                     return false;
                 }
