@@ -27,7 +27,7 @@
           <bool>true</bool>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>2</number>
          </property>
          <widget class="QWidget" name="tabTransfer">
           <attribute name="icon">
@@ -844,6 +844,13 @@
                 <widget class="QPushButton" name="pushButtonConfigureBMM">
                  <property name="text">
                   <string>Redo Mainchain Connection</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0" colspan="2">
+                <widget class="QLabel" name="label_23">
+                 <property name="text">
+                  <string>Make sure you set a --minersleep setting on the mainchain!</string>
                  </property>
                 </widget>
                </item>
