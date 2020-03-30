@@ -2155,7 +2155,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             uint256 hashWTPrime;
             uint256 hashWTPrimeID;
 
-            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, false /* fReplicate */))
+            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, true /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
@@ -3667,6 +3667,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     }
     if (fNewBlock) *fNewBlock = true;
 
+    // Note that checkblock verifies BMM
     if (!CheckBlock(block, state, chainparams.GetConsensus()) ||
         !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev)) {
         if (state.IsInvalid() && !state.CorruptionPossible()) {
@@ -3678,23 +3679,12 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 
     bool fInitialBlockDownload = IsInitialBlockDownload();
 
-    // Whether we want to verify BMM in this context
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptblock", DEFAULT_VERIFY_BMM_ACCEPT_BLOCK);
-    if (!fInitialBlockDownload && fVerifyBMM) {
-        if (!VerifyCriticalHashProof(block)) {
-            state.Error(strprintf("%s: bad-critical-hash", __func__));
-            return error("%s: bad-critical-hash", __func__);
-        }
-    }
-
+    bool fNewTip = (chainActive.Tip() == pindex->pprev);
     bool fVerifyWTPrimeAcceptBlock = gArgs.GetBoolArg("-verifywtprimeacceptblock", DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK);
-    if (fVerifyWTPrimeAcceptBlock) {
+    if (fVerifyWTPrimeAcceptBlock && fNewTip && !fInitialBlockDownload) {
         // Note that here we call VerifyWTPrimes with fReplicate set so that we
         // replicate the WT^ on our own and verify that it matches the WT^ in
         // this new block if there are any.
-        //
-        // We don't do this in ConnectBlock.
-        //
         std::string strFail = "";
         std::vector<SidechainWT> vWT;
         uint256 hashWTPrime;
@@ -5164,7 +5154,7 @@ int GetBlocksVerificationPeriod(int nMainchainHeight)
 }
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx)
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx)
 {
     // Get WT(s) from psidechaintree
     const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
@@ -5379,7 +5369,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                 // Try to create the same WT^
                 CTransactionRef wtPrimeTx;
                 CTransactionRef wtPrimeDataTx;
-                if (!CreateWTPrimeTx(chainActive.Height() + 1, wtPrimeTx, wtPrimeDataTx)) {
+                if (!CreateWTPrimeTx(wtPrimeTx, wtPrimeDataTx)) {
                     strFail = "Invalid WT^ - failed to create replicant WT^!\n";
                     return false;
                 }

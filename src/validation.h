@@ -231,7 +231,6 @@ static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b
 static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = true;
 static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = true;
 static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = true;
-static const bool DEFAULT_VERIFY_BMM_ACCEPT_BLOCK = true;
 
 static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
 
@@ -523,7 +522,7 @@ void DumpMainBlockCache();
 void LoadMainBlockCache();
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx);
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx);
 
 /** Get the number of blocks remaining in the current WT^ verification period */
 int GetBlocksVerificationPeriod(int nMainchainHeight);
