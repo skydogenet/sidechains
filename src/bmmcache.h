@@ -63,6 +63,10 @@ public:
 
     bool HaveBMMRequestForPrevBlock(const uint256& hashPrevBlock) const;
 
+    void AddCheckedMainBlock(const uint256& hashBlock);
+
+    bool MainBlockChecked(const uint256& hashMainBlock) const;
+
 private:
     // BMM blocks (without proof) that we have created with the intention of
     // adding to the side blockchain once proof is aquired from the main chain.
@@ -92,6 +96,9 @@ private:
     // prevblock. (Meaning the BMM request was created when the hash was the
     // mainchain tip)
     std::set<uint256> setPrevBlockBMMCreated;
+
+    // Set of main block hashes that we've already checked for our BMM requests
+    std::set<uint256> setMainBlockChecked;
 };
 
 #endif // BITCOIN_BMMCACHE_H

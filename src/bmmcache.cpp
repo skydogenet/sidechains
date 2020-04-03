@@ -227,3 +227,13 @@ bool BMMCache::HaveBMMRequestForPrevBlock(const uint256& hashPrevBlock) const
 {
     return setPrevBlockBMMCreated.count(hashPrevBlock);
 }
+
+void BMMCache::AddCheckedMainBlock(const uint256& hashBlock)
+{
+    setMainBlockChecked.insert(hashBlock);
+}
+
+bool BMMCache::MainBlockChecked(const uint256& hashBlock) const
+{
+    return setMainBlockChecked.count(hashBlock);
+}

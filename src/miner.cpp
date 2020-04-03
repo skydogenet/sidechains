@@ -505,6 +505,15 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 bool CreateDepositTx(CMutableTransaction& depositTx)
 {
     //
+    // TODO
+    // Refactor: Very slow once the sidechain has a large number of deposits
+    // because it is re-downloading from mainchain & resorting all of them.
+    //
+    // Make it only download new ones and sort from the one that connects to a
+    // CTIP from the database.
+    //
+
+    //
     // Create the deposit payout transaction that takes deposit(s) from the
     // mainchain and sends them to the sidechain address specified.
     //

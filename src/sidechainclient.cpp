@@ -234,7 +234,6 @@ bool SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint25
 uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight, const CAmount& amount)
 {
     uint256 txid = uint256();
-    LOCK(cs_main);
     std::string strPrevHash = hashBlockMain.ToString();
 
     // JSON for sending critical data request to mainchain via mainchain HTTP-RPC
@@ -382,6 +381,12 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
     // TODO this could be more efficient
     // Check new main:blocks for our bmm requests
     for (const uint256& u : vHashMainBlock) {
+        // Skip if we've already checked this block
+        if (bmmCache.MainBlockChecked(u))
+            continue;
+        // Record that we are going to check this mainchain block
+        bmmCache.AddCheckedMainBlock(u);
+
         // Check main:block for any of our current BMM requests
         for (const CBlock& b : vBMMCache) {
             const uint256& hashBMMBlock = b.GetBlindHash();
@@ -405,7 +410,7 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
         }
     }
 
-    // Was there a new mainchain block?
+    // Was there a new mainchain block since the last request we made?
     if (!bmmCache.HaveBMMRequestForPrevBlock(vHashMainBlock.back())) {
         // Clear out the bmm cache, the old requests are invalid now as they
         // were created for the old mainchain tip.
