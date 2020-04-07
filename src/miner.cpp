@@ -192,11 +192,22 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         for (const CTxOut& out : wtPrimeDataTx->vout)
             coinbaseTx.vout.push_back(out);
     }
+
     // Create deposit payout output(s)
+    //
+    // Make sure we don't add too many deposit outputs
+    uint64_t nAdded = 0;
     CMutableTransaction depositTx;
     if (CreateDepositTx(depositTx)) {
-        for (const CTxOut& out : depositTx.vout)
+        for (const CTxOut& out : depositTx.vout) {
             coinbaseTx.vout.push_back(out);
+            uint64_t nSize = GetVirtualTransactionSize(coinbaseTx);
+            if (nAdded + nSize + nBlockWeight > MAX_BLOCK_WEIGHT) {
+                coinbaseTx.vout.pop_back();
+                break;
+            }
+            nAdded += nSize;
+        }
     }
 
     // Signal the most recent WT^ created by this sidechain
