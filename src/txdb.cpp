@@ -31,6 +31,8 @@ static const char DB_FLAG = 'F';
 static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
 
+static const char DB_LAST_SIDECHAIN_DEPOSIT = 'x';
+
 namespace {
 
 struct CoinEntry {
@@ -370,6 +372,13 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
             std::pair<SidechainDeposit, uint256> value = std::make_pair(*ptr, obj->txid);
             batch.Write(key, value);
             batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_DEPOSIT_KEY, ptr->nSidechain), ptr->nHeight), objid), value);
+            // Also index the deposit by the non amount hash
+            uint256 hashNonAmount = ptr->GetNonAmountHash();
+            std::pair<char, uint256> keyNonAmount = std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, hashNonAmount);
+            batch.Write(keyNonAmount, value);
+
+            // Update DB_LAST_SIDECHAIN_DEPOSIT
+            batch.Write(DB_LAST_SIDECHAIN_DEPOSIT, hashNonAmount);
         }
     }
 
@@ -527,17 +536,27 @@ bool CSidechainTreeDB::HaveDeposits()
     return false;
 }
 
-bool CSidechainTreeDB::HaveDepositNonAmount(const uint256& hash)
+bool CSidechainTreeDB::HaveDepositNonAmount(const uint256& hashNonAmount)
 {
-    std::vector<SidechainDeposit> vDeposit = GetDeposits(SIDECHAIN_TEST);
-    if (vDeposit.empty())
+    SidechainDeposit deposit;
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, hashNonAmount),
+                deposit))
+        return true;
+
+    return false;
+}
+
+bool CSidechainTreeDB::GetLastDeposit(SidechainDeposit& deposit)
+{
+    // Look up the last deposit non amount hash
+    uint256 objid;
+    if (!Read(DB_LAST_SIDECHAIN_DEPOSIT, objid))
         return false;
 
-    // Try to find the deposit with the non amount hash
-    for (const SidechainDeposit& d : vDeposit) {
-        if (d.GetNonAmountHash() == hash)
-            return true;
-    }
+    // Read the last deposit
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, objid), deposit))
+        return true;
+
     return false;
 }
 
