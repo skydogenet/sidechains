@@ -196,6 +196,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // Create deposit payout output(s)
     //
     // Make sure we don't add too many deposit outputs
+    //
     uint64_t nAdded = 0;
     CMutableTransaction depositTx;
     if (CreateDepositTx(depositTx)) {
@@ -545,8 +546,20 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
     //
 
     // Get list of deposits from the mainchain
+
     SidechainClient client;
-    std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES);
+
+    std::vector<SidechainDeposit> vDeposit;
+
+    SidechainDeposit lastDeposit;
+    uint256 hashLastDeposit;
+    uint32_t n = 0;
+    if (psidechaintree->GetLastDeposit(lastDeposit)) {
+        hashLastDeposit = lastDeposit.dtx.GetHash();
+        n = lastDeposit.n;
+    }
+    vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES, hashLastDeposit, n);
+
     if (!vDeposit.size())
         return false;
 

@@ -51,7 +51,7 @@ bool SidechainClient::BroadcastWTPrime(const std::string& hex)
 }
 
 // TODO return bool & state / fail string
-std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strAddressBytes)
+std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, uint32_t n)
 {
     // List of deposits in sidechain format for DB
     std::vector<SidechainDeposit> incoming;
@@ -62,13 +62,21 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
     json.append("\"method\": \"listsidechaindeposits\", \"params\": ");
     json.append("[\"");
     json.append(strAddressBytes);
-    json.append("\"");
-    json.append("] }");
+    if (hashLastDeposit.IsNull()) {
+        json.append("\"] }");
+    } else {
+        json.append("\",");
+        json.append("\"");
+        json.append(hashLastDeposit.ToString());
+        json.append("\",");
+        json.append(UniValue(uint64_t(n)).write());
+        json.append("] }");
+    }
 
     // Try to request deposits from mainchain
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
-        // TODO LogPrintf("ERROR Sidechain client failed to request new deposits\n");
+        LogPrintf("ERROR Sidechain client failed to request new deposits\n");
         return incoming;  // TODO return false
     }
 
@@ -148,6 +156,10 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
         incoming.push_back(deposit);
     }
     // TODO LogPrintf("Sidechain client received %d deposits\n", incoming.size());
+
+    // The deposits are sent in reverse order. Putting the deposits back in
+    // order should make sorting faster.
+    std::reverse(incoming.begin(), incoming.end());
 
     // return valid (in terms of format) deposits in sidechain format
     return incoming;
