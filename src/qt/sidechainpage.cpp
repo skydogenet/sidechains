@@ -43,9 +43,9 @@
 #include <qrencode.h>
 #endif
 
-static const int nTrainRefresh = 5 * 1000; // 5 seconds
-static const int nRetryRefresh = 5 * 1000; // 5 seconds
-static const int nTrainWarningSleep = 30 * 1000; // 30 seconds
+static const int nTrainRefresh = 30 * 1000; // 30 seconds
+static const int nRetryRefresh = 30 * 1000; // 30 seconds
+static const int nTrainWarningSleep = 30 * 1000; // 60 seconds
 
 static const int PAGE_DEFAULT_INDEX = 0;
 static const int PAGE_RESTART_INDEX = 1;
