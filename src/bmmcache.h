@@ -67,6 +67,8 @@ public:
 
     bool MainBlockChecked(const uint256& hashMainBlock) const;
 
+    void ResetMainBlockCache();
+
 private:
     // BMM blocks (without proof) that we have created with the intention of
     // adding to the side blockchain once proof is aquired from the main chain.

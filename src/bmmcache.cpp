@@ -153,8 +153,8 @@ bool BMMCache::UpdateMainBlockCache(std::deque<uint256>& deqHashNew, bool& fReor
     if (mapMainBlock.count(deqHashNew.front())) {
         index = mapMainBlock[deqHashNew.front()];
     } else {
-        index.index = vMainBlockHash.size() - 1;
-        index.hash = deqHashNew.front();
+        LogPrintf("%s: Error - New blocks do not connect to cached chain!\n", __func__);
+        return false;
     }
 
     // If there were any blocks in our cache after the block we will be building
@@ -236,4 +236,10 @@ void BMMCache::AddCheckedMainBlock(const uint256& hashBlock)
 bool BMMCache::MainBlockChecked(const uint256& hashBlock) const
 {
     return setMainBlockChecked.count(hashBlock);
+}
+
+void BMMCache::ResetMainBlockCache()
+{
+    vMainBlockHash.clear();
+    mapMainBlock.clear();
 }
