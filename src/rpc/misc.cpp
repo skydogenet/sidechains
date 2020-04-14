@@ -659,11 +659,11 @@ UniValue updatemainblockcache(const JSONRPCRequest& request)
             "cachesize      (numeric)\n"
         );
 
-    bool fReorg = false;
-    std::vector<uint256> vDisconnected;
 
     int nCached = bmmCache.GetCachedBlockCount();
 
+    bool fReorg = false;
+    std::vector<uint256> vDisconnected;
     if (!UpdateMainBlockHashCache(fReorg, vDisconnected))
         throw JSONRPCError(RPC_MISC_ERROR, "Failed to update!");
 

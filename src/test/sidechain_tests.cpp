@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+// TODO move all BMM Cache tests to bmmcache_tests.cpp
 #include "bmmcache.h"
 #include "chainparams.h"
 #include "consensus/validation.h"

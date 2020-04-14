@@ -654,6 +654,11 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
         }
     }
 
+    // TODO
+    // Improve this code by requesting only DB_LAST_SIDECHAIN_DEPOSIT and
+    // refactor the code to work with that required deposit instead of loading
+    // all of the deposits.
+
     // Get the deposits in the database
     std::vector<SidechainDeposit> vDepositDB = psidechaintree->GetDeposits(SIDECHAIN_TEST);
 
