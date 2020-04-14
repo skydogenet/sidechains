@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <exception>
 #include <map>
+#include <mutex>
 #include <set>
 #include <stdint.h>
 #include <string>
@@ -235,6 +236,8 @@ static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = true;
 static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
 
 extern BMMCache bmmCache;
+
+extern std::mutex mainBlockCacheMutex;
 
 /**
  * Process an incoming block. This only returns after the best known valid
@@ -553,6 +556,7 @@ uint256 GetMainBlockHash(const CBlockHeader& block);
  */
 bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected);
 
+// TODO mutex
 /** Disconnect blocks with a BMM commit from an orphan mainchain block */
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan);
 

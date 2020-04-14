@@ -20,6 +20,7 @@
 #include <cuckoocache.h>
 #include <hash.h>
 #include <init.h>
+#include <mutex>
 #include <net.h>
 #include <policy/fees.h>
 #include <policy/policy.h>
@@ -243,6 +244,8 @@ CTxMemPool mempool(&feeEstimator);
 CScript COINBASE_FLAGS;
 
 const std::string strMessageMagic = "Bitcoin Signed Message:\n";
+
+std::mutex mainBlockCacheMutex;
 
 // Internal stuff
 namespace {
@@ -5550,6 +5553,8 @@ uint256 GetMainBlockHash(const CBlockHeader& block)
 
 bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
 {
+    std::lock_guard<std::mutex> lock(mainBlockCacheMutex);
+
     //
     // Note: bitcoin core does not count genesis block towards block count but
     // we will cache it.
@@ -5576,8 +5581,9 @@ bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
     // same as the current mainchain tip. If it is we don't need to do anything
     // else. If it isn't we will continue to update / reorg handling.
     int nCachedBlocks = bmmCache.GetCachedBlockCount();
-    if (nMainBlocks + 1 == nCachedBlocks && hashCachedTip == hashMainTip)
+    if (nMainBlocks + 1 == nCachedBlocks && hashCachedTip == hashMainTip) {
         return true;
+    }
 
     // Otherwise;
     // From the new mainchain tip, start looping back through mainchain blocks
@@ -5596,6 +5602,7 @@ bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
         // our cache we can update our cache from that block up to the new
         // mainchain tip.
         if (bmmCache.HaveMainBlock(hashPrevBlock)) {
+            deqHashNew.push_front(hashPrevBlock);
             break;
         }
 
