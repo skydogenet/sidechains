@@ -27,7 +27,7 @@
           <bool>true</bool>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="tabTransfer">
           <attribute name="icon">
@@ -734,7 +734,7 @@
                <item row="4" column="1">
                 <widget class="QSpinBox" name="spinBoxRefreshInterval">
                  <property name="suffix">
-                  <string> Seconds</string>
+                  <string> Second(s)</string>
                  </property>
                  <property name="minimum">
                   <number>1</number>
@@ -743,7 +743,7 @@
                   <number>600</number>
                  </property>
                  <property name="value">
-                  <number>21</number>
+                  <number>1</number>
                  </property>
                 </widget>
                </item>
@@ -759,7 +759,7 @@
                   <item>
                    <widget class="QLabel" name="label_15">
                     <property name="text">
-                     <string>Hash of last mainchain block seen: </string>
+                     <string>Hash of last mainchain block scanned: </string>
                     </property>
                    </widget>
                   </item>
@@ -850,7 +850,7 @@
                <item row="0" column="0" colspan="2">
                 <widget class="QLabel" name="label_23">
                  <property name="text">
-                  <string>Make sure you set a --minersleep setting on the mainchain!</string>
+                  <string>Make sure you set --minerbreakforbmm on the mainchain!</string>
                  </property>
                 </widget>
                </item>
