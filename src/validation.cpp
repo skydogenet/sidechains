@@ -2113,6 +2113,10 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 if (!obj)
                     continue;
 
+                // TODO
+                // Refactor. We are also loading SidechainWT *wt later when
+                // calculating the ID. Instead do it only once.
+
                 // Check validity of wt(s). Block invalid if any wt is invalid.
                 if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
                     const SidechainWT *wt = (const SidechainWT *) obj;
@@ -5696,33 +5700,38 @@ void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
             vOrphanFinal.push_back(u);
     }
 
-    {
-        LOCK(cs_main);
-        // Check if any BMM blocks were created from commitments in this
-        // orphaned mainchain block
-        for (const uint256& u : vOrphanFinal) {
+    // Check if any BMM blocks were created from commitments in this
+    // orphaned mainchain block
+    for (const uint256& u : vOrphanFinal) {
+        CValidationState state;
+        {
+            LOCK(cs_main);
             // Check our map of blocks based on their mainchain BMM commit block
             if (!mapBlockMainHashIndex.count(u))
                 continue;
 
             CBlockIndex* pindex = mapBlockMainHashIndex[u];
+            if (!chainActive.Contains(pindex))
+                continue;
 
-            CValidationState state;
             InvalidateBlock(state, Params(), pindex);
 
-            LogPrintf("%s: Invalidated block: %s because mainchain block: %s was orphaned!\n", __func__, pindex->GetBlockHash().ToString(), u.ToString());
+            LogPrintf("%s: Invalidated block: %s because mainchain block: %s was orphaned!\n",
+                    __func__, pindex->GetBlockHash().ToString(), u.ToString());
 
             if (!state.IsValid()) {
-                LogPrintf("%s: Error while invalidating blocks: %s\n", __func__, FormatStateMessage(state));
+                LogPrintf("%s: Error while invalidating blocks: %s\n",
+                        __func__, FormatStateMessage(state));
                 return;
             }
         }
-    }
 
-    CValidationState state;
-    ActivateBestChain(state, Params());
-    if (!state.IsValid()) {
-        LogPrintf("%s: Error activating best chain: %s\n", __func__, FormatStateMessage(state));
+        ActivateBestChain(state, Params());
+        if (!state.IsValid()) {
+            LogPrintf("%s: Error activating best chain: %s\n",
+                    __func__, FormatStateMessage(state));
+            return;
+        }
     }
 }
 
