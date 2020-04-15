@@ -238,6 +238,7 @@ static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
 extern BMMCache bmmCache;
 
 extern std::mutex mainBlockCacheMutex;
+extern std::mutex mainBlockCacheReorgMutex;
 
 /**
  * Process an incoming block. This only returns after the best known valid

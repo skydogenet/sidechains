@@ -246,6 +246,7 @@ CScript COINBASE_FLAGS;
 const std::string strMessageMagic = "Bitcoin Signed Message:\n";
 
 std::mutex mainBlockCacheMutex;
+std::mutex mainBlockCacheReorgMutex;
 
 // Internal stuff
 namespace {
@@ -5648,18 +5649,56 @@ bool VerifyMainBlockCache(std::string& strError)
 
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
 {
-    //
+    std::lock_guard<std::mutex> lock(mainBlockCacheReorgMutex);
+
     // For mainchain blocks that were orphaned - invalidate bmm blocks with
     // commitments from them.
     //
     // vOrphan contains a list of mainchain block hashes that were orphaned
-    //
+
+    // Before invalidating any blocks, check the sanity of the mainchain block
+    // cache and then verify that the blocks to be orphaned actually are missing
+    // from the mainchain.
+
+    // Check the mainchain block cache
+    std::string strError = "";
+    if (!VerifyMainBlockCache(strError)) {
+        LogPrintf("%s: Main block cache invalid: %s. Resyncing...\n",
+                __func__, strError);
+        // Reset the mainchain block cache and then re-sync it
+        bmmCache.ResetMainBlockCache();
+
+        // TODO
+        // If during this call a reorg is detected and we have more orphans then
+        // something bad happened and needs to be handled. Since we just reset
+        // the mainchain block cache, have a mutex lock, and are updating the
+        // cache from scratch now, it should be impossible.
+        bool fReorg = false;
+        std::vector<uint256> vOrphanIgnore;
+        if (!UpdateMainBlockHashCache(fReorg, vOrphanIgnore)) {
+            // TODO
+            // If we make it to this point there might be a connection issue or
+            // something going on. Maybe the mainchain node went down during the
+            // function? There might be something better to do than just logging
+            // the error here.
+            LogPrintf("%s: Failed to re-update main block cache after reset!",
+                    __func__);
+            return;
+        }
+    }
+
+    // Check that the alleged orphans actually don't exist on the mainchain
+    std::vector<uint256> vOrphanFinal;
+    for (const uint256& u : vOrphan) {
+        if (!bmmCache.HaveMainBlock(u))
+            vOrphanFinal.push_back(u);
+    }
 
     {
         LOCK(cs_main);
         // Check if any BMM blocks were created from commitments in this
         // orphaned mainchain block
-        for (const uint256& u : vOrphan) {
+        for (const uint256& u : vOrphanFinal) {
             // Check our map of blocks based on their mainchain BMM commit block
             if (!mapBlockMainHashIndex.count(u))
                 continue;
