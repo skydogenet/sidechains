@@ -5635,7 +5635,7 @@ bool VerifyMainBlockCache(std::string& strError)
         }
 
         if (hashBlock != vHash[i]) {
-            std::string strError = "Invalid hash cached: ";
+            strError = "Invalid hash cached: ";
             strError += vHash[i].ToString();
             strError += " height: ";
             strError += std::to_string(i);
