@@ -5614,6 +5614,38 @@ bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
     return bmmCache.UpdateMainBlockCache(deqHashNew, fReorg, vDisconnected);
 }
 
+bool VerifyMainBlockCache(std::string& strError)
+{
+    SidechainClient client;
+
+    const std::vector<uint256> vHash = bmmCache.GetMainBlockHashCache();
+    if (!vHash.size()) {
+        strError = "No mainchain blocks in cache!";
+        return false;
+    }
+
+    // Compare cached hash at height with mainchain block hash at height
+    for (size_t i = 0; i < vHash.size(); i++) {
+        uint256 hashBlock;
+
+        if (!client.GetBlockHash(i, hashBlock)) {
+            strError = "Failed to request mainchain block hash!";
+            return false;
+        }
+
+        if (hashBlock != vHash[i]) {
+            std::string strError = "Invalid hash cached: ";
+            strError += vHash[i].ToString();
+            strError += " height: ";
+            strError += std::to_string(i);
+
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
 {
     //
