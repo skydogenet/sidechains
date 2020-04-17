@@ -6,6 +6,7 @@
 #include <qt/forms/ui_sidechainpage.h>
 
 #include <qt/bitcoinunits.h>
+#include <qt/clientmodel.h>
 #include <qt/confgeneratordialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
@@ -24,6 +25,7 @@
 #include <sidechain.h>
 #include <sidechainclient.h>
 #include <txdb.h>
+#include <utilmoneystr.h>
 #include <validation.h>
 #include <wallet/coincontrol.h>
 #include <wallet/wallet.h>
@@ -103,35 +105,20 @@ SidechainPage::SidechainPage(QWidget *parent) :
 
     trainErrorMessageBox->setText(QString::fromStdString(str));
 
-    // Initialize models and table views
-    incomingTableView = new QTableView(this);
-    outgoingTableView = new QTableView(this);
-    incomingTableModel = new SidechainHistoryTableModel(this);
-    outgoingTableModel = new SidechainHistoryTableModel(this);
-
-    // Set table models
-    incomingTableView->setModel(incomingTableModel);
-    outgoingTableView->setModel(outgoingTableModel);
-
     // Table style
 #if QT_VERSION < 0x050000
-    incomingTableView->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
-    incomingTableView->verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
-    outgoingTableView->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
-    outgoingTableView->verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidgetWTs->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidgetWTs->verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
 #else
-    incomingTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    incomingTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    outgoingTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    outgoingTableView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidgetWTs->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidgetWTs->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #endif
-
-    // Display tables
-    ui->frameIncoming->layout()->addWidget(incomingTableView);
-    ui->frameOutgoing->layout()->addWidget(outgoingTableView);
 
     generateAddress();
     RefreshTrain();
+
+    connect(ui->checkBoxAutoWTPrimeRefresh, SIGNAL(stateChanged(int)), this,
+            SLOT(on_checkBoxAutoWTPrimeRefresh_changed(int)));
 
     // Set the fee label
     QString strFee = "Note: this sidechain will collect its own fee of: ";
@@ -203,6 +190,23 @@ void SidechainPage::setWalletModel(WalletModel *model)
     {
         connect(model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)), this,
                 SLOT(setBalance(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)));
+
+        // Also set the WT^ explorer to the latest WT^. We don't do this in the
+        // constructor because it depends on having the wallet model set.
+        UpdateToLatestWTPrime(false /* fRequested */);
+
+        // Set the sidechain wealth, which also requires the wallet model
+        UpdateSidechainWealth();
+    }
+}
+
+void SidechainPage::setClientModel(ClientModel *model)
+{
+    this->clientModel = model;
+    if (model)
+    {
+        connect(model, SIGNAL(numBlocksChanged(int, QDateTime, double, bool)),
+                this, SLOT(setNumBlocks(int, QDateTime, double, bool)));
     }
 }
 
@@ -212,6 +216,17 @@ void SidechainPage::setBalance(const CAmount& balance, const CAmount& unconfirme
 {
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
     ui->available->setText(BitcoinUnits::formatWithUnit(unit, balance, false, BitcoinUnits::separatorAlways));
+}
+
+void SidechainPage::setNumBlocks(const int nBlocks, const QDateTime& time,
+        const double progress, const bool fHeader)
+{
+    if (ui->checkBoxAutoWTPrimeRefresh->isChecked()) {
+        // Update to the current WT^
+        UpdateToLatestWTPrime(false /* fRequested */);
+    }
+
+    UpdateSidechainWealth();
 }
 
 void SidechainPage::on_pushButtonMainchain_clicked()
@@ -299,6 +314,13 @@ void SidechainPage::on_pushButtonWT_clicked()
     result += BitcoinUnits::formatWithUnit(unit, burnAmount, false, BitcoinUnits::separatorAlways);
     messageBox.setText(result);
     messageBox.exec();
+}
+
+void SidechainPage::on_checkBoxAutoWTPrimeRefresh_changed(int state)
+{
+    if (state == Qt::Checked) {
+        UpdateToLatestWTPrime();
+    }
 }
 
 void SidechainPage::on_addressBookButton_clicked()
@@ -684,6 +706,20 @@ void SidechainPage::on_pushButtonRetryConnection_clicked()
     UpdateNetworkActive(fConnection);
 }
 
+void SidechainPage::on_pushButtonLookup_clicked()
+{
+    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
+    // TODO check hash validity - show error message if not
+    std::string strHash = ui->lineEditWTPrimeHash->text().toStdString();
+    SetCurrentWTPrime(strHash);
+}
+
+void SidechainPage::on_pushButtonShowLatestWTPrime_clicked()
+{
+    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
+    UpdateToLatestWTPrime();
+}
+
 void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
     // Enable or disable networking based on connection to mainchain
     SetNetworkActive(fMainchainConnected, "Sidechain page update.");
@@ -733,4 +769,127 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     // Check if we can connect to the mainchain
     fConnection = CheckMainchainConnection();
     UpdateNetworkActive(fConnection);
+}
+
+void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequested)
+{
+    ClearWTPrimeExplorer();
+
+    int unit = walletModel->getOptionsModel()->getDisplayUnit();
+
+    // If the user didn't request this update (fRequested) themselves, don't
+    // show error messages
+
+    // Try to lookup the WT^
+    SidechainWTPrime wtPrime;
+    if (!psidechaintree->GetWTPrime(uint256S(strHash), wtPrime)) {
+        if (fRequested) {
+            QMessageBox messageBox;
+            messageBox.setDefaultButton(QMessageBox::Ok);
+
+            messageBox.setWindowTitle("Failed to lookup WT^");
+            messageBox.setText("Could not locate specified WT^ in the database.");
+            messageBox.exec();
+        }
+        return;
+    }
+
+    QString qHash = QString::fromStdString(strHash);
+
+    // Set the line edit to the current WT^ hash
+    ui->lineEditWTPrimeHash->setText(qHash);
+    ui->lineEditWTPrimeHash->setCursorPosition(0);
+
+    // Set the WT^ hash label
+    ui->labelWTPrimeHash->setText("Hash: " + qHash);
+
+    // Set number of WT outputs
+    ui->labelNumWT->setText(QString::number(wtPrime.vWT.size()));
+
+    // Add WTs to the table view
+    CAmount amountTotal = 0;
+    for (const uint256& id : wtPrime.vWT) {
+        SidechainWT wt;
+        if (!psidechaintree->GetWT(id, wt)) {
+            if (fRequested) {
+                QMessageBox messageBox;
+                messageBox.setDefaultButton(QMessageBox::Ok);
+
+                messageBox.setWindowTitle("Failed to lookup WT in WT^");
+                messageBox.setText("For the specified WT^, one of the WT could not be located in the database.");
+                messageBox.exec();
+            }
+            ClearWTPrimeExplorer();
+            return;
+        }
+
+        // Add row for new data
+        int nRows = ui->tableWidgetWTs->rowCount();
+        ui->tableWidgetWTs->insertRow(nRows);
+
+        // Add to total amount withdrawn
+        amountTotal += wt.amount;
+
+        // Add to table
+
+        QString amount = BitcoinUnits::formatWithUnit(unit, wt.amount, false,
+                BitcoinUnits::separatorAlways);
+
+        QTableWidgetItem* amountItem = new QTableWidgetItem(amount);
+
+        QTableWidgetItem* destItem = new QTableWidgetItem(
+                QString::fromStdString(wt.strDestination));
+
+        ui->tableWidgetWTs->setItem(nRows /* row */, 0 /* col */, amountItem);
+        ui->tableWidgetWTs->setItem(nRows /* row */, 1 /* col */, destItem);
+    }
+
+    // Set total amount withdrawn
+    QString total = BitcoinUnits::formatWithUnit(unit, amountTotal, false,
+            BitcoinUnits::separatorAlways);
+
+    ui->labelTotalAmount->setText(total);
+}
+
+void SidechainPage::ClearWTPrimeExplorer()
+{
+    ui->tableWidgetWTs->setRowCount(0);
+    ui->labelWTPrimeHash->setText("");
+    ui->labelNumWT->setText(QString::number(0));
+
+    int unit = walletModel->getOptionsModel()->getDisplayUnit();
+    QString zero = BitcoinUnits::formatWithUnit(unit, CAmount(0), false,
+            BitcoinUnits::separatorAlways);
+
+    ui->labelTotalAmount->setText(zero);
+}
+
+void SidechainPage::UpdateSidechainWealth()
+{
+    SidechainDeposit deposit;
+    if (!psidechaintree->GetLastDeposit(deposit)) {
+        // TODO Error
+        return;
+    }
+    if (deposit.n >= deposit.dtx.vout.size()) {
+        // TODO Error
+        return;
+    }
+
+    int unit = walletModel->getOptionsModel()->getDisplayUnit();
+
+    CAmount amountCtip = deposit.dtx.vout[deposit.n].nValue;
+    QString wealth = BitcoinUnits::formatWithUnit(unit, amountCtip, false,
+            BitcoinUnits::separatorAlways);
+
+    ui->labelTotalWealth->setText(wealth);
+}
+
+void SidechainPage::UpdateToLatestWTPrime(bool fRequested)
+{
+    uint256 hashLatest;
+    if (!psidechaintree->GetLastWTPrimeHash(hashLatest))
+        return;
+
+    SetCurrentWTPrime(hashLatest.ToString(), fRequested);
 }
