@@ -202,17 +202,6 @@ uint256 BMMCache::GetLastMainBlockHash() const
     return vMainBlockHash.back();
 }
 
-void BMMCache::SetLatestWTPrime(const uint256& hashWTPrime)
-{
-    hashLatestWTPrime = hashWTPrime;
-    LogPrintf("%s Set latest WT^ to: %s\n", __func__, hashWTPrime.ToString());
-}
-
-uint256 BMMCache::GetLatestWTPrime() const
-{
-    return hashLatestWTPrime;
-}
-
 int BMMCache::GetCachedBlockCount() const
 {
     return vMainBlockHash.size();

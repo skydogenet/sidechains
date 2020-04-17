@@ -212,7 +212,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
 
     // Signal the most recent WT^ created by this sidechain
-    uint256 hashWTPrime = bmmCache.GetLatestWTPrime();
+    uint256 hashWTPrime;
+    psidechaintree->GetLastWTPrimeHash(hashWTPrime);
     if (!hashWTPrime.IsNull())
         pblock->hashWTPrime = hashWTPrime;
 
@@ -571,7 +572,7 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
         // point. Deposit objects include both the mainchain txn and txout proof
         // meaning that there should not be any duplicates as it would be an
         // invalid transaction.
-        if (!psidechaintree->HaveDepositNonAmount(d.GetNonAmountHash())) {
+        if (!psidechaintree->HaveDepositNonAmount(d.GetID())) {
             vDepositNew.push_back(d);
         }
     }

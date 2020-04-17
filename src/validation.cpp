@@ -2085,7 +2085,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     if (fSidechainIndex) {
         // Send latest WT^ to the mainchain if it hasn't been broadcasted yet
         SidechainWTPrime wtPrime;
-        uint256 hashLatestWTPrime = bmmCache.GetLatestWTPrime();
+        uint256 hashLatestWTPrime;
+        psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
         if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrime)) {
             // If we haven't broadcasted the latest WT^ yet, do it now
             if (!bmmCache.HaveBroadcastedWTPrime(hashLatestWTPrime)) {
@@ -2176,7 +2177,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             if (hashWTPrime.IsNull())
                 return state.Error(strprintf("%s: hashWTPrime shouldn't be null if VerifyWTPrimes passed!\n", __func__));
 
-            bmmCache.SetLatestWTPrime(hashWTPrimeID);
             psidechaintree->WriteWTUpdate(vWT);
         }
 
@@ -3182,6 +3182,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     // Do we want to verify BMM in this context?
     bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
+    if (fSkipBMMChecks)
+        fVerifyBMM = false;
 
     // Check for mainchain connection
     if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {

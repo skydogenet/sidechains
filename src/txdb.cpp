@@ -32,6 +32,7 @@ static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
 
 static const char DB_LAST_SIDECHAIN_DEPOSIT = 'x';
+static const char DB_LAST_SIDECHAIN_WTPRIME = 'w';
 
 namespace {
 
@@ -557,6 +558,15 @@ bool CSidechainTreeDB::GetLastDeposit(SidechainDeposit& deposit)
         return true;
 
     return false;
+}
+
+bool CSidechainTreeDB::GetLastWTPrimeHash(uint256& hash)
+{
+    // Look up the last deposit non amount hash
+    if (!Read(DB_LAST_SIDECHAIN_WTPRIME, hash))
+        return false;
+
+    return true;
 }
 
 namespace {

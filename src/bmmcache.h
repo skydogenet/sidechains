@@ -53,10 +53,6 @@ public:
 
     uint256 GetLastMainBlockHash() const;
 
-    void SetLatestWTPrime(const uint256& hashWTPrime);
-
-    uint256 GetLatestWTPrime() const;
-
     int GetCachedBlockCount() const;
 
     bool HaveMainBlock(const uint256& hash) const;
@@ -85,9 +81,6 @@ private:
 
     // List of all known mainchain block hashes in order
     std::vector<uint256> vMainBlockHash;
-
-    // The last WT^ added to the sidechain tree
-    uint256 hashLatestWTPrime;
 
     // TODO we could also cache a map of mainchain block hashes that we created
     // BMM requests for. That way, to check for BMM commitments we can just
