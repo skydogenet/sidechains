@@ -167,14 +167,12 @@ public:
         return true;
     }
 
-    // TODO cleanup
     template<typename V> bool GetSidechainValue(V& value) {
         leveldb::Slice slValue = piter->value();
         try {
             CDataStream ssValue(slValue.data(), slValue.data() + slValue.size(), SER_DISK, CLIENT_VERSION);
             ssValue.Xor(dbwrapper_private::GetObfuscateKey(parent));
             ssValue >> value;
-            ssValue >> value.txid;
         } catch (const std::exception&) {
             return false;
         }
@@ -261,7 +259,6 @@ public:
         return true;
     }
 
-    // TODO cleanup
     template <typename K, typename V>
     bool ReadSidechain(const K& key, V& value) const
     {
@@ -282,7 +279,6 @@ public:
             CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, CLIENT_VERSION);
             ssValue.Xor(obfuscate_key);
             ssValue >> value;
-            ssValue >> value.txid;
         } catch (const std::exception&) {
             return false;
         }

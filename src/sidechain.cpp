@@ -84,8 +84,6 @@ std::string SidechainObj::ToString(void) const
 {
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;
-    str << "nHeight=" << nHeight << std::endl;
-    str << "txid=" << txid.GetHex() << std::endl;
     return str.str();
 }
 
@@ -93,8 +91,6 @@ std::string SidechainWT::ToString() const
 {
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;
-    str << "nHeight=" << nHeight << std::endl;
-    str << "txid=" << txid.GetHex() << std::endl;
     str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
     str << "destination=" << strDestination << std::endl;
     str << "amount=" << FormatMoney(amount) << std::endl;
@@ -107,8 +103,6 @@ std::string SidechainWTPrime::ToString() const
 {
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;
-    str << "nHeight=" << nHeight << std::endl;
-    str << "txid=" << txid.GetHex() << std::endl;
     str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
     str << "wtprime=" << CTransaction(wtPrime).ToString() << std::endl;
     return str.str();
@@ -119,7 +113,6 @@ std::string SidechainDeposit::ToString() const
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;
     str << "nSidechain=" << (unsigned int)nSidechain << std::endl;
-    str << "txid=" << txid.GetHex() << std::endl;
     str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
     str << "keyID=" << keyID.ToString() << std::endl;
     str << "payout=" << FormatMoney(amtUserPayout) << std::endl;

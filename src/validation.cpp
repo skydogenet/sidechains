@@ -2147,11 +2147,18 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 uint256 id;
                 if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
                     const SidechainWT *wt = (const SidechainWT *) obj;
-                    id = wt->GetNonStatusHash();
-                } else {
-                    id = obj->GetHash();
+                    id = wt->GetID();
                 }
-                obj->txid = tx->GetHash();
+                else
+                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
+                    const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
+                    id = wtPrime->GetID();
+                }
+                else
+                if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
+                    const SidechainDeposit *deposit = (const SidechainDeposit *) obj;
+                    id = deposit->GetID();
+                }
                 vSidechainObjects.push_back(std::make_pair(id, obj));
             }
         }
@@ -3239,7 +3246,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         block.fChecked = true;
 
     // Check h* for BMM block
-    if (!fSkipBMMChecks && fVerifyBMM && !VerifyCriticalHashProof(block)) {
+    if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
         return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof B");
     }
 
@@ -5225,7 +5232,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
         wjtx.vout.push_back(CTxOut(amountWTBurn, GetScriptForDestination(dest)));
 
         // Add WT objid to WT^ obj
-        wtPrime.vWT.push_back(wt.GetNonStatusHash());
+        wtPrime.vWT.push_back(wt.GetID());
 
         // Make sure we have room for more outputs
         if (GetTransactionWeight(wjtx) > MAX_WTPRIME_WEIGHT) {

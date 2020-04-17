@@ -355,27 +355,30 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
 
         if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
             const SidechainWT *ptr = (const SidechainWT *) obj;
-            std::pair<SidechainWT, uint256> value = std::make_pair(*ptr, obj->txid);
-            batch.Write(key, value);
-            batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_WT_KEY, ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(key, *ptr);
         }
         else
         if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
             const SidechainWTPrime *ptr = (const SidechainWTPrime *) obj;
-            std::pair<SidechainWTPrime, uint256> value = std::make_pair(*ptr, obj->txid);
-            batch.Write(key, value);
-            batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_WTPRIME_KEY, ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(key, *ptr);
+
+            // Also index the WT^ by the WT^ transaction hash
+            uint256 hashWTPrime = ptr->wtPrime.GetHash();
+            std::pair<char, uint256> keyTx = std::make_pair(DB_SIDECHAIN_WTPRIME_OP, hashWTPrime);
+            batch.Write(keyTx, *ptr);
+
+            // Update DB_LAST_SIDECHAIN_WTPRIME
+            batch.Write(DB_LAST_SIDECHAIN_WTPRIME, hashWTPrime);
         }
         else
         if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
             const SidechainDeposit *ptr = (const SidechainDeposit *) obj;
-            std::pair<SidechainDeposit, uint256> value = std::make_pair(*ptr, obj->txid);
-            batch.Write(key, value);
-            batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_DEPOSIT_KEY, ptr->nSidechain), ptr->nHeight), objid), value);
+            batch.Write(key, *ptr);
+
             // Also index the deposit by the non amount hash
-            uint256 hashNonAmount = ptr->GetNonAmountHash();
+            uint256 hashNonAmount = ptr->GetID();
             std::pair<char, uint256> keyNonAmount = std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, hashNonAmount);
-            batch.Write(keyNonAmount, value);
+            batch.Write(keyNonAmount, *ptr);
 
             // Update DB_LAST_SIDECHAIN_DEPOSIT
             batch.Write(DB_LAST_SIDECHAIN_DEPOSIT, hashNonAmount);
@@ -391,11 +394,8 @@ bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
 
     for (const SidechainWT& wt : vWT)
     {
-        std::pair<char, uint256> key = std::make_pair(wt.sidechainop, wt.GetNonStatusHash());
-
-        std::pair<SidechainWT, uint256> value = std::make_pair(wt, wt.txid);
-        batch.Write(key, value);
-        batch.Write(std::make_pair(std::make_pair(std::make_pair(DB_SIDECHAIN_WT_KEY, wt.nSidechain), wt.nHeight), wt.GetNonStatusHash()), value);
+        std::pair<char, uint256> key = std::make_pair(wt.sidechainop, wt.GetID());
+        batch.Write(key, wt);
     }
 
     return WriteBatch(batch);
@@ -492,7 +492,6 @@ std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSide
 
 std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSidechain)
 {
-    // TODO filter by height
     const char sidechainop = DB_SIDECHAIN_DEPOSIT_OP;
     std::ostringstream ss;
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
@@ -520,7 +519,7 @@ bool CSidechainTreeDB::HaveDeposits()
 {
     const char sidechainop = DB_SIDECHAIN_DEPOSIT_OP;
     std::ostringstream ss;
-    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, DB_SIDECHAIN_DEPOSIT_KEY), uint256()));
+    ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, DB_SIDECHAIN_DEPOSIT_OP), uint256()));
 
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
     pcursor->Seek(ss.str());

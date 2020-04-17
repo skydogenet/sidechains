@@ -64,23 +64,16 @@ static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
 static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 
 static const char DB_SIDECHAIN_DEPOSIT_OP = 'D';
-static const char DB_SIDECHAIN_DEPOSIT_KEY = 'd';
-
 static const char DB_SIDECHAIN_WT_OP = 'W';
-static const char DB_SIDECHAIN_WT_KEY = 'w';
-
 static const char DB_SIDECHAIN_WTPRIME_OP = 'P';
-static const char DB_SIDECHAIN_WTPRIME_KEY = 'p';
 
 /**
  * Base object for sidechain related database entries
  */
 struct SidechainObj {
     char sidechainop;
-    uint32_t nHeight;
-    uint256 txid;
 
-    SidechainObj(void): nHeight(INT_MAX) { }
+    SidechainObj(void) { }
     virtual ~SidechainObj(void) { }
 
     uint256 GetHash(void) const;
@@ -115,8 +108,7 @@ struct SidechainWT: public SidechainObj {
 
     std::string ToString(void) const;
 
-    uint256 GetNonStatusHash() const
-    {
+    uint256 GetID() const {
         SidechainWT wt(*this);
         wt.status = WT_UNSPENT;
         return wt.GetHash();
@@ -145,9 +137,7 @@ struct SidechainWTPrime: public SidechainObj {
     }
 
     uint256 GetID() const {
-        SidechainWTPrime wtPrime(*this);
-        wtPrime.txid.SetNull();
-        return wtPrime.GetHash();
+        return GetHash();
     }
 
     std::string ToString(void) const;
@@ -196,7 +186,7 @@ struct SidechainDeposit : public SidechainObj {
         return false;
     }
 
-    uint256 GetNonAmountHash() const
+    uint256 GetID() const
     {
         SidechainDeposit deposit(*this);
         deposit.amtUserPayout = CAmount(0);
