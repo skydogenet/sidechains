@@ -5,20 +5,17 @@
 #ifndef SIDECHAINPAGE_H
 #define SIDECHAINPAGE_H
 
-#include <qt/sidechainhistorytablemodel.h>
-
 #include <amount.h>
 
 #include <string>
 #include <uint256.h>
 
-QT_BEGIN_NAMESPACE
 #include <QTableView>
 #include <QTimer>
 #include <QWidget>
-QT_END_NAMESPACE
 
 class CBlock;
+class ClientModel;
 class WalletModel;
 class QMessageBox;
 class ConfGeneratorDialog;
@@ -39,12 +36,17 @@ public:
 
     void setWalletModel(WalletModel *model);
 
+    void setClientModel(ClientModel *model);
+
 public Q_SLOTS:
     void setBalance(const CAmount& balance, const CAmount& unconfirmedBalance,
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
 
     void RefreshTrain();
+
+    void setNumBlocks(const int nBlocks, const QDateTime& time,
+            const double progress, const bool fHeader);
 
 private Q_SLOTS:
     void on_pushButtonMainchain_clicked();
@@ -83,16 +85,17 @@ private Q_SLOTS:
 
     void on_pushButtonRetryConnection_clicked();
 
+    void on_pushButtonLookup_clicked();
+
+    void on_pushButtonShowLatestWTPrime_clicked();
+
+    void on_checkBoxAutoWTPrimeRefresh_changed(int state);
+
 private:
     Ui::SidechainPage *ui;
 
     WalletModel *walletModel;
-
-    QTableView *incomingTableView;
-    QTableView *outgoingTableView;
-
-    SidechainHistoryTableModel *incomingTableModel;
-    SidechainHistoryTableModel *outgoingTableModel;
+    ClientModel *clientModel;
 
     ConfGeneratorDialog *confGeneratorDialog;
 
@@ -123,6 +126,14 @@ private:
 
     // Check if configuration files are setup and connection works
     void CheckConfiguration(bool& fConfig, bool& fConnection);
+
+    void SetCurrentWTPrime(const std::string& strHash, bool fRequested = true);
+
+    void ClearWTPrimeExplorer();
+
+    void UpdateSidechainWealth();
+
+    void UpdateToLatestWTPrime(bool fRequested = true);
 };
 
 #endif // SIDECHAINPAGE_H

@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+// TODO move all BMM Cache tests to bmmcache_tests.cpp
 #include "bmmcache.h"
 #include "chainparams.h"
 #include "consensus/validation.h"
@@ -117,14 +118,14 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
 
     BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
-    // Set -verifybmmcheckblock arg to true
-    //gArgs.ForceSetArg("-verifybmmcheckblock", "1");
-
     // Generate BMM block
     CScript scriptPubKey;
     CBlock block;
     std::string strError = "";
     BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(scriptPubKey, block, strError));
+
+    // Set -verifybmmcheckblock arg to true
+    gArgs.ForceSetArg("-verifybmmcheckblock", "1");
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     BOOST_CHECK(!ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */));
@@ -132,7 +133,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
     BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
     // Set -verifybmmcheckblock arg back to default (gArgs effect all tests)
-    //gArgs.ForceSetArg("-verifybmmcheckblock", "0");
+    gArgs.ForceSetArg("-verifybmmcheckblock", "0");
 }
 
 // TODO although more complicated than it may seem at first, it would be nice

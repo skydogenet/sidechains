@@ -51,7 +51,7 @@ bool SidechainClient::BroadcastWTPrime(const std::string& hex)
 }
 
 // TODO return bool & state / fail string
-std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strAddressBytes)
+std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, uint32_t n)
 {
     // List of deposits in sidechain format for DB
     std::vector<SidechainDeposit> incoming;
@@ -62,13 +62,21 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
     json.append("\"method\": \"listsidechaindeposits\", \"params\": ");
     json.append("[\"");
     json.append(strAddressBytes);
-    json.append("\"");
-    json.append("] }");
+    if (hashLastDeposit.IsNull()) {
+        json.append("\"] }");
+    } else {
+        json.append("\",");
+        json.append("\"");
+        json.append(hashLastDeposit.ToString());
+        json.append("\",");
+        json.append(UniValue(uint64_t(n)).write());
+        json.append("] }");
+    }
 
     // Try to request deposits from mainchain
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
-        // TODO LogPrintf("ERROR Sidechain client failed to request new deposits\n");
+        LogPrintf("ERROR Sidechain client failed to request new deposits\n");
         return incoming;  // TODO return false
     }
 
@@ -148,6 +156,10 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
         incoming.push_back(deposit);
     }
     // TODO LogPrintf("Sidechain client received %d deposits\n", incoming.size());
+
+    // The deposits are sent in reverse order. Putting the deposits back in
+    // order should make sorting faster.
+    std::reverse(incoming.begin(), incoming.end());
 
     // return valid (in terms of format) deposits in sidechain format
     return incoming;
@@ -234,7 +246,6 @@ bool SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint25
 uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight, const CAmount& amount)
 {
     uint256 txid = uint256();
-    LOCK(cs_main);
     std::string strPrevHash = hashBlockMain.ToString();
 
     // JSON for sending critical data request to mainchain via mainchain HTTP-RPC
@@ -382,6 +393,12 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
     // TODO this could be more efficient
     // Check new main:blocks for our bmm requests
     for (const uint256& u : vHashMainBlock) {
+        // Skip if we've already checked this block
+        if (bmmCache.MainBlockChecked(u))
+            continue;
+        // Record that we are going to check this mainchain block
+        bmmCache.AddCheckedMainBlock(u);
+
         // Check main:block for any of our current BMM requests
         for (const CBlock& b : vBMMCache) {
             const uint256& hashBMMBlock = b.GetBlindHash();
@@ -405,7 +422,7 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
         }
     }
 
-    // Was there a new mainchain block?
+    // Was there a new mainchain block since the last request we made?
     if (!bmmCache.HaveBMMRequestForPrevBlock(vHashMainBlock.back())) {
         // Clear out the bmm cache, the old requests are invalid now as they
         // were created for the old mainchain tip.

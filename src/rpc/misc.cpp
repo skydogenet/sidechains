@@ -616,31 +616,12 @@ UniValue verifymainblockcache(const JSONRPCRequest& request)
             "height  (numeric) Cache verified to this mainchain block height.\n"
         );
 
-    SidechainClient client;
-
-    const std::vector<uint256> vHash = bmmCache.GetMainBlockHashCache();
-    if (!vHash.size())
-        throw JSONRPCError(RPC_MISC_ERROR, "No mainchain blocks in cache!");
-
-    // Compare cached hash at height with mainchain block hash at height
-    for (size_t i = 0; i < vHash.size(); i++) {
-        uint256 hashBlock;
-
-        if (!client.GetBlockHash(i, hashBlock))
-            throw JSONRPCError(RPC_MISC_ERROR, "Failed to request mainchain block hash!");
-
-        if (hashBlock != vHash[i]) {
-            std::string strError = "Invalid hash cached: ";
-            strError += vHash[i].ToString();
-            strError += " height: ";
-            strError += std::to_string(i);
-
-            throw JSONRPCError(RPC_MISC_ERROR, strError);
-        }
-    }
+    std::string strError = "";
+    if (!VerifyMainBlockCache(strError))
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
 
     UniValue result(UniValue::VOBJ);
-    result.pushKV("height", vHash.size() - 1);
+    result.pushKV("height", bmmCache.GetCachedBlockCount() - 1);
 
     return result;
 }
@@ -659,11 +640,11 @@ UniValue updatemainblockcache(const JSONRPCRequest& request)
             "cachesize      (numeric)\n"
         );
 
-    bool fReorg = false;
-    std::vector<uint256> vDisconnected;
 
     int nCached = bmmCache.GetCachedBlockCount();
 
+    bool fReorg = false;
+    std::vector<uint256> vDisconnected;
     if (!UpdateMainBlockHashCache(fReorg, vDisconnected))
         throw JSONRPCError(RPC_MISC_ERROR, "Failed to update!");
 

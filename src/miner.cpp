@@ -188,19 +188,32 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // Create WT^
     CTransactionRef wtPrimeTx;
     CTransactionRef wtPrimeDataTx;
-    if (CreateWTPrimeTx(nHeight, wtPrimeTx, wtPrimeDataTx)) {
+    if (CreateWTPrimeTx(wtPrimeTx, wtPrimeDataTx)) {
         for (const CTxOut& out : wtPrimeDataTx->vout)
             coinbaseTx.vout.push_back(out);
     }
+
     // Create deposit payout output(s)
+    //
+    // Make sure we don't add too many deposit outputs
+    //
+    uint64_t nAdded = 0;
     CMutableTransaction depositTx;
     if (CreateDepositTx(depositTx)) {
-        for (const CTxOut& out : depositTx.vout)
+        for (const CTxOut& out : depositTx.vout) {
             coinbaseTx.vout.push_back(out);
+            uint64_t nSize = GetVirtualTransactionSize(coinbaseTx);
+            if (nAdded + nSize + nBlockWeight > MAX_BLOCK_WEIGHT) {
+                coinbaseTx.vout.pop_back();
+                break;
+            }
+            nAdded += nSize;
+        }
     }
 
     // Signal the most recent WT^ created by this sidechain
-    uint256 hashWTPrime = bmmCache.GetLatestWTPrime();
+    uint256 hashWTPrime;
+    psidechaintree->GetLastWTPrimeHash(hashWTPrime);
     if (!hashWTPrime.IsNull())
         pblock->hashWTPrime = hashWTPrime;
 
@@ -505,6 +518,15 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 bool CreateDepositTx(CMutableTransaction& depositTx)
 {
     //
+    // TODO
+    // Refactor: Very slow once the sidechain has a large number of deposits
+    // because it is re-downloading from mainchain & resorting all of them.
+    //
+    // Make it only download new ones and sort from the one that connects to a
+    // CTIP from the database.
+    //
+
+    //
     // Create the deposit payout transaction that takes deposit(s) from the
     // mainchain and sends them to the sidechain address specified.
     //
@@ -525,8 +547,20 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
     //
 
     // Get list of deposits from the mainchain
+
     SidechainClient client;
-    std::vector<SidechainDeposit> vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES);
+
+    std::vector<SidechainDeposit> vDeposit;
+
+    SidechainDeposit lastDeposit;
+    uint256 hashLastDeposit;
+    uint32_t n = 0;
+    if (psidechaintree->GetLastDeposit(lastDeposit)) {
+        hashLastDeposit = lastDeposit.dtx.GetHash();
+        n = lastDeposit.n;
+    }
+    vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES, hashLastDeposit, n);
+
     if (!vDeposit.size())
         return false;
 
@@ -538,7 +572,7 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
         // point. Deposit objects include both the mainchain txn and txout proof
         // meaning that there should not be any duplicates as it would be an
         // invalid transaction.
-        if (!psidechaintree->HaveDepositNonAmount(d.GetNonAmountHash())) {
+        if (!psidechaintree->HaveDepositNonAmount(d.GetID())) {
             vDepositNew.push_back(d);
         }
     }
@@ -620,6 +654,11 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
             prev = *rit;
         }
     }
+
+    // TODO
+    // Improve this code by requesting only DB_LAST_SIDECHAIN_DEPOSIT and
+    // refactor the code to work with that required deposit instead of loading
+    // all of the deposits.
 
     // Get the deposits in the database
     std::vector<SidechainDeposit> vDepositDB = psidechaintree->GetDeposits(SIDECHAIN_TEST);

@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <exception>
 #include <map>
+#include <mutex>
 #include <set>
 #include <stdint.h>
 #include <string>
@@ -211,7 +212,7 @@ static const unsigned int MIN_BLOCKS_TO_KEEP = 288;
 static const unsigned int NODE_NETWORK_LIMITED_MIN_BLOCKS = 288;
 
 static const signed int DEFAULT_CHECKBLOCKS = 6;
-static const unsigned int DEFAULT_CHECKLEVEL = 3;
+static const unsigned int DEFAULT_CHECKLEVEL = 4;
 
 // Require that user allocate at least 550MB for block & undo files (blk???.dat and rev???.dat)
 // At 1MB per block, 288 blocks = 288MB.
@@ -228,14 +229,16 @@ static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc59115285
 static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
 
 /** Blind merged mining */
-static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = true;
+static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = false;
 static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = true;
 static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = true;
-static const bool DEFAULT_VERIFY_BMM_ACCEPT_BLOCK = true;
 
 static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
 
 extern BMMCache bmmCache;
+
+extern std::mutex mainBlockCacheMutex;
+extern std::mutex mainBlockCacheReorgMutex;
 
 /**
  * Process an incoming block. This only returns after the best known valid
@@ -523,7 +526,7 @@ void DumpMainBlockCache();
 void LoadMainBlockCache();
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx);
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false);
 
 /** Get the number of blocks remaining in the current WT^ verification period */
 int GetBlocksVerificationPeriod(int nMainchainHeight);
@@ -554,6 +557,10 @@ uint256 GetMainBlockHash(const CBlockHeader& block);
  */
 bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected);
 
+/* Verify the contents of the mainchain block cache with the mainchain */
+bool VerifyMainBlockCache(std::string& strError);
+
+// TODO mutex
 /** Disconnect blocks with a BMM commit from an orphan mainchain block */
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan);
 

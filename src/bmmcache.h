@@ -53,15 +53,17 @@ public:
 
     uint256 GetLastMainBlockHash() const;
 
-    void SetLatestWTPrime(const uint256& hashWTPrime);
-
-    uint256 GetLatestWTPrime() const;
-
     int GetCachedBlockCount() const;
 
     bool HaveMainBlock(const uint256& hash) const;
 
     bool HaveBMMRequestForPrevBlock(const uint256& hashPrevBlock) const;
+
+    void AddCheckedMainBlock(const uint256& hashBlock);
+
+    bool MainBlockChecked(const uint256& hashMainBlock) const;
+
+    void ResetMainBlockCache();
 
 private:
     // BMM blocks (without proof) that we have created with the intention of
@@ -80,9 +82,6 @@ private:
     // List of all known mainchain block hashes in order
     std::vector<uint256> vMainBlockHash;
 
-    // The last WT^ added to the sidechain tree
-    uint256 hashLatestWTPrime;
-
     // TODO we could also cache a map of mainchain block hashes that we created
     // BMM requests for. That way, to check for BMM commitments we can just
     // check recent blocks that we created a commitment for instead of scanning
@@ -92,6 +91,9 @@ private:
     // prevblock. (Meaning the BMM request was created when the hash was the
     // mainchain tip)
     std::set<uint256> setPrevBlockBMMCreated;
+
+    // Set of main block hashes that we've already checked for our BMM requests
+    std::set<uint256> setMainBlockChecked;
 };
 
 #endif // BITCOIN_BMMCACHE_H

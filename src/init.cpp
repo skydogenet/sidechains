@@ -1559,7 +1559,7 @@ bool AppInitMain()
 
                     if (!CVerifyDB().VerifyDB(chainparams, pcoinsdbview.get(), gArgs.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
                                   gArgs.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS))) {
-                        strLoadError = _("Corrupted block database detected. Note: mainchain connection required!");
+                        strLoadError = _("Corrupted block database detected.");
                         break;
                     }
                 }
@@ -1689,19 +1689,20 @@ bool AppInitMain()
     // Try to sync mainchain block cache - may not work if RPC connection hasn't
     // been setup yet. Don't exit if the update fails.
     bool fUpdateCache = gArgs.GetBoolArg("-updatemainblockcache", true);
-    uiInterface.InitMessage(_("Updating mainchain block cache..."));
-    bool fReorg;
-    std::vector<uint256> vOrphan;
-    if (fUpdateCache && UpdateMainBlockHashCache(fReorg, vOrphan))
-    {
-        LogPrintf("%s: Updated mainchain block hash cache.\n", __func__);
-        if (fReorg) {
-            LogPrintf("%s: Mainchain reorg detected. Orphans: %u\n", __func__, vOrphan.size());
-            HandleMainchainReorg(vOrphan);
-        }
-    } else {
-        if (fUpdateCache)
+    if (fUpdateCache) {
+        uiInterface.InitMessage(_("Updating mainchain block cache..."));
+        bool fReorg = false;
+        std::vector<uint256> vOrphan;
+        if (UpdateMainBlockHashCache(fReorg, vOrphan))
+        {
+            LogPrintf("%s: Updated mainchain block hash cache.\n", __func__);
+            if (fReorg) {
+                LogPrintf("%s: Mainchain reorg detected. Orphans: %u\n", __func__, vOrphan.size());
+                HandleMainchainReorg(vOrphan);
+            }
+        } else {
             LogPrintf("%s: Failed to update mainchain block hash cache!\n", __func__);
+        }
     }
 
     // ********************************************************* Step 11: start node

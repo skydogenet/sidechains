@@ -20,6 +20,7 @@
 #include <cuckoocache.h>
 #include <hash.h>
 #include <init.h>
+#include <mutex>
 #include <net.h>
 #include <policy/fees.h>
 #include <policy/policy.h>
@@ -243,6 +244,9 @@ CTxMemPool mempool(&feeEstimator);
 CScript COINBASE_FLAGS;
 
 const std::string strMessageMagic = "Bitcoin Signed Message:\n";
+
+std::mutex mainBlockCacheMutex;
+std::mutex mainBlockCacheReorgMutex;
 
 // Internal stuff
 namespace {
@@ -2081,7 +2085,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     if (fSidechainIndex) {
         // Send latest WT^ to the mainchain if it hasn't been broadcasted yet
         SidechainWTPrime wtPrime;
-        uint256 hashLatestWTPrime = bmmCache.GetLatestWTPrime();
+        uint256 hashLatestWTPrime;
+        psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
         if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrime)) {
             // If we haven't broadcasted the latest WT^ yet, do it now
             if (!bmmCache.HaveBroadcastedWTPrime(hashLatestWTPrime)) {
@@ -2108,6 +2113,10 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 SidechainObj *obj = SidechainObjCtr(scriptPubKey);
                 if (!obj)
                     continue;
+
+                // TODO
+                // Refactor. We are also loading SidechainWT *wt later when
+                // calculating the ID. Instead do it only once.
 
                 // Check validity of wt(s). Block invalid if any wt is invalid.
                 if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
@@ -2139,11 +2148,18 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 uint256 id;
                 if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
                     const SidechainWT *wt = (const SidechainWT *) obj;
-                    id = wt->GetNonStatusHash();
-                } else {
-                    id = obj->GetHash();
+                    id = wt->GetID();
                 }
-                obj->txid = tx->GetHash();
+                else
+                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
+                    const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
+                    id = wtPrime->GetID();
+                }
+                else
+                if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
+                    const SidechainDeposit *deposit = (const SidechainDeposit *) obj;
+                    id = deposit->GetID();
+                }
                 vSidechainObjects.push_back(std::make_pair(id, obj));
             }
         }
@@ -2155,13 +2171,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             uint256 hashWTPrime;
             uint256 hashWTPrimeID;
 
-            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, false /* fReplicate */))
+            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, true /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
                 return state.Error(strprintf("%s: hashWTPrime shouldn't be null if VerifyWTPrimes passed!\n", __func__));
 
-            bmmCache.SetLatestWTPrime(hashWTPrimeID);
             psidechaintree->WriteWTUpdate(vWT);
         }
 
@@ -3167,6 +3182,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     // Do we want to verify BMM in this context?
     bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
+    if (fSkipBMMChecks)
+        fVerifyBMM = false;
 
     // Check for mainchain connection
     if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
@@ -3231,8 +3248,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         block.fChecked = true;
 
     // Check h* for BMM block
-    if (!fSkipBMMChecks && fVerifyBMM && !VerifyCriticalHashProof(block)) {
-        return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof B");
+    if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
+        return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof B");
     }
 
     return true;
@@ -3531,7 +3548,7 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
             return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
         if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
-            return state.DoS(100, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof A");
+            return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof A");
         }
 
         // Get prev block index
@@ -3667,6 +3684,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     }
     if (fNewBlock) *fNewBlock = true;
 
+    // Note that checkblock verifies BMM
     if (!CheckBlock(block, state, chainparams.GetConsensus()) ||
         !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev)) {
         if (state.IsInvalid() && !state.CorruptionPossible()) {
@@ -3678,23 +3696,12 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 
     bool fInitialBlockDownload = IsInitialBlockDownload();
 
-    // Whether we want to verify BMM in this context
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptblock", DEFAULT_VERIFY_BMM_ACCEPT_BLOCK);
-    if (!fInitialBlockDownload && fVerifyBMM) {
-        if (!VerifyCriticalHashProof(block)) {
-            state.Error(strprintf("%s: bad-critical-hash", __func__));
-            return error("%s: bad-critical-hash", __func__);
-        }
-    }
-
+    bool fNewTip = (chainActive.Tip() == pindex->pprev);
     bool fVerifyWTPrimeAcceptBlock = gArgs.GetBoolArg("-verifywtprimeacceptblock", DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK);
-    if (fVerifyWTPrimeAcceptBlock) {
+    if (fVerifyWTPrimeAcceptBlock && fNewTip && !fInitialBlockDownload) {
         // Note that here we call VerifyWTPrimes with fReplicate set so that we
         // replicate the WT^ on our own and verify that it matches the WT^ in
         // this new block if there are any.
-        //
-        // We don't do this in ConnectBlock.
-        //
         std::string strFail = "";
         std::vector<SidechainWT> vWT;
         uint256 hashWTPrime;
@@ -3734,8 +3741,6 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 
 bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock, bool fUnitTest)
 {
-    AssertLockNotHeld(cs_main);
-
     bool fReorg = false;
     std::vector<uint256> vOrphan;
     if (!UpdateMainBlockHashCache(fReorg, vOrphan)) {
@@ -3745,6 +3750,8 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
     }
     if (fReorg)
         HandleMainchainReorg(vOrphan);
+
+    AssertLockNotHeld(cs_main);
 
     {
         CBlockIndex *pindex = nullptr;
@@ -4215,7 +4222,8 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
         if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
-        if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus()))
+        if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus(),
+                    true /* fCheckPow */, true /* fCheckMerkleRoot */, true /* fSkipBMMChecks */))
             return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__,
                          pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         // check level 2: verify undo validity
@@ -4258,7 +4266,8 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             CBlock block;
             if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
                 return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
-            if (!g_chainstate.ConnectBlock(block, state, pindex, coins, chainparams))
+            if (!g_chainstate.ConnectBlock(block, state, pindex, coins,
+                        chainparams, false /* fJustCheck */, true /* fSkipBMMChecks */))
                 return error("VerifyDB(): *** found unconnectable block at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         }
     }
@@ -5164,7 +5173,7 @@ int GetBlocksVerificationPeriod(int nMainchainHeight)
 }
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx)
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck)
 {
     // Get WT(s) from psidechaintree
     const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
@@ -5173,27 +5182,29 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
         return false;
     }
 
-    // Get the mainchain's chain height
-    SidechainClient client;
-    int nMainchainHeight = 0;
-    if (!client.GetBlockCount(nMainchainHeight)) {
-        LogPrintf("%s: Failed to request mainchain block count!");
-        return false;
-    }
+    if (!fReplicationCheck) {
+        // Get the mainchain's chain height
+        SidechainClient client;
+        int nMainchainHeight = 0;
+        if (!client.GetBlockCount(nMainchainHeight)) {
+            LogPrintf("%s: Failed to request mainchain block count!");
+            return false;
+        }
 
-    // Check if remaining mainchain WT^ verification period blocks are enough
-    // to get minimum workscore
-    int nBlocksRemaining = GetBlocksVerificationPeriod(nMainchainHeight);
-    if (nBlocksRemaining < MAINCHAIN_WTPRIME_MIN_WORKSCORE) {
-        LogPrintf("%s: Not enough blocks left in mainchain verification period to achieve minimim workscore\n", __func__);
-        return false;
-    }
+        // Check if remaining mainchain WT^ verification period blocks are enough
+        // to get minimum workscore
+        int nBlocksRemaining = GetBlocksVerificationPeriod(nMainchainHeight);
+        if (nBlocksRemaining < MAINCHAIN_WTPRIME_MIN_WORKSCORE) {
+            LogPrintf("%s: Not enough blocks left in mainchain verification period to achieve minimim workscore\n", __func__);
+            return false;
+        }
 
-    // Check for existing WT^ in mainchain SCDB for this sidechain
-    std::vector<uint256> vHashWTPrime;
-    if (client.ListWTPrimeStatus(vHashWTPrime)) {
-        LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
-        return false;
+        // Check for existing WT^ in mainchain SCDB for this sidechain
+        std::vector<uint256> vHashWTPrime;
+        if (client.ListWTPrimeStatus(vHashWTPrime)) {
+            LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
+            return false;
+        }
     }
 
     // Check the status / zone of wt(s) before including them in a WT^
@@ -5223,7 +5234,7 @@ bool CreateWTPrimeTx(uint32_t nHeight, CTransactionRef& wtPrimeTx, CTransactionR
         wjtx.vout.push_back(CTxOut(amountWTBurn, GetScriptForDestination(dest)));
 
         // Add WT objid to WT^ obj
-        wtPrime.vWT.push_back(wt.GetNonStatusHash());
+        wtPrime.vWT.push_back(wt.GetID());
 
         // Make sure we have room for more outputs
         if (GetTransactionWeight(wjtx) > MAX_WTPRIME_WEIGHT) {
@@ -5379,7 +5390,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                 // Try to create the same WT^
                 CTransactionRef wtPrimeTx;
                 CTransactionRef wtPrimeDataTx;
-                if (!CreateWTPrimeTx(chainActive.Height() + 1, wtPrimeTx, wtPrimeDataTx)) {
+                if (!CreateWTPrimeTx(wtPrimeTx, wtPrimeDataTx, true /* fReplicationCheck */ )) {
                     strFail = "Invalid WT^ - failed to create replicant WT^!\n";
                     return false;
                 }
@@ -5558,6 +5569,8 @@ uint256 GetMainBlockHash(const CBlockHeader& block)
 
 bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
 {
+    std::lock_guard<std::mutex> lock(mainBlockCacheMutex);
+
     //
     // Note: bitcoin core does not count genesis block towards block count but
     // we will cache it.
@@ -5584,8 +5597,9 @@ bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
     // same as the current mainchain tip. If it is we don't need to do anything
     // else. If it isn't we will continue to update / reorg handling.
     int nCachedBlocks = bmmCache.GetCachedBlockCount();
-    if (nMainBlocks + 1 == nCachedBlocks && hashCachedTip == hashMainTip)
+    if (nMainBlocks + 1 == nCachedBlocks && hashCachedTip == hashMainTip) {
         return true;
+    }
 
     // Otherwise;
     // From the new mainchain tip, start looping back through mainchain blocks
@@ -5604,6 +5618,7 @@ bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
         // our cache we can update our cache from that block up to the new
         // mainchain tip.
         if (bmmCache.HaveMainBlock(hashPrevBlock)) {
+            deqHashNew.push_front(hashPrevBlock);
             break;
         }
 
@@ -5615,42 +5630,117 @@ bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
     return bmmCache.UpdateMainBlockCache(deqHashNew, fReorg, vDisconnected);
 }
 
+bool VerifyMainBlockCache(std::string& strError)
+{
+    SidechainClient client;
+
+    const std::vector<uint256> vHash = bmmCache.GetMainBlockHashCache();
+    if (!vHash.size()) {
+        strError = "No mainchain blocks in cache!";
+        return false;
+    }
+
+    // Compare cached hash at height with mainchain block hash at height
+    for (size_t i = 0; i < vHash.size(); i++) {
+        uint256 hashBlock;
+
+        if (!client.GetBlockHash(i, hashBlock)) {
+            strError = "Failed to request mainchain block hash!";
+            return false;
+        }
+
+        if (hashBlock != vHash[i]) {
+            strError = "Invalid hash cached: ";
+            strError += vHash[i].ToString();
+            strError += " height: ";
+            strError += std::to_string(i);
+
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
 {
-    //
+    std::lock_guard<std::mutex> lock(mainBlockCacheReorgMutex);
+
     // For mainchain blocks that were orphaned - invalidate bmm blocks with
     // commitments from them.
     //
     // vOrphan contains a list of mainchain block hashes that were orphaned
-    //
 
-    {
-        LOCK(cs_main);
-        // Check if any BMM blocks were created from commitments in this
-        // orphaned mainchain block
-        for (const uint256& u : vOrphan) {
+    // Before invalidating any blocks, check the sanity of the mainchain block
+    // cache and then verify that the blocks to be orphaned actually are missing
+    // from the mainchain.
+
+    // Check the mainchain block cache
+    std::string strError = "";
+    if (!VerifyMainBlockCache(strError)) {
+        LogPrintf("%s: Main block cache invalid: %s. Resyncing...\n",
+                __func__, strError);
+        // Reset the mainchain block cache and then re-sync it
+        bmmCache.ResetMainBlockCache();
+
+        // TODO
+        // If during this call a reorg is detected and we have more orphans then
+        // something bad happened and needs to be handled. Since we just reset
+        // the mainchain block cache, have a mutex lock, and are updating the
+        // cache from scratch now, it should be impossible.
+        bool fReorg = false;
+        std::vector<uint256> vOrphanIgnore;
+        if (!UpdateMainBlockHashCache(fReorg, vOrphanIgnore)) {
+            // TODO
+            // If we make it to this point there might be a connection issue or
+            // something going on. Maybe the mainchain node went down during the
+            // function? There might be something better to do than just logging
+            // the error here.
+            LogPrintf("%s: Failed to re-update main block cache after reset!",
+                    __func__);
+            return;
+        }
+    }
+
+    // Check that the alleged orphans actually don't exist on the mainchain
+    std::vector<uint256> vOrphanFinal;
+    for (const uint256& u : vOrphan) {
+        if (!bmmCache.HaveMainBlock(u))
+            vOrphanFinal.push_back(u);
+    }
+
+    // Check if any BMM blocks were created from commitments in this
+    // orphaned mainchain block
+    for (const uint256& u : vOrphanFinal) {
+        CValidationState state;
+        {
+            LOCK(cs_main);
             // Check our map of blocks based on their mainchain BMM commit block
             if (!mapBlockMainHashIndex.count(u))
                 continue;
 
             CBlockIndex* pindex = mapBlockMainHashIndex[u];
+            if (!chainActive.Contains(pindex))
+                continue;
 
-            CValidationState state;
             InvalidateBlock(state, Params(), pindex);
 
-            LogPrintf("%s: Invalidated block: %s because mainchain block: %s was orphaned!\n", __func__, pindex->GetBlockHash().ToString(), u.ToString());
+            LogPrintf("%s: Invalidated block: %s because mainchain block: %s was orphaned!\n",
+                    __func__, pindex->GetBlockHash().ToString(), u.ToString());
 
             if (!state.IsValid()) {
-                LogPrintf("%s: Error while invalidating blocks: %s\n", __func__, FormatStateMessage(state));
+                LogPrintf("%s: Error while invalidating blocks: %s\n",
+                        __func__, FormatStateMessage(state));
                 return;
             }
         }
-    }
 
-    CValidationState state;
-    ActivateBestChain(state, Params());
-    if (!state.IsValid()) {
-        LogPrintf("%s: Error activating best chain: %s\n", __func__, FormatStateMessage(state));
+        ActivateBestChain(state, Params());
+        if (!state.IsValid()) {
+            LogPrintf("%s: Error activating best chain: %s\n",
+                    __func__, FormatStateMessage(state));
+            return;
+        }
     }
 }
 

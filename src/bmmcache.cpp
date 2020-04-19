@@ -153,8 +153,8 @@ bool BMMCache::UpdateMainBlockCache(std::deque<uint256>& deqHashNew, bool& fReor
     if (mapMainBlock.count(deqHashNew.front())) {
         index = mapMainBlock[deqHashNew.front()];
     } else {
-        index.index = vMainBlockHash.size() - 1;
-        index.hash = deqHashNew.front();
+        LogPrintf("%s: Error - New blocks do not connect to cached chain!\n", __func__);
+        return false;
     }
 
     // If there were any blocks in our cache after the block we will be building
@@ -202,17 +202,6 @@ uint256 BMMCache::GetLastMainBlockHash() const
     return vMainBlockHash.back();
 }
 
-void BMMCache::SetLatestWTPrime(const uint256& hashWTPrime)
-{
-    hashLatestWTPrime = hashWTPrime;
-    LogPrintf("%s Set latest WT^ to: %s\n", __func__, hashWTPrime.ToString());
-}
-
-uint256 BMMCache::GetLatestWTPrime() const
-{
-    return hashLatestWTPrime;
-}
-
 int BMMCache::GetCachedBlockCount() const
 {
     return vMainBlockHash.size();
@@ -226,4 +215,20 @@ bool BMMCache::HaveMainBlock(const uint256& hash) const
 bool BMMCache::HaveBMMRequestForPrevBlock(const uint256& hashPrevBlock) const
 {
     return setPrevBlockBMMCreated.count(hashPrevBlock);
+}
+
+void BMMCache::AddCheckedMainBlock(const uint256& hashBlock)
+{
+    setMainBlockChecked.insert(hashBlock);
+}
+
+bool BMMCache::MainBlockChecked(const uint256& hashBlock) const
+{
+    return setMainBlockChecked.count(hashBlock);
+}
+
+void BMMCache::ResetMainBlockCache()
+{
+    vMainBlockHash.clear();
+    mapMainBlock.clear();
 }
