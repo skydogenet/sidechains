@@ -2165,7 +2165,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         }
 
         // Handle WT^ verification & wt status update
-        if (fFoundWTPrime) {
+        if (fFoundWTPrime && !fSkipBMMChecks) {
             std::string strFail = "";
             std::vector<SidechainWT> vWT;
             uint256 hashWTPrime;
