@@ -88,6 +88,7 @@ private:
     QLabel *labelProgressPercentage;
     QLabel *labelNumBlocks;
     QLabel *labelLastBlock;
+    QLabel *labelLastWTPrime;
 
     QMenuBar *appMenuBar;
     QAction *overviewAction;

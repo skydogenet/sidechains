@@ -33,6 +33,12 @@
 #include <ui_interface.h>
 #include <util.h>
 
+// For getting the latest WT^ hash
+// TODO make the latest WT^ hash get set in the client model or somewhere else
+// instead of looking it up here.
+#include <validation.h>
+#include <txdb.h>
+
 #include <iostream>
 
 #include <QAction>
@@ -47,6 +53,7 @@
 #include <QSettings>
 #include <QShortcut>
 #include <QStackedWidget>
+#include <QSizePolicy>
 #include <QStatusBar>
 #include <QStyle>
 #include <QTimer>
@@ -86,6 +93,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     labelProgressPercentage(0),
     labelNumBlocks(0),
     labelLastBlock(0),
+    labelLastWTPrime(0),
     appMenuBar(0),
     overviewAction(0),
     historyAction(0),
@@ -201,6 +209,11 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     labelBlocksIcon = new GUIUtil::ClickableLabel();
     labelNumBlocks = new QLabel();
     labelLastBlock = new QLabel();
+
+    labelLastWTPrime = new QLabel();
+    labelLastWTPrime->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    labelLastWTPrime->setIndent(90);
+
     labelProgressReason = new QLabel();
     labelProgressPercentage = new QLabel();
     if(enableWallet)
@@ -209,6 +222,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         frameBlocksLayout->addStretch();
         frameBlocksLayout->addWidget(labelWalletEncryptionIcon);
     }
+    frameBlocksLayout->addStretch();
+    frameBlocksLayout->addWidget(labelLastWTPrime);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(CreateVLine());
     frameBlocksLayout->addWidget(labelNumBlocks);
@@ -799,6 +814,20 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
     }
     if (!clientModel)
         return;
+
+
+    uint256 hashLatest;
+    psidechaintree->GetLastWTPrimeHash(hashLatest);
+
+    QString latestWTPrime;
+    latestWTPrime += "WT^: ";
+    if (hashLatest.IsNull())
+        latestWTPrime += "None yet";
+    else
+        latestWTPrime += QString::fromStdString(hashLatest.ToString());
+
+    // Set latest WT^ hash
+    labelLastWTPrime->setText(latestWTPrime);
 
     // Prevent orphan statusbar messages (e.g. hover Quit in main menu, wait until chain-sync starts -> garbled text)
     statusBar()->clearMessage();
