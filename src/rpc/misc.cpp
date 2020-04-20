@@ -19,6 +19,7 @@
 #include <rpc/util.h>
 #include <sidechainclient.h>
 #include <timedata.h>
+#include <txdb.h>
 #include <util.h>
 #include <utilstrencodings.h>
 #ifdef ENABLE_WALLET
@@ -662,6 +663,32 @@ UniValue updatemainblockcache(const JSONRPCRequest& request)
     return result;
 }
 
+UniValue rebroadcastwtprimehex(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "rebroadcastwtprimehex\n"
+            "\nSend the latest WT^ transaction hex to the local mainchain node.\n"
+        );
+
+    SidechainWTPrime wtPrime;
+    uint256 hashLatest;
+    psidechaintree->GetLastWTPrimeHash(hashLatest);
+
+    if (hashLatest.IsNull())
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to lookup latest WT^ hash!");
+
+    if (!psidechaintree->GetWTPrime(hashLatest, wtPrime))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to load latest WT^ from database");
+
+    SidechainClient client;
+    std::string strHex = EncodeHexTx(wtPrime.wtPrime);
+    if (!client.BroadcastWTPrime(strHex))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to broadcast latest WT^");
+
+    return NullUniValue;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           argNames
   //  --------------------- ------------------------    -----------------------    ----------
@@ -685,6 +712,7 @@ static const CRPCCommand commands[] =
     { "sidechain",          "getmainchainblockhash",    &getmainchainblockhash,    {"height"}},
     { "sidechain",          "verifymainblockcache",     &verifymainblockcache,     {}},
     { "sidechain",          "updatemainblockcache",     &updatemainblockcache,     {}},
+    { "sidechain",          "rebroadcastwtprimehex",    &rebroadcastwtprimehex,    {}},
 
 };
 
