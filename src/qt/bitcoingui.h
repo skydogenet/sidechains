@@ -29,7 +29,6 @@ class SendCoinsRecipient;
 class WalletFrame;
 class WalletModel;
 class HelpMessageDialog;
-class ModalOverlay;
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -119,7 +118,6 @@ private:
     Notificator *notificator;
     RPCConsole *rpcConsole;
     HelpMessageDialog *helpMessageDialog;
-    ModalOverlay *modalOverlay;
 
     QTimer *pollTimer;
 
@@ -242,8 +240,6 @@ private Q_SLOTS:
 
     /** Toggle networking */
     void toggleNetworkActive();
-
-    void showModalOverlay();
 
     /** Refresh the last block time */
     void updateBlockTime();
