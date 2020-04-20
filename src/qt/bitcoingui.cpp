@@ -37,7 +37,6 @@
 
 #include <QAction>
 #include <QApplication>
-#include <QDateTime>
 #include <QDesktopWidget>
 #include <QDragEnterEvent>
 #include <QListWidget>
@@ -80,14 +79,13 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     enableWallet(false),
     clientModel(0),
     walletFrame(0),
-    unitDisplayControl(0),
     labelWalletEncryptionIcon(0),
-    labelWalletHDStatusIcon(0),
     connectionsControl(0),
     labelBlocksIcon(0),
-    progressBarLabel(0),
-    progressBar(0),
-    progressDialog(0),
+    labelProgressReason(0),
+    labelProgressPercentage(0),
+    labelNumBlocks(0),
+    labelLastBlock(0),
     appMenuBar(0),
     overviewAction(0),
     historyAction(0),
@@ -198,43 +196,34 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     QHBoxLayout *frameBlocksLayout = new QHBoxLayout(frameBlocks);
     frameBlocksLayout->setContentsMargins(3,0,3,0);
     frameBlocksLayout->setSpacing(3);
-    unitDisplayControl = new UnitDisplayStatusBarControl(platformStyle);
     labelWalletEncryptionIcon = new QLabel();
-    labelWalletHDStatusIcon = new QLabel();
     connectionsControl = new GUIUtil::ClickableLabel();
     labelBlocksIcon = new GUIUtil::ClickableLabel();
+    labelNumBlocks = new QLabel();
+    labelLastBlock = new QLabel();
+    labelProgressReason = new QLabel();
+    labelProgressPercentage = new QLabel();
     if(enableWallet)
     {
         frameBlocksLayout->addStretch();
-        frameBlocksLayout->addWidget(unitDisplayControl);
         frameBlocksLayout->addStretch();
         frameBlocksLayout->addWidget(labelWalletEncryptionIcon);
-        frameBlocksLayout->addWidget(labelWalletHDStatusIcon);
     }
     frameBlocksLayout->addStretch();
+    frameBlocksLayout->addWidget(CreateVLine());
+    frameBlocksLayout->addWidget(labelNumBlocks);
+    frameBlocksLayout->addWidget(CreateVLine());
+    frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(connectionsControl);
+    frameBlocksLayout->addWidget(CreateVLine());
+    frameBlocksLayout->addStretch();
+    frameBlocksLayout->addWidget(labelLastBlock);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelBlocksIcon);
     frameBlocksLayout->addStretch();
 
-    // Progress bar and label for blocks download
-    progressBarLabel = new QLabel();
-    progressBarLabel->setVisible(false);
-    progressBar = new GUIUtil::ProgressBar();
-    progressBar->setAlignment(Qt::AlignCenter);
-    progressBar->setVisible(false);
-
-    // Override style sheet for progress bar for styles that have a segmented progress bar,
-    // as they make the text unreadable (workaround for issue #1071)
-    // See https://qt-project.org/doc/qt-4.8/gallery.html
-    QString curStyle = QApplication::style()->metaObject()->className();
-    if(curStyle == "QWindowsStyle" || curStyle == "QWindowsXPStyle")
-    {
-        progressBar->setStyleSheet("QProgressBar { background-color: #e8e8e8; border: 1px solid grey; border-radius: 7px; padding: 1px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #FF8000, stop: 1 orange); border-radius: 7px; margin: 0px; }");
-    }
-
-    statusBar()->addWidget(progressBarLabel);
-    statusBar()->addWidget(progressBar);
+    statusBar()->addWidget(labelProgressReason);
+    statusBar()->addWidget(labelProgressPercentage);
     statusBar()->addPermanentWidget(frameBlocks);
 
     // Install event filter to be able to catch status tip events (QEvent::StatusTip)
@@ -253,9 +242,12 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     if(enableWallet) {
         connect(walletFrame, SIGNAL(requestedSyncWarningInfo()), this, SLOT(showModalOverlay()));
         connect(labelBlocksIcon, SIGNAL(clicked(QPoint)), this, SLOT(showModalOverlay()));
-        connect(progressBar, SIGNAL(clicked(QPoint)), this, SLOT(showModalOverlay()));
     }
 #endif
+
+    pollTimer = new QTimer(this);
+    connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateBlockTime()));
+    pollTimer->start(1000); // 1 second
 }
 
 BitcoinGUI::~BitcoinGUI()
@@ -502,7 +494,7 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
         // Receive and report messages from client model
         connect(_clientModel, SIGNAL(message(QString,QString,unsigned int)), this, SLOT(message(QString,QString,unsigned int)));
 
-        // Show progress dialog
+        // Show progress
         connect(_clientModel, SIGNAL(showProgress(QString,int)), this, SLOT(showProgress(QString,int)));
 
         rpcConsole->setClientModel(_clientModel);
@@ -512,7 +504,6 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
             walletFrame->setClientModel(_clientModel);
         }
 #endif // ENABLE_WALLET
-        unitDisplayControl->setOptionsModel(_clientModel->getOptionsModel());
 
 #ifdef ENABLE_WALLET
         if (walletFrame) {
@@ -547,7 +538,6 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
             walletFrame->setClientModel(nullptr);
         }
 #endif // ENABLE_WALLET
-        unitDisplayControl->setOptionsModel(nullptr);
     }
 }
 
@@ -747,30 +737,25 @@ void BitcoinGUI::gotoSidechainPage()
 void BitcoinGUI::updateNetworkState()
 {
     int count = clientModel->getNumConnections();
-    QString icon;
-    switch(count)
-    {
-    case 0: icon = ":/icons/connect_0"; break;
-    case 1: case 2: case 3: icon = ":/icons/connect_1"; break;
-    case 4: case 5: case 6: icon = ":/icons/connect_2"; break;
-    case 7: case 8: case 9: icon = ":/icons/connect_3"; break;
-    default: icon = ":/icons/connect_4"; break;
-    }
 
     QString tooltip;
 
-    if (clientModel->getNetworkActive()) {
-        tooltip = tr("%n active connection(s) to Bitcoin network", "", count) + QString(".<br>") + tr("Click to disable network activity.");
+    bool fNetworking = clientModel->getNetworkActive();
+    if (fNetworking) {
+        tooltip = tr("%n active connection(s) to DriveNet network", "", count) + QString(".<br>");
     } else {
         tooltip = tr("Network activity disabled.") + QString("<br>") + tr("Click to enable network activity again.");
-        icon = ":/icons/network_disabled";
     }
 
     // Don't word-wrap this (fixed-width) tooltip
     tooltip = QString("<nobr>") + tooltip + QString("</nobr>");
     connectionsControl->setToolTip(tooltip);
 
-    connectionsControl->setPixmap(platformStyle->SingleColorIcon(icon).pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
+    if (count == 1) {
+        connectionsControl->setText(tr("%n peer", "", count));
+    } else {
+        connectionsControl->setText(tr("%n peers", "", count));
+    }
 }
 
 void BitcoinGUI::setNumConnections(int count)
@@ -788,8 +773,19 @@ void BitcoinGUI::updateHeadersSyncProgressLabel()
     int64_t headersTipTime = clientModel->getHeaderTipTime();
     int headersTipHeight = clientModel->getHeaderTipHeight();
     int estHeadersLeft = (GetTime() - headersTipTime) / Params().GetConsensus().nPowTargetSpacing;
-    if (estHeadersLeft > HEADER_HEIGHT_DELTA_SYNC)
-        progressBarLabel->setText(tr("Syncing Headers (%1%)...").arg(QString::number(100.0 / (headersTipHeight+estHeadersLeft)*headersTipHeight, 'f', 1)));
+
+    if (estHeadersLeft > HEADER_HEIGHT_DELTA_SYNC) {
+        QString reason = tr("Syncing Headers (%1%)...").arg(QString::number(100.0 / (headersTipHeight+estHeadersLeft)*headersTipHeight, 'f', 1));
+        labelProgressReason->setText(reason);
+    }
+}
+
+QFrame* BitcoinGUI::CreateVLine()
+{
+    QFrame *vline = new QFrame(this);
+    vline->setFrameShape(QFrame::VLine);
+    vline->setLineWidth(1);
+    return vline;
 }
 
 void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVerificationProgress, bool header)
@@ -815,24 +811,24 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
                 updateHeadersSyncProgressLabel();
                 return;
             }
-            progressBarLabel->setText(tr("Synchronizing with network..."));
+            labelProgressReason->setText(tr("Synchronizing with network..."));
             updateHeadersSyncProgressLabel();
             break;
         case BLOCK_SOURCE_DISK:
             if (header) {
-                progressBarLabel->setText(tr("Indexing blocks on disk..."));
+                labelProgressReason->setText(tr("Indexing blocks on disk..."));
             } else {
-                progressBarLabel->setText(tr("Processing blocks on disk..."));
+                labelProgressReason->setText(tr("Processing blocks on disk..."));
             }
             break;
         case BLOCK_SOURCE_REINDEX:
-            progressBarLabel->setText(tr("Reindexing blocks on disk..."));
+            labelProgressReason->setText(tr("Reindexing blocks on disk..."));
             break;
         case BLOCK_SOURCE_NONE:
             if (header) {
                 return;
             }
-            progressBarLabel->setText(tr("Connecting to peers..."));
+            labelProgressReason->setText(tr("Connecting to peers..."));
             break;
     }
 
@@ -840,6 +836,7 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
 
     QDateTime currentDate = QDateTime::currentDateTime();
     qint64 secs = blockDate.secsTo(currentDate);
+    QString timeBehindText = GUIUtil::formatNiceTimeOffset(secs);
 
     tooltip = tr("Processed %n block(s) of transaction history.", "", count);
 
@@ -847,7 +844,8 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
     if(secs < 90*60)
     {
         tooltip = tr("Up to date") + QString(".<br>") + tooltip;
-        labelBlocksIcon->setPixmap(platformStyle->SingleColorIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE, STATUSBAR_ICONSIZE));
+
+        labelBlocksIcon->setVisible(false);
 
 #ifdef ENABLE_WALLET
         if(walletFrame)
@@ -857,18 +855,14 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
         }
 #endif // ENABLE_WALLET
 
-        progressBarLabel->setVisible(false);
-        progressBar->setVisible(false);
+        labelProgressReason->setVisible(false);
+        labelProgressPercentage->setVisible(false);
+        prevBlockTime = QDateTime(blockDate);
     }
     else
     {
-        QString timeBehindText = GUIUtil::formatNiceTimeOffset(secs);
-
-        progressBarLabel->setVisible(true);
-        progressBar->setFormat(tr("%1 behind").arg(timeBehindText));
-        progressBar->setMaximum(1000000000);
-        progressBar->setValue(nVerificationProgress * 1000000000.0 + 0.5);
-        progressBar->setVisible(true);
+        labelProgressReason->setVisible(true);
+        labelProgressPercentage->setVisible(true);
 
         tooltip = tr("Catching up...") + QString("<br>") + tooltip;
         if(count != prevBlocks)
@@ -879,6 +873,7 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
             spinnerFrame = (spinnerFrame + 1) % SPINNER_FRAMES;
         }
         prevBlocks = count;
+        prevBlockTime = QDateTime(blockDate);
 
 #ifdef ENABLE_WALLET
         if(walletFrame)
@@ -898,8 +893,14 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
     tooltip = QString("<nobr>") + tooltip + QString("</nobr>");
 
     labelBlocksIcon->setToolTip(tooltip);
-    progressBarLabel->setToolTip(tooltip);
-    progressBar->setToolTip(tooltip);
+    labelProgressReason->setToolTip(tooltip);
+    labelProgressPercentage->setToolTip(tooltip);
+
+    // Display number of blocks
+    labelNumBlocks->setText(tr("%n blocks", "", count));
+
+    // Display last block time
+    labelLastBlock->setText(tr("Last block: %1 ago").arg(timeBehindText));
 }
 
 void BitcoinGUI::message(const QString &title, const QString &message, unsigned int style, bool *ret)
@@ -1052,7 +1053,7 @@ bool BitcoinGUI::eventFilter(QObject *object, QEvent *event)
     if (event->type() == QEvent::StatusTip)
     {
         // Prevent adding text from setStatusTip(), if we currently use the status bar for displaying other stuff
-        if (progressBarLabel->isVisible() || progressBar->isVisible())
+        if (labelProgressReason->isVisible() || labelProgressPercentage->isVisible())
             return true;
     }
     return QMainWindow::eventFilter(object, event);
@@ -1069,15 +1070,6 @@ bool BitcoinGUI::handlePaymentRequest(const SendCoinsRecipient& recipient)
         return true;
     }
     return false;
-}
-
-void BitcoinGUI::setHDStatus(int hdEnabled)
-{
-    labelWalletHDStatusIcon->setPixmap(platformStyle->SingleColorIcon(hdEnabled ? ":/icons/hd_enabled" : ":/icons/hd_disabled").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
-    labelWalletHDStatusIcon->setToolTip(hdEnabled ? tr("HD key generation is <b>enabled</b>") : tr("HD key generation is <b>disabled</b>"));
-
-    // eventually disable the QLabel to set its opacity to 50%
-    labelWalletHDStatusIcon->setEnabled(hdEnabled);
 }
 
 void BitcoinGUI::setEncryptionStatus(int status)
@@ -1154,23 +1146,20 @@ void BitcoinGUI::showProgress(const QString &title, int nProgress)
 {
     if (nProgress == 0)
     {
-        progressDialog = new QProgressDialog(title, "", 0, 100);
-        progressDialog->setWindowModality(Qt::ApplicationModal);
-        progressDialog->setMinimumDuration(0);
-        progressDialog->setCancelButton(0);
-        progressDialog->setAutoClose(false);
-        progressDialog->setValue(0);
+        labelProgressReason->setVisible(true);
+        labelProgressPercentage->setVisible(true);
+        labelProgressReason->setText(title);
+        labelProgressPercentage->setText(tr("%n\%", "", nProgress));
     }
     else if (nProgress == 100)
     {
-        if (progressDialog)
-        {
-            progressDialog->close();
-            progressDialog->deleteLater();
-        }
+        labelProgressReason->setVisible(false);
+        labelProgressPercentage->setVisible(false);
     }
-    else if (progressDialog)
-        progressDialog->setValue(nProgress);
+    else
+    {
+        labelProgressPercentage->setText(tr("%n\%", "", nProgress));
+    }
 }
 
 void BitcoinGUI::setTrayIconVisible(bool fHideTrayIcon)
@@ -1183,8 +1172,6 @@ void BitcoinGUI::setTrayIconVisible(bool fHideTrayIcon)
 
 void BitcoinGUI::showModalOverlay()
 {
-    if (modalOverlay && (progressBar->isVisible() || modalOverlay->isLayerVisible()))
-        modalOverlay->toggleVisibility();
 }
 
 static bool ThreadSafeMessageBox(BitcoinGUI *gui, const std::string& message, const std::string& caption, unsigned int style)
@@ -1225,76 +1212,15 @@ void BitcoinGUI::toggleNetworkActive()
     }
 }
 
-UnitDisplayStatusBarControl::UnitDisplayStatusBarControl(const PlatformStyle *platformStyle) :
-    optionsModel(0),
-    menu(0)
+void BitcoinGUI::updateBlockTime()
 {
-    createContextMenu();
-    setToolTip(tr("Unit to show amounts in. Click to select another unit."));
-    QList<BitcoinUnits::Unit> units = BitcoinUnits::availableUnits();
-    int max_width = 0;
-    const QFontMetrics fm(font());
-    for (const BitcoinUnits::Unit unit : units)
-    {
-        max_width = qMax(max_width, fm.width(BitcoinUnits::longName(unit)));
-    }
-    setMinimumSize(max_width, 0);
-    setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    setStyleSheet(QString("QLabel { color : %1 }").arg(platformStyle->SingleColor().name()));
-}
+    if (prevBlockTime.isNull())
+        return;
 
-/** So that it responds to button clicks */
-void UnitDisplayStatusBarControl::mousePressEvent(QMouseEvent *event)
-{
-    onDisplayUnitsClicked(event->pos());
-}
+    QDateTime currentDate = QDateTime::currentDateTime();
+    qint64 secs = prevBlockTime.secsTo(currentDate);
+    QString timeBehindText = GUIUtil::formatNiceTimeOffset(secs);
 
-/** Creates context menu, its actions, and wires up all the relevant signals for mouse events. */
-void UnitDisplayStatusBarControl::createContextMenu()
-{
-    menu = new QMenu(this);
-    for (BitcoinUnits::Unit u : BitcoinUnits::availableUnits())
-    {
-        QAction *menuAction = new QAction(QString(BitcoinUnits::longName(u)), this);
-        menuAction->setData(QVariant(u));
-        menu->addAction(menuAction);
-    }
-    connect(menu,SIGNAL(triggered(QAction*)),this,SLOT(onMenuSelection(QAction*)));
-}
-
-/** Lets the control know about the Options Model (and its signals) */
-void UnitDisplayStatusBarControl::setOptionsModel(OptionsModel *_optionsModel)
-{
-    if (_optionsModel)
-    {
-        this->optionsModel = _optionsModel;
-
-        // be aware of a display unit change reported by the OptionsModel object.
-        connect(_optionsModel,SIGNAL(displayUnitChanged(int)),this,SLOT(updateDisplayUnit(int)));
-
-        // initialize the display units label with the current value in the model.
-        updateDisplayUnit(_optionsModel->getDisplayUnit());
-    }
-}
-
-/** When Display Units are changed on OptionsModel it will refresh the display text of the control on the status bar */
-void UnitDisplayStatusBarControl::updateDisplayUnit(int newUnits)
-{
-    setText(BitcoinUnits::longName(newUnits));
-}
-
-/** Shows context menu with Display Unit options by the mouse coordinates */
-void UnitDisplayStatusBarControl::onDisplayUnitsClicked(const QPoint& point)
-{
-    QPoint globalPos = mapToGlobal(point);
-    menu->exec(globalPos);
-}
-
-/** Tells underlying optionsModel to update its current display unit. */
-void UnitDisplayStatusBarControl::onMenuSelection(QAction* action)
-{
-    if (action)
-    {
-        optionsModel->setDisplayUnit(action->data());
-    }
+    // Display last block time
+    labelLastBlock->setText(tr("Last block: %1 ago").arg(timeBehindText));
 }
