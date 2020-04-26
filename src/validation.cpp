@@ -5157,21 +5157,6 @@ void DumpMainBlockCache()
     }
 }
 
-int GetBlocksVerificationPeriod(int nMainchainHeight)
-{
-    if (nMainchainHeight % MAINCHAIN_WTPRIME_VERIFICATION_PERIOD == 0)
-        return MAINCHAIN_WTPRIME_VERIFICATION_PERIOD;
-
-    int nBlocks = 0;
-    for (;;) {
-        nBlocks++;
-        if ((nMainchainHeight + nBlocks) % MAINCHAIN_WTPRIME_VERIFICATION_PERIOD == 0)
-            break;
-    }
-
-    return nBlocks;
-}
-
 /** Create joined WT^ to be sent to the mainchain */
 bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck)
 {
@@ -5188,14 +5173,6 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
         int nMainchainHeight = 0;
         if (!client.GetBlockCount(nMainchainHeight)) {
             LogPrintf("%s: Failed to request mainchain block count!");
-            return false;
-        }
-
-        // Check if remaining mainchain WT^ verification period blocks are enough
-        // to get minimum workscore
-        int nBlocksRemaining = GetBlocksVerificationPeriod(nMainchainHeight);
-        if (nBlocksRemaining < MAINCHAIN_WTPRIME_MIN_WORKSCORE) {
-            LogPrintf("%s: Not enough blocks left in mainchain verification period to achieve minimim workscore\n", __func__);
             return false;
         }
 

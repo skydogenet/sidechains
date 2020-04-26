@@ -528,9 +528,6 @@ void LoadMainBlockCache();
 /** Create joined WT^ to be sent to the mainchain */
 bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false);
 
-/** Get the number of blocks remaining in the current WT^ verification period */
-int GetBlocksVerificationPeriod(int nMainchainHeight);
-
 /**
  * If there are any WT^(s) (note the limit per block is 1) verify it, and
  * optionally replicate it. This function will return by reference a vector of
