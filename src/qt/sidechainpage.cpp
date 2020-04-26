@@ -662,14 +662,7 @@ void SidechainPage::RefreshTrain()
     trainRetryTimer->stop();
     trainTimer->start(nTrainRefresh);
 
-    int nBlocksLeft = GetBlocksVerificationPeriod(nMainchainBlocks);
-    std::string strTrain = "";
-    // Show the "leaving now" message a little bit before it's actually leaving
-    if (nBlocksLeft > 5)
-        strTrain = std::to_string(GetBlocksVerificationPeriod(nMainchainBlocks)) + " blocks";
-    else
-        strTrain = "Leaving now - all aboard!";
-
+    std::string strTrain = "N/A";
     ui->train->setText(QString::fromStdString(strTrain));
 }
 
