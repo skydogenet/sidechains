@@ -39,6 +39,10 @@
 #include <queue>
 #include <utility>
 
+#ifdef ENABLE_WALLET
+#include <wallet/wallet.h>
+#endif
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // BitcoinMiner
@@ -183,7 +187,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vout.resize(1);
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
-    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+
+    coinbaseTx.vout[0].nValue = nFees;
 
     // Create WT^
     CTransactionRef wtPrimeTx;
@@ -786,13 +791,32 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
     return true;
 }
 
-bool BlockAssembler::GenerateBMMBlock(const CScript& scriptPubKey, CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx, const uint256& hashPrevBlock)
+bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx, const uint256& hashPrevBlock, const CScript& scriptPubKey)
 {
-    std::unique_ptr<CBlockTemplate> pblocktemplate(
-                BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true, hashPrevBlock));
+    // Either generate a new scriptPubKey or use the one that has optionally
+    // been passed in
+    std::unique_ptr<CBlockTemplate> pblocktemplate;
+    if (scriptPubKey.empty()) {
+        if (vpwallets.empty()) {
+            strError = "No wallet active!\n";
+            return false;
+        }
+
+        // Create script
+        std::shared_ptr<CReserveScript> coinbaseScript;
+        vpwallets[0]->GetScriptForMining(coinbaseScript);
+
+        if (!coinbaseScript || coinbaseScript->reserveScript.empty()) {
+            strError = "Failed to get script for mining!\n";
+            return false;
+        }
+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, true, hashPrevBlock);
+
+    } else {
+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true, hashPrevBlock);
+    }
 
     if (!pblocktemplate.get()) {
-        // No block template error message
         strError = "Failed to get block template!\n";
         return false;
     }

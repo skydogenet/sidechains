@@ -84,6 +84,8 @@ struct TestChain100Setup : public TestingSetup {
 
     CBlock CreateAndProcessBlock(const std::vector<CMutableTransaction>& vtx, const CScript& scriptPubKey);
 
+    CScript GetCoinbaseScript() const;
+
     ~TestChain100Setup();
 
     std::vector<CTransaction> coinbaseTxns; // For convenience, coinbase transactions

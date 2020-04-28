@@ -385,7 +385,6 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
             bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
             return true;
         } else {
-            strError = "Failed to create our first BMM request!";
             return false;
         }
     }
@@ -450,9 +449,8 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
 
 bool SidechainClient::CreateBMMBlock(CBlock& block, std::string& strError, const uint256& hashPrevBlock)
 {
-    CScript scriptPubKey;
-    if (!BlockAssembler(Params()).GenerateBMMBlock(scriptPubKey, block,
-                strError, std::vector<CMutableTransaction>(), hashPrevBlock)) {
+    if (!BlockAssembler(Params()).GenerateBMMBlock(block, strError,
+                std::vector<CMutableTransaction>(), hashPrevBlock)) {
         return false;
     }
 

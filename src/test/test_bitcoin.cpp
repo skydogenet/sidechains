@@ -155,7 +155,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const CScript& scriptPubKey)
     CBlock block;
 
     std::string strError = "";
-    BlockAssembler(chainparams).GenerateBMMBlock(scriptPubKey, block, strError);
+    BlockAssembler(chainparams).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), scriptPubKey);
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */);
@@ -170,13 +170,18 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransa
     CBlock block;
 
     std::string strError = "";
-    BlockAssembler(chainparams).GenerateBMMBlock(scriptPubKey, block, strError, vtx);
+    BlockAssembler(chainparams).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), scriptPubKey);
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */);
 
     CBlock result = block;
     return result;
+}
+
+CScript TestChain100Setup::GetCoinbaseScript() const
+{
+    return CScript() << ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
 }
 
 TestChain100Setup::~TestChain100Setup()
