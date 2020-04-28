@@ -2670,6 +2670,14 @@ OutputType CWallet::TransactionChangeType(OutputType change_type, const std::vec
         return change_type;
     }
 
+    for (const auto& recipient : vecSend) {
+        int witnessversion = 0;
+        std::vector<unsigned char> witnessprogram;
+        if (recipient.scriptPubKey.IsWitnessProgram(witnessversion, witnessprogram)) {
+            return OUTPUT_TYPE_BECH32;
+        }
+    }
+
     return OUTPUT_TYPE_LEGACY;
 }
 
