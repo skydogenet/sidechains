@@ -763,6 +763,16 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
                 return false;
             }
 
+
+            //
+            // TODO Refactor for clarity and simplify collection of deposit fees
+            // This is subtracting the deposit fee but not paying it to the
+            // coinbase scriptPubKey - it is paying to the sidechainChangeScript
+            //
+            // Should be refactored to just pay the fee to the coinbase script
+            // if possible.
+            //
+
             // Payout
             if (deposit.amtUserPayout >= SIDECHAIN_DEPOSIT_FEE) {
                 // Pay keyID the deposit if it isn't dust after paying fee
