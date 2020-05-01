@@ -30,6 +30,8 @@ static const std::string SIDECHAIN_BUILD_TAR_HASH = "d1e200d2aa7eee51b29938065b0
 
 static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 140;
 
+static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
+
 struct Sidechain {
     uint8_t nSidechain;
     CScript depositScript;

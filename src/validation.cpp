@@ -5178,6 +5178,9 @@ void DumpMainBlockCache()
 /** Create joined WT^ to be sent to the mainchain */
 bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck)
 {
+    unsigned int nMinWT = gArgs.GetArg("-minwt", DEFAULT_MIN_WT_CREATE_WTPRIME);
+    bool fReplace = gArgs.GetBoolArg("-replacewtprime", false);
+
     // Get WT(s) from psidechaintree
     const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
     if (vWT.empty()) {
@@ -5196,7 +5199,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
 
         // Check for existing WT^ in mainchain SCDB for this sidechain
         std::vector<uint256> vHashWTPrime;
-        if (client.ListWTPrimeStatus(vHashWTPrime)) {
+        if (!fReplace && client.ListWTPrimeStatus(vHashWTPrime)) {
             LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
             return false;
         }
@@ -5207,6 +5210,11 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     for (const SidechainWT& wt : vWT) {
         if (wt.status == WT_UNSPENT)
             vWTFiltered.push_back(wt);
+    }
+
+    if (!fReplicationCheck && vWTFiltered.size() < nMinWT) {
+        LogPrintf("%s: Not enough WT(s) to create WT^\n", __func__);
+        return false;
     }
 
     // TODO sort vWT by fees
