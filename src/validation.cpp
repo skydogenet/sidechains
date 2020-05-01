@@ -5191,11 +5191,6 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     if (!fReplicationCheck) {
         // Get the mainchain's chain height
         SidechainClient client;
-        int nMainchainHeight = 0;
-        if (!client.GetBlockCount(nMainchainHeight)) {
-            LogPrintf("%s: Failed to request mainchain block count!");
-            return false;
-        }
 
         // Check for existing WT^ in mainchain SCDB for this sidechain
         std::vector<uint256> vHashWTPrime;
