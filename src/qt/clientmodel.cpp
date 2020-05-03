@@ -35,7 +35,8 @@ ClientModel::ClientModel(OptionsModel *_optionsModel, QObject *parent) :
     optionsModel(_optionsModel),
     peerTableModel(0),
     banTableModel(0),
-    pollTimer(0)
+    pollTimer(0),
+    ignoredBlockChangeTimer(0)
 {
     cachedBestHeaderHeight = -1;
     cachedBestHeaderTime = -1;
@@ -44,6 +45,15 @@ ClientModel::ClientModel(OptionsModel *_optionsModel, QObject *parent) :
     pollTimer = new QTimer(this);
     connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
     pollTimer->start(MODEL_UPDATE_DELAY);
+
+    lastIgnoredBlockChange.clear();
+
+    // Starting the timer to check for ignored block updates now. The timer
+    // will be stopped once a block is passed to BlockTipChanged with
+    // fInitialSync set false.
+    ignoredBlockChangeTimer = new QTimer(this);
+    connect(ignoredBlockChangeTimer, SIGNAL(timeout()), this, SLOT(updateIgnoredBlockChanges()));
+    ignoredBlockChangeTimer->start(MODEL_UPDATE_DELAY * 2);
 
     subscribeToCoreSignals();
 }
@@ -246,6 +256,41 @@ QString ClientModel::dataDir() const
     return GUIUtil::boostPathToQString(GetDataDir());
 }
 
+void ClientModel::UpdateBlockCountLater(const int count, const QDateTime& date,
+        const double nVerificationProgress, const bool fHeader)
+{
+    std::lock_guard<std::mutex> lock(blockChangeMutex);
+
+    lastIgnoredBlockChange.count = count;
+    lastIgnoredBlockChange.date = date;
+    lastIgnoredBlockChange.nVerificationProgress = nVerificationProgress;
+    lastIgnoredBlockChange.fHeader = fHeader;
+
+    // When the ignoredBlockChangeTimer expires and calls
+    // updateIgnoredBlockChanges it will decide whether to
+    // send this ignored block update
+}
+
+void ClientModel::StopIgnoredBlockChangeTimer()
+{
+    ignoredBlockChangeTimer->stop();
+}
+
+void ClientModel::updateIgnoredBlockChanges()
+{
+    // Check if any block count updates were held back and send it now unless
+    // the current state is newer.
+    if (cachedBestHeaderHeight > 0 &&
+            lastIgnoredBlockChange.count == cachedBestHeaderHeight) {
+        Q_EMIT numBlocksChanged(lastIgnoredBlockChange.count,
+                lastIgnoredBlockChange.date,
+                lastIgnoredBlockChange.nVerificationProgress,
+                lastIgnoredBlockChange.fHeader);
+    }
+
+    lastIgnoredBlockChange.clear();
+}
+
 void ClientModel::updateBanlist()
 {
     banTableModel->refresh();
@@ -289,10 +334,15 @@ static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, const CB
 {
     // lock free async UI updates in case we have a new block tip
     // during initial sync, only update the UI if the last update
-    // was > 250ms (MODEL_UPDATE_DELAY) ago
+    // was > 250ms (MODEL_UPDATE_DELAY) ago. If an update is ignored
+    // it will be cached and sent later
     int64_t now = 0;
     if (initialSync)
         now = GetTimeMillis();
+
+    // Once we are synchronized we can stop the ignored block changes timer
+    if (!initialSync)
+        clientmodel->StopIgnoredBlockChangeTimer();
 
     int64_t& nLastUpdateNotification = fHeader ? nLastHeaderTipUpdateNotification : nLastBlockTipUpdateNotification;
 
@@ -310,6 +360,13 @@ static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, const CB
                                   Q_ARG(double, clientmodel->getVerificationProgress(pIndex)),
                                   Q_ARG(bool, fHeader));
         nLastUpdateNotification = now;
+    } else {
+        // If the update was ignored because it happened too soon after the last
+        // update, cache it and send the update signal later
+        clientmodel->UpdateBlockCountLater(pIndex->nHeight,
+                QDateTime::fromTime_t(pIndex->GetBlockTime()),
+                clientmodel->getVerificationProgress(pIndex),
+                fHeader);
     }
 }
 
