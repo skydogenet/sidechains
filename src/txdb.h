@@ -153,6 +153,8 @@ public:
     bool GetLastDeposit(SidechainDeposit& deposit);
     bool GetLastWTPrimeHash(uint256& hash);
 
+    bool HaveWTPrime(const uint256& hashWTPrime) const;
+
     std::vector<SidechainWT> GetWTs(const uint8_t & /* nSidechain */);
     std::vector<SidechainWTPrime> GetWTPrimes(const uint8_t & /* nSidechain */);
     std::vector<SidechainDeposit> GetDeposits(const uint8_t & /* nSidechain */);

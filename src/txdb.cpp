@@ -569,6 +569,15 @@ bool CSidechainTreeDB::GetLastWTPrimeHash(uint256& hash)
     return true;
 }
 
+bool CSidechainTreeDB::HaveWTPrime(const uint256& hashWTPrime) const
+{
+    SidechainWTPrime wtPrime;
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WTPRIME_OP, hashWTPrime), wtPrime))
+        return true;
+
+    return false;
+}
+
 namespace {
 
 //! Legacy class to deserialize pre-pertxout database entries without reindex.

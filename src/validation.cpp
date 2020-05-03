@@ -5250,6 +5250,17 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
         return false;
     }
 
+    // If the WT^ hash will be the same as a previous WT^ return false. It is
+    // possible for a new WT^ to have the same hash as a previous WT^ if all of
+    // the outputs (destinations & amounts) are exactly the same. In that case,
+    // wait for a new WT to be added to the database so that this WT^ will have
+    // a unique hash. It would also be possible to remove one of the outputs to
+    // obtain a unique WT^ hash (TODO?)
+    if (psidechaintree->HaveWTPrime(wjtx.GetHash())) {
+        LogPrintf("%s: ERROR: WT^ is not unique!\n", __func__);
+        return false;
+    }
+
     // TODO deterministic WT^ creation will need to handle fees another way
     // TODO improve fee calculation
     //CAmount nBaseFee = CENT;
