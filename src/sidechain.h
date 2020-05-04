@@ -59,7 +59,7 @@ static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
 static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << ToByteVector(testkey) << OP_EQUALVERIFY << OP_CHECKSIG;
 
 //! The default payment amount to mainchain miner for critical data commitment
-static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
+static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 0.0001 * COIN;
 
 //! The fee for sidechain deposits on this sidechain
 static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;

@@ -570,6 +570,22 @@ void SidechainPage::RefreshBMM()
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
+    // Get & check the BMM amount
+    CAmount amount = ui->bmmAmount->value();
+    if (amount <= 0) {
+        ui->checkBoxEnableAutomation->setChecked(false);
+
+        messageBox.setWindowTitle("Automated BMM failed - invalid BMM amount!");
+        std::string str;
+        str = "The amount set for the BMM request is invalid!\n\n";
+        str += "The BMM request must pay the mainchain miner an amount ";
+        str += "greater than zero. Please set an amount greater than ";
+        str += "zero and try again.\n";
+        messageBox.setText(QString::fromStdString(str));
+        messageBox.exec();
+        return;
+    }
+
     if (!CheckMainchainConnection()) {
         UpdateNetworkActive(false /* fMainchainConnected */);
         ui->checkBoxEnableAutomation->setChecked(false);
@@ -604,7 +620,7 @@ void SidechainPage::RefreshBMM()
     std::string strError = "";
     uint256 hashCreated;
     uint256 hashConnected;
-    if (!client.RefreshBMM(strError, hashCreated, hashConnected)) {
+    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected)) {
         UpdateNetworkActive(false /* fMainchainConnected */);
         ui->checkBoxEnableAutomation->setChecked(false);
 

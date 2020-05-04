@@ -243,10 +243,13 @@ bool SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint25
 }
 
 // TODO rename
-uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight, const CAmount& amount)
+uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight, CAmount amount)
 {
     uint256 txid = uint256();
     std::string strPrevHash = hashBlockMain.ToString();
+
+    if (amount == CAmount(0))
+        amount = DEFAULT_CRITICAL_DATA_AMOUNT;
 
     // JSON for sending critical data request to mainchain via mainchain HTTP-RPC
     std::string json;
@@ -254,7 +257,7 @@ uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical,
     json.append("\"method\": \"createbmmcriticaldatatx\", \"params\": ");
     json.append("[\"");
     // TODO use amount
-    json.append(ValueFromAmount(DEFAULT_CRITICAL_DATA_AMOUNT).write());
+    json.append(ValueFromAmount(amount).write());
     json.append("\",");
     json.append(UniValue(nHeight).write());
     json.append(",\"");
@@ -340,7 +343,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     return true;
 }
 
-bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, uint256& hashConnected, bool fCreateNew, const uint256& hashPrevBlock)
+bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreated, uint256& hashConnected, bool fCreateNew, const uint256& hashPrevBlock)
 {
     //
     // A cache of recent mainchain block hashes and the mainchain tip is created
@@ -381,7 +384,7 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
         if (CreateBMMBlock(block, strError, hashPrevBlock)) {
             // TODO check return value
             hashCreated = block.GetBlindHash();
-            SendBMMCriticalDataRequest(hashCreated, vHashMainBlock.back(), 0, 0);
+            SendBMMCriticalDataRequest(hashCreated, vHashMainBlock.back(), 0, amount);
             bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
             return true;
         } else {
@@ -432,7 +435,7 @@ bool SidechainClient::RefreshBMM(std::string& strError, uint256& hashCreated, ui
         if (fCreateNew && CreateBMMBlock(block, strError, hashPrevBlock)) {
             // Create BMM critical data request
             hashCreated = block.GetBlindHash();
-            SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlock.back());
+            SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlock.back(), 0, amount);
             bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
         } else {
             if (fCreateNew) {

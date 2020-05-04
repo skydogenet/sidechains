@@ -465,13 +465,14 @@ static UniValue getinfo_deprecated(const JSONRPCRequest& request)
 
 UniValue refreshbmm(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size() > 2)
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 3)
         throw std::runtime_error(
             "refreshbmm\n"
             "\nRefresh automated BMM. Basic testing implementation\n"
             "\nArguments:\n"
-            "1. \"createnew\" true|false  (bool) Create a new BMM block if possible\n (optional, default: true)\n"
-            "2. \"prevblock\"             (string) Hash of sidechain block to build on (optional, default: chaintip)\n"
+            "1. \"amount\"                (numeric) Amount to pay mainchain miner for including BMM request (required)\n"
+            "2. \"createnew\" true|false  (bool) Create a new BMM block if possible\n (optional, default: true)\n"
+            "3. \"prevblock\"             (string) Hash of sidechain block to build on (optional, default: chaintip)\n"
             "\nResult:\n"
             "hash_last_main_block  (string) Hash of mainchain tip.\n"
             "bmm_block_created     (string) Hash of new BMM block created.\n"
@@ -487,18 +488,22 @@ UniValue refreshbmm(const JSONRPCRequest& request)
     if (fReorg)
         HandleMainchainReorg(vDisconnected);
 
+    CAmount amount = AmountFromValue(request.params[0]);
+    if (amount <= 0)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for BMM!");
+
     // Whether or not to create a new BMM block / request if possible. If set
     // false, we will only check for BMM commits in the mainchain and try to
     // connect those blocks but not generate a new BMM block and request.
-    bool fCreateNew = request.params[0].isNull() ? true : request.params[0].get_bool();
+    bool fCreateNew = request.params[1].isNull() ? true : request.params[1].get_bool();
 
     // If hashPrevBlock is set, we will build a block on top of that block
     // instead of the current sidechain tip.
     uint256 hashPrevBlock;
-    if (request.params.size() == 2) {
+    if (request.params.size() == 3) {
         LOCK(cs_main);
 
-        hashPrevBlock = uint256S(request.params[1].get_str());
+        hashPrevBlock = uint256S(request.params[2].get_str());
         if (hashPrevBlock.IsNull())
             throw JSONRPCError(RPC_MISC_ERROR, "Invalid prev block hash (null)!");
 
@@ -520,7 +525,7 @@ UniValue refreshbmm(const JSONRPCRequest& request)
     std::string strError = "";
     uint256 hashCreated;
     uint256 hashConnected;
-    if (!client.RefreshBMM(strError, hashCreated, hashConnected, fCreateNew, hashPrevBlock))
+    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected, fCreateNew, hashPrevBlock))
         throw JSONRPCError(RPC_MISC_ERROR, strError);
 
     UniValue result(UniValue::VOBJ);
