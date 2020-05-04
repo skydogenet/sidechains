@@ -5082,7 +5082,7 @@ void LoadBMMCache()
 
 void DumpBMMCache()
 {
-    std::vector<uint256> vHash = bmmCache.GetBMMWTPrimeCache();
+    std::vector<uint256> vHash = bmmCache.GetBroadcastedWTPrimeCache();
     if (vHash.empty())
         return;
 
