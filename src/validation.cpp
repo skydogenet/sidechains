@@ -5256,7 +5256,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     // wait for a new WT to be added to the database so that this WT^ will have
     // a unique hash. It would also be possible to remove one of the outputs to
     // obtain a unique WT^ hash (TODO?)
-    if (psidechaintree->HaveWTPrime(wjtx.GetHash())) {
+    if (!fReplicationCheck && psidechaintree->HaveWTPrime(wjtx.GetHash())) {
         LogPrintf("%s: ERROR: WT^ is not unique!\n", __func__);
         return false;
     }
