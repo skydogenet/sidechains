@@ -142,6 +142,8 @@ SidechainPage::SidechainPage(QWidget *parent) :
     } else {
         ui->stackedWidget->setCurrentIndex(PAGE_DEFAULT_INDEX);
     }
+
+    ui->bmmAmount->setValue(DEFAULT_CRITICAL_DATA_AMOUNT);
 }
 
 SidechainPage::~SidechainPage()
