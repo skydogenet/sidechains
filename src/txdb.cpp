@@ -386,7 +386,7 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
         }
     }
 
-    return WriteBatch(batch);
+    return WriteBatch(batch, true);
 }
 
 bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
@@ -399,7 +399,7 @@ bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
         batch.Write(key, wt);
     }
 
-    return WriteBatch(batch);
+    return WriteBatch(batch, true);
 }
 
 bool CSidechainTreeDB::WriteFlag(const std::string& name, bool fValue)
