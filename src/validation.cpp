@@ -2183,13 +2183,13 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         }
 
         // Handle WT^ verification & wt status update
-        if (fFoundWTPrime && !fSkipBMMChecks) {
+        if (fFoundWTPrime) {
             std::string strFail = "";
             std::vector<SidechainWT> vWT;
             uint256 hashWTPrime;
             uint256 hashWTPrimeID;
 
-            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, true /* fReplicate */))
+            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, !fSkipBMMChecks /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
