@@ -1404,6 +1404,9 @@ bool AppInitMain()
 
     // ********************************************************* Step 7: load block chain
 
+    // Load the BMM cache from disk
+    LoadBMMCache();
+
     fReindex = gArgs.GetBoolArg("-reindex", false);
     bool fReindexChainState = gArgs.GetBoolArg("-reindex-chainstate", false);
 
@@ -1610,9 +1613,6 @@ bool AppInitMain()
     if (!est_filein.IsNull())
         ::feeEstimator.Read(est_filein);
     fFeeEstimatesInitialized = true;
-
-    // Load the BMM cache from disk
-    LoadBMMCache();
 
     // Load the mainchain block hash cache from disk
     LoadMainBlockCache();
