@@ -5176,7 +5176,7 @@ void DumpMainBlockCache()
 }
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck)
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck, bool fCheckUnique)
 {
     unsigned int nMinWT = gArgs.GetArg("-minwt", DEFAULT_MIN_WT_CREATE_WTPRIME);
     bool fReplace = gArgs.GetBoolArg("-replacewtprime", false);
@@ -5256,7 +5256,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     // wait for a new WT to be added to the database so that this WT^ will have
     // a unique hash. It would also be possible to remove one of the outputs to
     // obtain a unique WT^ hash (TODO?)
-    if (!fReplicationCheck && psidechaintree->HaveWTPrime(wjtx.GetHash())) {
+    if (fCheckUnique && psidechaintree->HaveWTPrime(wjtx.GetHash())) {
         LogPrintf("%s: ERROR: WT^ is not unique!\n", __func__);
         return false;
     }

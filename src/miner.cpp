@@ -193,7 +193,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // Create WT^
     CTransactionRef wtPrimeTx;
     CTransactionRef wtPrimeDataTx;
-    if (CreateWTPrimeTx(wtPrimeTx, wtPrimeDataTx)) {
+    if (CreateWTPrimeTx(wtPrimeTx, wtPrimeDataTx, false /* fReplicationCheck */,
+                true /* fCheckUnique */)) {
         for (const CTxOut& out : wtPrimeDataTx->vout)
             coinbaseTx.vout.push_back(out);
     }

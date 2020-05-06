@@ -526,7 +526,7 @@ void DumpMainBlockCache();
 void LoadMainBlockCache();
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false);
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false, bool fCheckUnique = false);
 
 /**
  * If there are any WT^(s) (note the limit per block is 1) verify it, and
