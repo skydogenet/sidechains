@@ -2156,9 +2156,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     }
                 }
 
-                // If we find a WT^ we will call VerifyWTPrimes later
-                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP)
-                    fFoundWTPrime = true;
 
                 // If the object is a wt we do not want the ID to change when
                 // the wt status is changed so that we can update the status
@@ -2170,6 +2167,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 }
                 else
                 if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
+                    // If we find a WT^ we will call VerifyWTPrimes later
+                    fFoundWTPrime = true;
+
                     const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
                     id = wtPrime->GetID();
                 }
@@ -2189,12 +2189,14 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             uint256 hashWTPrime;
             uint256 hashWTPrimeID;
 
+            // This will also return a list of wt(s) from the WT^
             if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, !fSkipBMMChecks /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
                 return state.Error(strprintf("%s: hashWTPrime shouldn't be null if VerifyWTPrimes passed!\n", __func__));
 
+            // Write the updated status of wt(s) in the WT^ (WT_IN_WTPRIME)
             psidechaintree->WriteWTUpdate(vWT);
         }
 
