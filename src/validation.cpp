@@ -2172,6 +2172,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
                     const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
                     id = wtPrime->GetID();
+
+                    LogPrintf("%s: Found new WT^: %s.\n", __func__, wtPrime->wtPrime.GetHash().ToString());
                 }
                 else
                 if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
@@ -3731,7 +3733,6 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
             return error("%s: invalid WT^! Error: %s", __func__, strFail);
         }
     }
-
 
     // Header is valid/has work, merkle tree and segwit merkle tree are good...RELAY NOW
     // (but if it does not build on our best tip, let the SendMessages loop relay it)

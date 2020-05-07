@@ -370,6 +370,9 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
 
             // Update DB_LAST_SIDECHAIN_WTPRIME
             batch.Write(DB_LAST_SIDECHAIN_WTPRIME, hashWTPrime);
+
+            LogPrintf("%s: Writing new WT^ and updating DB_LAST_SIDECHAIN_WTPRIME to: %s",
+                    __func__, hashWTPrime.ToString());
         }
         else
         if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
