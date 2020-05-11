@@ -135,15 +135,8 @@ class CSidechainTreeDB : public CDBWrapper
 {
 public:
     CSidechainTreeDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
-    bool WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo);
-    bool ReadBlockFileInfo(int nFile, CBlockFileInfo &fileinfo);
-    bool ReadLastBlockFile(int &nFile);
-    bool WriteReindexing(bool fReindex);
-    bool ReadReindexing(bool &fReindex);
     bool WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list);
     bool WriteWTUpdate(const std::vector<SidechainWT>& vWT);
-    bool WriteFlag(const std::string &name, bool fValue);
-    bool ReadFlag(const std::string &name, bool &fValue);
 
     bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
     bool GetWTPrime(const uint256 & /* WT^ ID */, SidechainWTPrime &wtPrime);

@@ -309,43 +309,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
 CSidechainTreeDB::CSidechainTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
     : CDBWrapper(GetDataDir() / "blocks" / "sidechain", nCacheSize, fMemory, fWipe) { }
 
-bool CSidechainTreeDB::ReadBlockFileInfo(int nFile, CBlockFileInfo& fileinfo)
-{
-    return Read(std::make_pair(DB_BLOCK_FILES, nFile), fileinfo);
-}
-
-bool CSidechainTreeDB::WriteReindexing(bool fReindex)
-{
-    if (fReindex)
-        return Write(DB_REINDEX_FLAG, '1');
-    else
-        return Erase(DB_REINDEX_FLAG);
-}
-
-bool CSidechainTreeDB::ReadReindexing(bool& fReindex)
-{
-    fReindex = Exists(DB_REINDEX_FLAG);
-    return true;
-}
-
-bool CSidechainTreeDB::ReadLastBlockFile(int& nFile)
-{
-    return Read(DB_LAST_BLOCK, nFile);
-}
-
-bool CSidechainTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo *> > &fileInfo, int nLastFile, const std::vector<const CBlockIndex *> &blockinfo)
-{
-    CDBBatch batch(*this);
-    for (std::vector<std::pair<int, const CBlockFileInfo*> >::const_iterator it=fileInfo.begin(); it != fileInfo.end(); it++) {
-        batch.Write(std::make_pair(DB_BLOCK_FILES, it->first), *it->second);
-    }
-    batch.Write(DB_LAST_BLOCK, nLastFile);
-    for (std::vector<const CBlockIndex*>::const_iterator it=blockinfo.begin(); it != blockinfo.end(); it++) {
-        batch.Write(std::make_pair(DB_BLOCK_INDEX, (*it)->GetBlockHash()), CDiskBlockIndex(*it));
-    }
-    return WriteBatch(batch, true);
-}
-
 bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list)
 {
     CDBBatch batch(*this);
@@ -403,20 +366,6 @@ bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
     }
 
     return WriteBatch(batch, true);
-}
-
-bool CSidechainTreeDB::WriteFlag(const std::string& name, bool fValue)
-{
-    return Write(std::make_pair(DB_FLAG, name), fValue ? '1' : '0');
-}
-
-bool CSidechainTreeDB::ReadFlag(const std::string& name, bool &fValue)
-{
-    char ch;
-    if (!Read(std::make_pair(DB_FLAG, name), ch))
-        return false;
-    fValue = ch == '1';
-    return true;
 }
 
 bool CSidechainTreeDB::GetWT(const uint256& objid, SidechainWT& wt)

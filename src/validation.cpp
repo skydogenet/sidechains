@@ -2309,9 +2309,6 @@ bool static FlushStateToDisk(const CChainParams& chainparams, CValidationState &
                 if (!pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
                     return AbortNode(state, "Failed to write to block index database");
                 }
-                if (!psidechaintree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
-                    return AbortNode(state, "Failed to write to sidechain index database");
-                }
             }
             // Finally remove any pruned files
             if (fFlushForPrune)

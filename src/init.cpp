@@ -652,7 +652,6 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
             nFile++;
         }
         pblocktree->WriteReindexing(false);
-        psidechaintree->WriteReindexing(false);
         fReindex = false;
         LogPrintf("Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
@@ -1453,7 +1452,6 @@ bool AppInitMain()
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);
-                    psidechaintree->WriteReindexing(true);
                     //If we're reindexing in prune mode, wipe away unusable block files and all undo data files
                     if (fPruneMode)
                         CleanupBlockRevFiles();
