@@ -524,15 +524,6 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 bool CreateDepositTx(CMutableTransaction& depositTx)
 {
     //
-    // TODO
-    // Refactor: Very slow once the sidechain has a large number of deposits
-    // because it is re-downloading from mainchain & resorting all of them.
-    //
-    // Make it only download new ones and sort from the one that connects to a
-    // CTIP from the database.
-    //
-
-    //
     // Create the deposit payout transaction that takes deposit(s) from the
     // mainchain and sends them to the sidechain address specified.
     //
@@ -561,7 +552,8 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
     SidechainDeposit lastDeposit;
     uint256 hashLastDeposit;
     uint32_t n = 0;
-    if (psidechaintree->GetLastDeposit(lastDeposit)) {
+    bool fHaveDeposits = psidechaintree->GetLastDeposit(lastDeposit);
+    if (fHaveDeposits) {
         hashLastDeposit = lastDeposit.dtx.GetHash();
         n = lastDeposit.n;
     }
@@ -669,28 +661,24 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
     // Get the deposits in the database
     std::vector<SidechainDeposit> vDepositDB = psidechaintree->GetDeposits(SIDECHAIN_TEST);
 
-    // Look up the CTIP for the first in the sorted list if we need to
-    if (vDepositDB.size()) {
-        // Find the CTIP that the first sorted deposit spent
+    // Look up the CTIP spent by the first new sorted deposit
+    if (fHaveDeposits) {
         bool fFound = false;
         const SidechainDeposit& first = vDepositSorted.front();
-        for (const SidechainDeposit& d : vDepositDB) {
-            for (const CTxIn& in : first.dtx.vin) {
-                if (in.prevout.hash == d.dtx.GetHash()
-                        && d.dtx.vout.size() > in.prevout.n
-                        && d.n == in.prevout.n) {
-                    // Calculate payout amount
-                    CAmount ctipAmount = d.dtx.vout[d.n].nValue;
-                    if (first.amtUserPayout > ctipAmount)
-                        vDepositSorted.front().amtUserPayout -= ctipAmount;
-                    else
-                        vDepositSorted.front().amtUserPayout = CAmount(0);
+        for (const CTxIn& in : first.dtx.vin) {
+            if (in.prevout.hash == lastDeposit.dtx.GetHash()
+                    && lastDeposit.dtx.vout.size() > in.prevout.n
+                    && lastDeposit.n == in.prevout.n) {
+                // Calculate payout amount
+                CAmount ctipAmount = lastDeposit.dtx.vout[lastDeposit.n].nValue;
+                if (first.amtUserPayout > ctipAmount)
+                    vDepositSorted.front().amtUserPayout -= ctipAmount;
+                else
+                    vDepositSorted.front().amtUserPayout = CAmount(0);
 
-                    fFound = true;
-                    break;
-                }
+                fFound = true;
+                break;
             }
-            if (fFound) break;
         }
         if (!fFound) {
             LogPrintf("%s: Error: No CTIP found for first deposit in sorted list: %s (mainchain txid)\n", __func__, first.dtx.GetHash().ToString());
