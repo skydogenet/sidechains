@@ -209,7 +209,9 @@ private:
 void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 
-/** Create a payout transaction for any new deposits */
 bool CreateDepositTx(CMutableTransaction& depositTx);
+
+/** Create packages of each output for new deposits */
+bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages);
 
 #endif // BITCOIN_MINER_H

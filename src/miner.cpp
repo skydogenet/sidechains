@@ -204,15 +204,25 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // Make sure we don't add too many deposit outputs
     //
     uint64_t nAdded = 0;
-    CMutableTransaction depositTx;
-    if (CreateDepositTx(depositTx)) {
-        for (const CTxOut& out : depositTx.vout) {
-            coinbaseTx.vout.push_back(out);
+    // A vector of vectors of CTxOut - each vector of CTxOut contains all of the
+    // outputs for one deposit. When adding / removing deposits of the coinbase
+    // transaction we have to add or remove all of the outputs for a deposit.
+    std::vector<std::vector<CTxOut>> vOutPackages;
+    if (CreateDepositOutputs(vOutPackages)) {
+        for (const auto& v : vOutPackages) {
+            // Add all of the outputs for this deposit to the coinbase tx
+            for (const CTxOut& o : v)
+                coinbaseTx.vout.push_back(o);
+
+            // Check the block size now & remove this deposit if the block size
+            // became too large.
             uint64_t nSize = GetVirtualTransactionSize(coinbaseTx);
             if (nAdded + nSize + nBlockWeight > MAX_BLOCK_WEIGHT) {
-                coinbaseTx.vout.pop_back();
+                for (size_t i = 0; i < v.size(); i++)
+                    coinbaseTx.vout.pop_back();
                 break;
             }
+
             nAdded += nSize;
         }
     }
@@ -520,8 +530,8 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 }
 
-/** Create a payout transaction for any new deposits */
-bool CreateDepositTx(CMutableTransaction& depositTx)
+/** Create payout outputs for any new deposits */
+bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
 {
     //
     // Create the deposit payout transaction that takes deposit(s) from the
@@ -725,11 +735,13 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
     }
 
     // Create the deposit transaction
-    CMutableTransaction mtx;
     for (const SidechainDeposit& deposit : vDepositSorted) {
+        std::vector<CTxOut> vOut;
         // Special case for WT^ change return - we don't want to pay anyone that
         if (deposit.keyID == CKeyID(uint160(ParseHex("1111111111111111111111111111111111111111")))) {
-            mtx.vout.push_back(CTxOut(0, deposit.GetScript()));
+            vOut.push_back(CTxOut(0, deposit.GetScript()));
+            // Add this deposits output to the vector of deposit outputs
+            vOutPackages.push_back(vOut);
             continue;
         }
 
@@ -769,24 +781,26 @@ bool CreateDepositTx(CMutableTransaction& depositTx)
                 script << OP_DUP << OP_HASH160 << ToByteVector(deposit.keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
                 CTxOut depositOut(deposit.amtUserPayout - SIDECHAIN_DEPOSIT_FEE, script);
                 if (!IsDust(depositOut, ::dustRelayFee))
-                    mtx.vout.push_back(depositOut);
+                    vOut.push_back(depositOut);
 
                 // Depositor pays fee to sidechain
                 CKeyID sidechainKey;
                 sidechainKey.SetHex(SIDECHAIN_CHANGE_KEY);
                 CScript sidechainChangeScript;
                 sidechainChangeScript << OP_DUP << OP_HASH160 << ToByteVector(sidechainKey) << OP_EQUALVERIFY << OP_CHECKSIG;
-                mtx.vout.push_back(CTxOut(SIDECHAIN_DEPOSIT_FEE, sidechainChangeScript));
+                vOut.push_back(CTxOut(SIDECHAIN_DEPOSIT_FEE, sidechainChangeScript));
             }
 
             // Add serialization of deposit
-            mtx.vout.push_back(CTxOut(0, deposit.GetScript()));
+            vOut.push_back(CTxOut(0, deposit.GetScript()));
+
+            // Add this deposits outputs to the vector of deposit outputs
+            vOutPackages.push_back(vOut);
         }
     }
 
-    LogPrintf("%s: Created deposit tx with %u outputs.\n", __func__, mtx.vout.size());
+    LogPrintf("%s: Created deposit outputs for: %u deposits!\n", __func__, vOutPackages.size());
 
-    depositTx = mtx;
     return true;
 }
 
