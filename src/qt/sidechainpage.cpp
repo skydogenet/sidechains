@@ -817,6 +817,26 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     // Set number of WT outputs
     ui->labelNumWT->setText(QString::number(wtPrime.vWT.size()));
 
+    QString qStatus = "";
+    if (wtPrime.status == WTPRIME_CREATED) {
+        qStatus = "Created";
+    }
+    else
+    if (wtPrime.status == WTPRIME_ACKING) {
+        qStatus = "ACKing";
+    }
+    else
+    if (wtPrime.status == WTPRIME_FAILED) {
+        qStatus = "Failed";
+    }
+    else
+    if (wtPrime.status == WTPRIME_PAID_OUT) {
+        qStatus = "Paid out";
+    }
+
+    // Set the status
+    ui->labelStatus->setText(qStatus);
+
     // Add WTs to the table view
     CAmount amountTotal = 0;
     for (const uint256& id : wtPrime.vWT) {

@@ -557,8 +557,9 @@ bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
 /* Verify the contents of the mainchain block cache with the mainchain */
 bool VerifyMainBlockCache(std::string& strError);
 
-// TODO mutex
 /** Disconnect blocks with a BMM commit from an orphan mainchain block */
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan);
+
+bool UpdateWTPrimeStatus();
 
 #endif // BITCOIN_VALIDATION_H

@@ -368,6 +368,16 @@ bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
     return WriteBatch(batch, true);
 }
 
+bool CSidechainTreeDB::WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime)
+{
+    CDBBatch batch(*this);
+
+    std::pair<char, uint256> key = std::make_pair(wtPrime.sidechainop, wtPrime.GetID());
+    batch.Write(key, wtPrime);
+
+    return WriteBatch(batch, true);
+}
+
 bool CSidechainTreeDB::GetWT(const uint256& objid, SidechainWT& wt)
 {
     if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WT_OP, objid), wt))

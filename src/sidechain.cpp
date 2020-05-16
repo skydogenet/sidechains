@@ -119,6 +119,23 @@ std::string SidechainWTPrime::ToString() const
     str << "sidechainop=" << sidechainop << std::endl;
     str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
     str << "wtprime=" << CTransaction(wtPrime).ToString() << std::endl;
+    std::string strStatus;
+    if (status == WTPRIME_CREATED) {
+        strStatus = "WTPRIME_CREATED";
+    }
+    else
+    if (status == WTPRIME_ACKING) {
+        strStatus = "WTPRIME_ACKING";
+    }
+    else
+    if (status == WTPRIME_FAILED) {
+        strStatus = "WTPRIME_FAILED";
+    }
+    else
+    if (status == WTPRIME_PAID_OUT) {
+        strStatus = "WTPRIME_PAID_OUT";
+    }
+    str << "status=" << strStatus << std::endl;
     return str.str();
 }
 

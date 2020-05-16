@@ -2156,7 +2156,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     }
                 }
 
-
                 // If the object is a wt we do not want the ID to change when
                 // the wt status is changed so that we can update the status
                 // using the same ID in ldb.
@@ -5751,6 +5750,44 @@ void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
             return;
         }
     }
+}
+
+bool UpdateWTPrimeStatus()
+{
+    // Lookup the current WT^
+    SidechainWTPrime wtPrime;
+    uint256 hashCurrentWTPrime;
+    psidechaintree->GetLastWTPrimeHash(hashCurrentWTPrime);
+    if (!psidechaintree->GetWTPrime(hashCurrentWTPrime, wtPrime)) {
+        // TODO log
+        return false;
+    }
+
+    // Check if the WT^ is still being verified on the mainchain
+    SidechainClient client;
+    int nWorkScore = 0;
+    if (client.GetWorkScore(hashCurrentWTPrime, nWorkScore)) {
+        // Update WT^ status if needed
+        if (wtPrime.status != WTPRIME_ACKING) {
+            wtPrime.status = WTPRIME_ACKING;
+            psidechaintree->WriteWTPrimeUpdate(wtPrime);
+            // TODO log
+        }
+
+    } else {
+        // If the WT^ previously had the ACKING status, check if it was paid out
+        // or removed from the mainchain without being paid out (failed).
+        if (wtPrime.status == WTPRIME_ACKING) {
+            // Check if the WT^ was paid out
+            bool fPaidOut = false; // TODO sidechain client getwtprimepaidout
+
+            wtPrime.status = fPaidOut ? WTPRIME_PAID_OUT : WTPRIME_FAILED;
+            psidechaintree->WriteWTPrimeUpdate(wtPrime);
+            // TODO log
+        }
+    }
+
+    return true;
 }
 
 //! Guess how far we are in the verification process at the given block index

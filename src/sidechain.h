@@ -50,6 +50,12 @@ static const char WT_UNSPENT = 'u';
 static const char WT_IN_WTPRIME = 'p';
 static const char WT_SPENT = 's';
 
+//! WT^ status / zone
+static const char WTPRIME_CREATED = 'c';
+static const char WTPRIME_ACKING = 'a';
+static const char WTPRIME_FAILED = 'f';
+static const char WTPRIME_PAID_OUT = 'o';
+
 //! KeyID for testing
 static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
 //mx3PT9t2kzCFgAURR9HeK6B5wN8egReUxY
@@ -123,8 +129,9 @@ struct SidechainWTPrime: public SidechainObj {
     uint8_t nSidechain;
     CMutableTransaction wtPrime;
     std::vector<uint256> vWT; // The id in ldb of WT(s) that this WT^ is using
+    char status;
 
-    SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; }
+    SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; status = WTPRIME_CREATED; }
     virtual ~SidechainWTPrime(void) { }
 
     ADD_SERIALIZE_METHODS
@@ -135,10 +142,13 @@ struct SidechainWTPrime: public SidechainObj {
         READWRITE(nSidechain);
         READWRITE(wtPrime);
         READWRITE(vWT);
+        READWRITE(status);
     }
 
     uint256 GetID() const {
-        return GetHash();
+        SidechainWTPrime wtPrime(*this);
+        wtPrime.status = WTPRIME_CREATED;
+        return wtPrime.GetHash();
     }
 
     std::string ToString(void) const;
