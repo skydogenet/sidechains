@@ -817,21 +817,23 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     // Set number of WT outputs
     ui->labelNumWT->setText(QString::number(wtPrime.vWT.size()));
 
+    //
+    // TODO
+    // If the status is created, the WT^ might be being acked on the mainchain.
+    // Request the workscore and display it if there is any.
+    //
+
     QString qStatus = "";
     if (wtPrime.status == WTPRIME_CREATED) {
         qStatus = "Created";
-    }
-    else
-    if (wtPrime.status == WTPRIME_ACKING) {
-        qStatus = "ACKing";
     }
     else
     if (wtPrime.status == WTPRIME_FAILED) {
         qStatus = "Failed";
     }
     else
-    if (wtPrime.status == WTPRIME_PAID_OUT) {
-        qStatus = "Paid out";
+    if (wtPrime.status == WTPRIME_SPENT) {
+        qStatus = "Spent";
     }
 
     // Set the status
@@ -893,6 +895,8 @@ void SidechainPage::ClearWTPrimeExplorer()
             BitcoinUnits::separatorAlways);
 
     ui->labelTotalAmount->setText(zero);
+
+    ui->labelStatus->setText("");
 }
 
 void SidechainPage::UpdateSidechainWealth()

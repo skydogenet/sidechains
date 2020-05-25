@@ -799,16 +799,19 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
     if (!clientModel)
         return;
 
-
     uint256 hashLatest;
     psidechaintree->GetLastWTPrimeHash(hashLatest);
 
-    QString latestWTPrime;
-    latestWTPrime += "WT^: ";
-    if (hashLatest.IsNull())
-        latestWTPrime += "None yet";
-    else
-        latestWTPrime += QString::fromStdString(hashLatest.ToString());
+    QString latestWTPrime = "WT^: None right now";
+
+    SidechainWTPrime wtPrime;
+    if (psidechaintree->GetWTPrime(hashLatest, wtPrime)) {
+        if (wtPrime.status != WTPRIME_FAILED &&
+                wtPrime.status != WTPRIME_SPENT) {
+            latestWTPrime = "WT^: ";
+            latestWTPrime += QString::fromStdString(hashLatest.ToString());
+        }
+    }
 
     // Set latest WT^ hash
     labelLastWTPrime->setText(latestWTPrime);
