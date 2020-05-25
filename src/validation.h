@@ -441,6 +441,10 @@ void UpdateUncommittedBlockStructures(CBlock& block, const CBlockIndex* pindexPr
 /** Produce the necessary coinbase commitment for a block (modifies the hash, don't call for mined blocks). */
 std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBlockIndex* pindexPrev, const Consensus::Params& consensusParams);
 
+/** Produce WT^ status commitment for a block */
+CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime);
+CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime);
+
 /** RAII wrapper for VerifyDB: Verify consistency of the block and coin databases */
 class CVerifyDB {
 public:
@@ -511,8 +515,8 @@ bool DumpMempool();
 bool LoadMempool();
 
 //
-// TODO
-// RENAME: this is dumping/loading broadcasted WT^ hash cache...
+// TODO finish
+// Right now this is only storing the broadcasted WT^ hashes
 /** Dump the BMM caches to disk. */
 void DumpBMMCache();
 
@@ -559,7 +563,5 @@ bool VerifyMainBlockCache(std::string& strError);
 
 /** Disconnect blocks with a BMM commit from an orphan mainchain block */
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan);
-
-bool UpdateWTPrimeStatus();
 
 #endif // BITCOIN_VALIDATION_H

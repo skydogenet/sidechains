@@ -2101,21 +2101,63 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         return false;
 
     if (fSidechainIndex) {
+        SidechainClient client;
+
         // Send latest WT^ to the mainchain if it hasn't been broadcasted yet
-        SidechainWTPrime wtPrime;
+        SidechainWTPrime wtPrimeLatest;
         uint256 hashLatestWTPrime;
         psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
-        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrime)) {
+        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrimeLatest)) {
             // If we haven't broadcasted the latest WT^ yet, do it now
             if (!bmmCache.HaveBroadcastedWTPrime(hashLatestWTPrime)) {
-                SidechainClient client;
-                std::string strHex = EncodeHexTx(wtPrime.wtPrime);
+                std::string strHex = EncodeHexTx(wtPrimeLatest.wtPrime);
                 if (client.BroadcastWTPrime(strHex)) {
                     bmmCache.StoreBroadcastedWTPrime(hashLatestWTPrime);
                 }
             }
         } else {
             LogPrintf("%s: Failed to get latest WT^ from ldb: %s!\n", __func__, hashLatestWTPrime.ToString());
+        }
+
+        // Check for & validate WT^ status updates
+        for (const CTxOut& txout : block.vtx[0]->vout) {
+            const CScript& scriptPubKey = txout.scriptPubKey;
+
+            uint256 hashWTPrime;
+            bool fFailCommit = scriptPubKey.IsWTPrimeFailCommit(hashWTPrime);
+
+            if (fFailCommit || scriptPubKey.IsWTPrimeSpentCommit(hashWTPrime)) {
+                // Verify commit state with the mainchain
+                if (!fSkipBMMChecks) {
+                    bool fVerified = fFailCommit ?
+                        client.HaveFailedWTPrime(hashWTPrime) :
+                        client.HaveSpentWTPrime(hashWTPrime);
+
+                    if (!fVerified)
+                        return state.Error(strprintf("%s: Invalid WT^ update : %s - %s!\n",
+                                    __func__, fFailCommit ? "Failed" : "Paid out",
+                                    hashWTPrime.ToString()));
+                }
+
+                // Load the WT^ object from LDB if we need to and then write an
+                // update with the new WT^ status. If the commit is for the
+                // current WT^ (which it always should be in practice) we have
+                // already loaded it.
+                if (hashWTPrime == wtPrimeLatest.wtPrime.GetHash()) {
+                    wtPrimeLatest.status = fFailCommit ? WTPRIME_FAILED : WTPRIME_SPENT;
+                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrimeLatest))
+                        return state.Error(strprintf("%s: Failed to write WT^ update!\n", __func__));
+                } else {
+                    SidechainWTPrime wtPrime;
+                    if (!psidechaintree->GetWTPrime(hashWTPrime, wtPrime))
+                        return state.Error(strprintf("%s: Failed to read WT^ for update!\n", __func__));
+
+                    wtPrime.status = fFailCommit ? WTPRIME_FAILED : WTPRIME_SPENT;
+
+                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrime))
+                        return state.Error(strprintf("%s: Failed to write WT^ update!\n", __func__));
+                }
+            }
         }
 
         // Collect & verify sidechain objects
@@ -2166,6 +2208,15 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 }
                 else
                 if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
+                    // A block is invalid if it adds a new WT^ when the current
+                    // WT^ status hasn't been updated to either WTPRIME_FAILED
+                    // or WTPRIME_SPENT
+                    if (!hashLatestWTPrime.IsNull()) {
+                        if (wtPrimeLatest.status == WTPRIME_CREATED) {
+                            return state.Error(strprintf("%s Invalid WT^ - current WT^ still pending!\n", __func__));
+                        }
+                    }
+
                     // If we find a WT^ we will call VerifyWTPrimes later
                     fFoundWTPrime = true;
 
@@ -2198,7 +2249,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 return state.Error(strprintf("%s: hashWTPrime shouldn't be null if VerifyWTPrimes passed!\n", __func__));
 
             // Write the updated status of wt(s) in the WT^ (WT_IN_WTPRIME)
-            psidechaintree->WriteWTUpdate(vWT);
+            if (!psidechaintree->WriteWTUpdate(vWT))
+                return state.Error(strprintf("%s: Failed to write wt update!\n", __func__));
         }
 
         // Write sidechain objects to db
@@ -3393,6 +3445,50 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
     }
     UpdateUncommittedBlockStructures(block, pindexPrev, consensusParams);
     return commitment;
+}
+
+CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime)
+{
+    /*
+     * Generate a script commit indicating that the WT^ failed on the mainchain
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(37);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xFA;
+    scriptPubKey[2] = 0x86;
+    scriptPubKey[3] = 0xC6;
+    scriptPubKey[4] = 0x89;
+
+    // Add WT^ hash
+    memcpy(&scriptPubKey[5], &hashWTPrime, 32);
+
+    return scriptPubKey;
+}
+
+CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime)
+{
+    /*
+     * Generate a script commit indicating that the WT^ was spent by mainchain
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(37);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xFB;
+    scriptPubKey[2] = 0x53;
+    scriptPubKey[3] = 0x45;
+    scriptPubKey[4] = 0xDE;
+
+    // Add WT^ hash
+    memcpy(&scriptPubKey[5], &hashWTPrime, 32);
+
+    return scriptPubKey;
 }
 
 /** Context-dependent validity checks.
@@ -5191,6 +5287,17 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
         // Get the mainchain's chain height
         SidechainClient client;
 
+        // Check if the current WT^ is still pending
+        uint256 hashLatestWTPrime;
+        SidechainWTPrime wtPrimeLatest;
+        psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
+        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrimeLatest)) {
+            if (wtPrimeLatest.status == WTPRIME_CREATED) {
+                LogPrintf("%s: Current WT^ for this sidechain still pending!\n", __func__);
+                return false;
+            }
+        }
+
         // Check for existing WT^ in mainchain SCDB for this sidechain
         std::vector<uint256> vHashWTPrime;
         if (!fReplace && client.ListWTPrimeStatus(vHashWTPrime)) {
@@ -5750,44 +5857,6 @@ void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
             return;
         }
     }
-}
-
-bool UpdateWTPrimeStatus()
-{
-    // Lookup the current WT^
-    SidechainWTPrime wtPrime;
-    uint256 hashCurrentWTPrime;
-    psidechaintree->GetLastWTPrimeHash(hashCurrentWTPrime);
-    if (!psidechaintree->GetWTPrime(hashCurrentWTPrime, wtPrime)) {
-        // TODO log
-        return false;
-    }
-
-    // Check if the WT^ is still being verified on the mainchain
-    SidechainClient client;
-    int nWorkScore = 0;
-    if (client.GetWorkScore(hashCurrentWTPrime, nWorkScore)) {
-        // Update WT^ status if needed
-        if (wtPrime.status != WTPRIME_ACKING) {
-            wtPrime.status = WTPRIME_ACKING;
-            psidechaintree->WriteWTPrimeUpdate(wtPrime);
-            // TODO log
-        }
-
-    } else {
-        // If the WT^ previously had the ACKING status, check if it was paid out
-        // or removed from the mainchain without being paid out (failed).
-        if (wtPrime.status == WTPRIME_ACKING) {
-            // Check if the WT^ was paid out
-            bool fPaidOut = false; // TODO sidechain client getwtprimepaidout
-
-            wtPrime.status = fPaidOut ? WTPRIME_PAID_OUT : WTPRIME_FAILED;
-            psidechaintree->WriteWTPrimeUpdate(wtPrime);
-            // TODO log
-        }
-    }
-
-    return true;
 }
 
 //! Guess how far we are in the verification process at the given block index

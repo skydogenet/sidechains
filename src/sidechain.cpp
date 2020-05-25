@@ -124,16 +124,12 @@ std::string SidechainWTPrime::ToString() const
         strStatus = "WTPRIME_CREATED";
     }
     else
-    if (status == WTPRIME_ACKING) {
-        strStatus = "WTPRIME_ACKING";
-    }
-    else
     if (status == WTPRIME_FAILED) {
         strStatus = "WTPRIME_FAILED";
     }
     else
-    if (status == WTPRIME_PAID_OUT) {
-        strStatus = "WTPRIME_PAID_OUT";
+    if (status == WTPRIME_SPENT) {
+        strStatus = "WTPRIME_SPENT";
     }
     str << "status=" << strStatus << std::endl;
     return str.str();

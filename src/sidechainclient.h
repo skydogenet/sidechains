@@ -77,6 +77,10 @@ public:
 
     bool GetBlockHash(int nHeight, uint256& hashBlock);
 
+    bool HaveSpentWTPrime(const uint256& hashWTPrime);
+
+    bool HaveFailedWTPrime(const uint256& hashWTPrime);
+
 private:
     /*
      * Send json request to local node

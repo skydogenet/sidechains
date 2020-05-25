@@ -305,7 +305,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listsidechainctip\", \"params\": ");
     json.append("[");
-    json.append(std::to_string(SIDECHAIN_TEST));
+    json.append(UniValue(SIDECHAIN_TEST).write());
     json.append("] }");
 
     // Try to request CTIP from mainchain
@@ -479,9 +479,9 @@ bool SidechainClient::GetAverageFees(int nBlocks, int nStartHeight, CAmount& nAv
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"getaveragefee\", \"params\": ");
     json.append("[");
-    json.append(std::to_string(nBlocks));
+    json.append(UniValue(nBlocks).write());
     json.append(",");
-    json.append(std::to_string(nStartHeight));
+    json.append(UniValue(nStartHeight).write());
     json.append("]");
     json.append("}");
 
@@ -540,7 +540,8 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"getworkscore\", \"params\": ");
     json.append("[");
-    json.append(std::to_string(SIDECHAIN_TEST));
+    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(",");
     json.append("\"");
     json.append(hashWTPrime.ToString());
     json.append("\"");
@@ -553,7 +554,7 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     }
 
     // Process result, note that starting workscore on mainchain is 1
-    nWorkScore = ptree.get("workscore", 0);
+    nWorkScore = ptree.get("result", 0);
 
     return nWorkScore > 0;
 }
@@ -569,7 +570,7 @@ bool SidechainClient::ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listwtprimestatus\", \"params\": ");
     json.append("[");
-    json.append(std::to_string(SIDECHAIN_TEST));
+    json.append(UniValue(SIDECHAIN_TEST).write());
     json.append("] }");
 
     boost::property_tree::ptree ptree;
@@ -605,7 +606,7 @@ bool SidechainClient::GetBlockHash(int nHeight, uint256& hashBlock)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"getblockhash\", \"params\": ");
     json.append("[");
-    json.append(std::to_string(nHeight));
+    json.append(UniValue(nHeight).write());
     json.append("] }");
 
     // Try to request mainchain block hash
@@ -619,6 +620,58 @@ bool SidechainClient::GetBlockHash(int nHeight, uint256& hashBlock)
     hashBlock = uint256S(strHash);
 
     return (!hashBlock.IsNull());
+}
+
+bool SidechainClient::HaveSpentWTPrime(const uint256& hashWTPrime)
+{
+    // JSON for 'havespentwtprime' mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"havespentwtprime\", \"params\": ");
+    json.append("[");
+    json.append("\"");
+    json.append(hashWTPrime.ToString());
+    json.append("\"");
+    json.append(",");
+    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append("] }");
+
+    // Try to request mainchain block hash
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request spent WT^!\n");
+        return false;
+    }
+
+    bool fSpent = ptree.get("result", false);
+
+    return fSpent;
+}
+
+bool SidechainClient::HaveFailedWTPrime(const uint256& hashWTPrime)
+{
+    // JSON for 'havefailedwtprime' mainchain HTTP-RPC
+    std::string json;
+    json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
+    json.append("\"method\": \"havefailedwtprime\", \"params\": ");
+    json.append("[");
+    json.append("\"");
+    json.append(hashWTPrime.ToString());
+    json.append("\"");
+    json.append(",");
+    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append("] }");
+
+    // Try to request mainchain block hash
+    boost::property_tree::ptree ptree;
+    if (!SendRequestToMainchain(json, ptree)) {
+        LogPrintf("ERROR Sidechain client failed to request failed WT^!\n");
+        return false;
+    }
+
+    bool fFailed = ptree.get("result", false);
+
+    return fFailed;
 }
 
 bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::property_tree::ptree &ptree)

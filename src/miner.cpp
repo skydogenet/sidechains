@@ -120,6 +120,11 @@ void BlockAssembler::resetBlock()
 
 std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool fSkipBMMChecks, const uint256& hashPrevBlock)
 {
+    if (!fSkipBMMChecks && !CheckMainchainConnection()) {
+        LogPrintf("%s: Error: Cannot generate without mainchain connection!\n", __func__);
+        return nullptr;
+    }
+
     int64_t nTimeStart = GetTimeMicros();
 
     resetBlock();
@@ -190,6 +195,28 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     coinbaseTx.vout[0].nValue = nFees;
 
+    // Create WT^ status updates
+    // Lookup the current WT^
+    SidechainWTPrime wtPrime;
+    uint256 hashCurrentWTPrime;
+    psidechaintree->GetLastWTPrimeHash(hashCurrentWTPrime);
+    if (psidechaintree->GetWTPrime(hashCurrentWTPrime, wtPrime)) {
+        if (wtPrime.status == WTPRIME_CREATED) {
+            SidechainClient client;
+
+            // Check if the WT^ has been paid out or failed
+            if (client.HaveFailedWTPrime(hashCurrentWTPrime)) {
+                CScript script = GenerateWTPrimeFailCommit(hashCurrentWTPrime);
+                coinbaseTx.vout.push_back(CTxOut(0, script));
+            }
+            else
+            if (client.HaveSpentWTPrime(hashCurrentWTPrime)) {
+                CScript script = GenerateWTPrimeSpentCommit(hashCurrentWTPrime);
+                coinbaseTx.vout.push_back(CTxOut(0, script));
+            }
+        }
+    }
+
     // Create WT^
     CTransactionRef wtPrimeTx;
     CTransactionRef wtPrimeDataTx;
@@ -228,10 +255,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
 
     // Signal the most recent WT^ created by this sidechain
-    uint256 hashWTPrime;
-    psidechaintree->GetLastWTPrimeHash(hashWTPrime);
-    if (!hashWTPrime.IsNull())
-        pblock->hashWTPrime = hashWTPrime;
+    if (!hashCurrentWTPrime.IsNull() && wtPrime.status == WTPRIME_CREATED)
+        pblock->hashWTPrime = hashCurrentWTPrime;
 
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));

@@ -52,9 +52,8 @@ static const char WT_SPENT = 's';
 
 //! WT^ status / zone
 static const char WTPRIME_CREATED = 'c';
-static const char WTPRIME_ACKING = 'a';
 static const char WTPRIME_FAILED = 'f';
-static const char WTPRIME_PAID_OUT = 'o';
+static const char WTPRIME_SPENT = 'o';
 
 //! KeyID for testing
 static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
@@ -146,9 +145,9 @@ struct SidechainWTPrime: public SidechainObj {
     }
 
     uint256 GetID() const {
-        SidechainWTPrime wtPrime(*this);
-        wtPrime.status = WTPRIME_CREATED;
-        return wtPrime.GetHash();
+        SidechainWTPrime wt(*this);
+        wt.status = WTPRIME_CREATED;
+        return wt.GetHash();
     }
 
     std::string ToString(void) const;

@@ -375,6 +375,35 @@ bool CSidechainTreeDB::WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime)
     std::pair<char, uint256> key = std::make_pair(wtPrime.sidechainop, wtPrime.GetID());
     batch.Write(key, wtPrime);
 
+    // Also index the WT^ by the WT^ transaction hash
+    uint256 hashWTPrime = wtPrime.wtPrime.GetHash();
+    std::pair<char, uint256> keyTx = std::make_pair(DB_SIDECHAIN_WTPRIME_OP, hashWTPrime);
+    batch.Write(keyTx, wtPrime);
+
+    // Also write wt status updates if WT^ status changes
+    std::vector<SidechainWT> vUpdate;
+    for (const uint256& wtid: wtPrime.vWT) {
+        SidechainWT wt;
+        if (!GetWT(wtid, wt)) {
+            LogPrintf("%s: Failed to read wt of WT^ from LDB!\n", __func__);
+            return false;
+        }
+        if (wtPrime.status == WTPRIME_FAILED) {
+            wt.status = WT_UNSPENT;
+            vUpdate.push_back(wt);
+        }
+        else
+        if (wtPrime.status == WTPRIME_SPENT) {
+            wt.status = WT_SPENT;
+            vUpdate.push_back(wt);
+        }
+    }
+
+    if (!WriteWTUpdate(vUpdate)) {
+        LogPrintf("%s: Failed to write wt update!\n", __func__);
+        return false;
+    }
+
     return WriteBatch(batch, true);
 }
 

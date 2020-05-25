@@ -7,6 +7,7 @@
 
 #include <tinyformat.h>
 #include <utilstrencodings.h>
+#include <uint256.h>
 
 const char* GetOpName(opcodetype opcode)
 {
@@ -234,6 +235,52 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
         return true;
     }
     return false;
+}
+
+bool CScript::IsWTPrimeFailCommit(uint256& hashWTPrime) const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size != 37) // sha256 hash + opcodes
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xFA ||
+            (*this)[2] != 0x86 ||
+            (*this)[3] != 0xC6 ||
+            (*this)[4] != 0x89)
+        return false;
+
+    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+
+    if (hashWTPrime.IsNull())
+        return false;
+
+    return true;
+}
+
+bool CScript::IsWTPrimeSpentCommit(uint256& hashWTPrime) const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size != 37) // sha256 hash + opcodes
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xFB ||
+            (*this)[2] != 0x53 ||
+            (*this)[3] != 0x45 ||
+            (*this)[4] != 0xDE)
+        return false;
+
+    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+
+    if (hashWTPrime.IsNull())
+        return false;
+
+    return true;
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const
