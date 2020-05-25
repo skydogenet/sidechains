@@ -465,4 +465,28 @@ BOOST_AUTO_TEST_CASE(sidechain_deposit_sort_25_deposits)
     BOOST_CHECK(vDepositSorted == vD);
 }
 
+BOOST_AUTO_TEST_CASE(IsWTPrimeFailCommit)
+{
+    uint256 hashWTPrime = GetRandHash();
+
+    CScript script =  GenerateWTPrimeFailCommit(hashWTPrime);
+
+    uint256 hashWTPrimeFromCommit;
+    BOOST_CHECK(script.IsWTPrimeFailCommit(hashWTPrimeFromCommit));
+
+    BOOST_CHECK(hashWTPrime == hashWTPrimeFromCommit);
+}
+
+BOOST_AUTO_TEST_CASE(IsWTPrimeSpentCommit)
+{
+    uint256 hashWTPrime = GetRandHash();
+
+    CScript script = GenerateWTPrimeSpentCommit(hashWTPrime);
+
+    uint256 hashWTPrimeFromCommit;
+    BOOST_CHECK(script.IsWTPrimeSpentCommit(hashWTPrimeFromCommit));
+
+    BOOST_CHECK(hashWTPrime == hashWTPrimeFromCommit);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
