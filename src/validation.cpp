@@ -1672,6 +1672,25 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
                     psidechaintree->WriteWTUpdate(vWT);
                 }
             }
+
+            // If this output is a WT^ status update commit - undo the update
+            uint256 hashWTPrime;
+            if (scriptPubKey.IsWTPrimeFailCommit(hashWTPrime) ||
+                    scriptPubKey.IsWTPrimeSpentCommit(hashWTPrime)) {
+
+                SidechainWTPrime wtPrime;
+                if (!psidechaintree->GetWTPrime(hashWTPrime, wtPrime)) {
+                    error("DisconnectBlock(): Failed to read WT^ to undo update!");
+                    return DISCONNECT_FAILED;
+                }
+
+                wtPrime.status = WTPRIME_CREATED;
+
+                if (!psidechaintree->WriteWTPrimeUpdate(wtPrime)) {
+                    error("DisconnectBlock(): Failed to write WT^ undo update!");
+                    return DISCONNECT_FAILED;
+                }
+            }
         }
 
         // restore inputs

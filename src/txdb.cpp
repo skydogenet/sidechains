@@ -397,6 +397,11 @@ bool CSidechainTreeDB::WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime)
             wt.status = WT_SPENT;
             vUpdate.push_back(wt);
         }
+        else
+        if (wtPrime.status == WTPRIME_CREATED) {
+            wt.status = WT_IN_WTPRIME;
+            vUpdate.push_back(wt);
+        }
     }
 
     if (!WriteWTUpdate(vUpdate)) {
