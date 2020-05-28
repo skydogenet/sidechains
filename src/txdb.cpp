@@ -478,8 +478,11 @@ std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSide
         std::pair<char, uint256> key;
         SidechainWTPrime wtPrime;
         if (pcursor->GetKey(key) && key.first == sidechainop) {
-            if (pcursor->GetSidechainValue(wtPrime))
-                vWTPrime.push_back(wtPrime);
+            if (pcursor->GetSidechainValue(wtPrime)) {
+                // Only return the WT^(s) indexed by ID
+                if (key.second == wtPrime.GetID())
+                    vWTPrime.push_back(wtPrime);
+            }
         }
 
         pcursor->Next();
@@ -504,7 +507,9 @@ std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSide
         SidechainDeposit deposit;
         if (pcursor->GetKey(key) && key.first == sidechainop) {
             if (pcursor->GetSidechainValue(deposit))
-                vDeposit.push_back(deposit);
+                // Only return the deposits(s) indexed by ID
+                if (key.second == deposit.GetID())
+                    vDeposit.push_back(deposit);
         }
 
         pcursor->Next();
