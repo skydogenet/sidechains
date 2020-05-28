@@ -94,6 +94,7 @@ struct SidechainWT: public SidechainObj {
     uint8_t nSidechain;
     std::string strDestination;
     CAmount amount;
+    CAmount fee;
     char status;
     uint256 hashBlindWTX; // The hash of the WT transaction minus the WT script
 
@@ -108,6 +109,7 @@ struct SidechainWT: public SidechainObj {
         READWRITE(nSidechain);
         READWRITE(strDestination);
         READWRITE(amount);
+        READWRITE(fee);
         READWRITE(status);
         READWRITE(hashBlindWTX);
     }

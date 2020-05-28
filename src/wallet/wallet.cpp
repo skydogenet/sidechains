@@ -4279,7 +4279,7 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
     }
 }
 
-bool CWallet::CreateWT(const CAmount& nAmount, const std::string& strDestination, std::string& strFail, uint256& txid)
+bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const std::string& strDestination, std::string& strFail, uint256& txid)
 {
     CTxDestination dest = DecodeDestination(strDestination, true /*fMainchain */);
     if (!IsValidDestination(dest)) {
@@ -4294,12 +4294,12 @@ bool CWallet::CreateWT(const CAmount& nAmount, const std::string& strDestination
 
     CWalletTx wtx;
     CReserveKey reserve(this);
-    CAmount nFee;
+    CAmount nTxFee;
     int nChangePos = -1;
     CCoinControl control;
     std::string strError;
     if (!CreateTransaction(std::vector<CRecipient>{ burnRecipient }, wtx,
-                reserve, nFee, nChangePos, strError, control))
+                reserve, nTxFee, nChangePos, strError, control))
     {
         strFail = strError + " blind version.\n";
         return false;
@@ -4314,6 +4314,7 @@ bool CWallet::CreateWT(const CAmount& nAmount, const std::string& strDestination
     wt.strDestination = strDestination;
     wt.amount = burnRecipient.nAmount;
     wt.hashBlindWTX = wtx.GetHash();
+    wt.fee = nFee;
     CRecipient dataRecipient = {wt.GetScript(), CENT, false};
 
     // This is the actual transaction that will be committed
@@ -4321,7 +4322,7 @@ bool CWallet::CreateWT(const CAmount& nAmount, const std::string& strDestination
     nChangePos = -1;
     strError.clear();
     if (!CreateTransaction(std::vector<CRecipient>{ burnRecipient, dataRecipient }, wtx,
-                reserve, nFee, nChangePos, strError, control))
+                reserve, nTxFee, nChangePos, strError, control))
     {
         strFail = strError;
         return false;

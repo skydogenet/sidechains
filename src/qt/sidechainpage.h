@@ -119,6 +119,8 @@ private:
 
     bool validateWTAmount();
 
+    bool validateFeeAmount();
+
     void generateAddress();
 
     bool CreateBMMBlock(CBlock& block, QString error = "");

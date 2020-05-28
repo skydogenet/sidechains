@@ -293,6 +293,15 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
+    // Check fee amount
+    if (!validateFeeAmount()) {
+        // Invalid fee amount message box
+        messageBox.setWindowTitle("Invalid fee amount!");
+        messageBox.setText("Check the amount you have entered and try again.");
+        messageBox.exec();
+        return;
+    }
+
     // Check destination
     std::string strDest = ui->payTo->text().toStdString();
     CTxDestination dest = DecodeDestination(strDest, true);
@@ -306,8 +315,9 @@ void SidechainPage::on_pushButtonWT_clicked()
 
     std::string strError = "";
     CAmount burnAmount = ui->payAmount->value();
+    CAmount feeAmount = ui->feeAmount->value();
     uint256 txid;
-    if (!vpwallets[0]->CreateWT(burnAmount, strDest, strError, txid)) {
+    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, strDest, strError, txid)) {
         // Create burn transaction error message box
         messageBox.setWindowTitle("Creating withdraw transaction failed!");
         QString createError = "Error creating transaction: ";
@@ -373,6 +383,28 @@ bool SidechainPage::validateWTAmount()
     // Reject dust outputs:
     if (GUIUtil::isDust(ui->payTo->text(), ui->payAmount->value())) {
         ui->payAmount->setValid(false);
+        return false;
+    }
+
+    return true;
+}
+
+bool SidechainPage::validateFeeAmount()
+{
+    if (!ui->feeAmount->validate()) {
+        ui->feeAmount->setValid(false);
+        return false;
+    }
+
+    // Sending a zero amount is invalid
+    if (ui->feeAmount->value(0) <= 0) {
+        ui->feeAmount->setValid(false);
+        return false;
+    }
+
+    // Reject dust outputs:
+    if (GUIUtil::isDust(ui->payTo->text(), ui->feeAmount->value())) {
+        ui->feeAmount->setValid(false);
         return false;
     }
 

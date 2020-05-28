@@ -3462,7 +3462,7 @@ UniValue createwt(const JSONRPCRequest& request)
         return NullUniValue;
     }
 
-    if (request.fHelp || request.params.size() != 2)
+    if (request.fHelp || request.params.size() != 3)
         throw std::runtime_error(
             "createwt amount \"address\"\n"
             "\nCreate a WT so that it can be included in a WT^.\n"
@@ -3470,11 +3470,12 @@ UniValue createwt(const JSONRPCRequest& request)
             "\nArguments:\n"
             "1. \"address\"            (string, required) The bitcoin address to send to.\n"
             "2. \"amount\"             (numeric or string, required) The amount in " + CURRENCY_UNIT + " to send. eg 0.1\n"
+            "2. \"fee\"                (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be subtracted for fees. eg 0.1\n"
             "\nResult:\n"
             "\"txid\"                  (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1")
-            + HelpExampleRpc("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.1")
+            + HelpExampleCli("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1, 0.1")
+            + HelpExampleRpc("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.1, 0.1")
         );
 
     ObserveSafeMode();
@@ -3495,11 +3496,16 @@ UniValue createwt(const JSONRPCRequest& request)
     if (nAmount <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
 
+    // Fee
+    CAmount nFee = AmountFromValue(request.params[2]);
+    if (nFee <= 0)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for fee");
+
     EnsureWalletIsUnlocked(pwallet);
 
     std::string strFail = "";
     uint256 txid;
-    if (!pwallet->CreateWT(nAmount, request.params[0].get_str(), strFail, txid)) {
+    if (!pwallet->CreateWT(nAmount, nFee, request.params[0].get_str(), strFail, txid)) {
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
@@ -3865,7 +3871,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "removeprunedfunds",                &removeprunedfunds,             {"txid"} },
     { "wallet",             "rescanblockchain",                 &rescanblockchain,              {"start_height", "stop_height"} },
 
-    { "sidechain",          "createwt",                         &createwt,                      {"address","namount"} },
+    { "sidechain",          "createwt",                         &createwt,                      {"address","namount","nfee"} },
 };
 
 void RegisterWalletRPCCommands(CRPCTable &t)
