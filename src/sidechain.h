@@ -151,6 +151,8 @@ struct SidechainWTPrime: public SidechainObj {
     }
 
     std::string ToString(void) const;
+
+    std::string GetStatusStr(void) const;
 };
 
 /**
