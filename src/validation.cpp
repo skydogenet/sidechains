@@ -4400,7 +4400,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
                 return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
             if (!g_chainstate.ConnectBlock(block, state, pindex, coins,
                         chainparams, false /* fJustCheck */, true /* fSkipBMMChecks */))
-                return error("VerifyDB(): *** found unconnectable block at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
+                return error("VerifyDB(): *** found unconnectable block at %d, hash=%s.\n Error: %s\n", pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         }
     }
 
