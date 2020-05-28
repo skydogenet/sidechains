@@ -1669,7 +1669,18 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
                         vWT[w].status = WT_UNSPENT;
 
                     // Write to ldb
-                    psidechaintree->WriteWTUpdate(vWT);
+
+                    if (!psidechaintree->WriteWTUpdate(vWT)) {
+                        error("DisconnectBlock(): Failed to write wt update!");
+                        return DISCONNECT_FAILED;
+                    }
+
+                    SidechainWTPrime wtPrimeUpdate = *wtPrime;
+                    wtPrimeUpdate.status = WTPRIME_FAILED;
+                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrimeUpdate)) {
+                        error("DisconnectBlock(): Failed to write WT^ update!");
+                        return DISCONNECT_FAILED;
+                    }
                 }
             }
 
