@@ -7,9 +7,10 @@
 
 #include <QDialog>
 
+#include <uint256.h>
+
 class SidechainWTPrimeHistoryTableModel;
 class ClientModel;
-class uint256;
 class WalletModel;
 
 namespace Ui {
@@ -39,7 +40,7 @@ private Q_SLOTS:
     void on_tableView_doubleClicked(const QModelIndex& index);
 
 Q_SIGNALS:
-    void doubleClickedWTPrime(const uint256& hashWTPrime);
+    void doubleClickedWTPrime(uint256 hashWTPrime);
 };
 
 #endif // BITCOIN_SIDECHAINWTPRIMEHISTORYDIALOG_H

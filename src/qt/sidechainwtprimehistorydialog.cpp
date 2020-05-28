@@ -5,8 +5,6 @@
 #include <qt/sidechainwtprimehistorydialog.h>
 #include <qt/forms/ui_sidechainwtprimehistorydialog.h>
 
-#include <uint256.h>
-
 #include <QScrollBar>
 
 #include <qt/sidechainwtprimehistorytablemodel.h>
@@ -69,7 +67,6 @@ void SidechainWTPrimeHistoryDialog::on_tableView_doubleClicked(const QModelIndex
 {
     // Get the WT^ hash that was double clicked
     QModelIndexList selected = ui->tableView->selectionModel()->selectedRows();
-
 
     // Emit double clicked signal with WT^ hash
     for (int i = 0; i < selected.size(); i++) {

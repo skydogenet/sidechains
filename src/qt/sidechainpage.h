@@ -97,6 +97,8 @@ private Q_SLOTS:
 
     void on_checkBoxAutoWTPrimeRefresh_changed(int state);
 
+    void on_wtPrime_doubleClicked(uint256 hashWTPrime);
+
 private:
     Ui::SidechainPage *ui;
 
@@ -134,13 +136,13 @@ private:
     // Check if configuration files are setup and connection works
     void CheckConfiguration(bool& fConfig, bool& fConnection);
 
-    void SetCurrentWTPrime(const std::string& strHash, bool fRequested = true);
-
     void ClearWTPrimeExplorer();
 
     void UpdateSidechainWealth();
 
     void UpdateToLatestWTPrime(bool fRequested = true);
+
+    void SetCurrentWTPrime(const std::string& strHash, bool fRequested = true);
 };
 
 #endif // SIDECHAINPAGE_H

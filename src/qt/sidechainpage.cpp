@@ -150,6 +150,9 @@ SidechainPage::SidechainPage(QWidget *parent) :
     // this window open while using the rest of the software.
     wtPrimeHistoryDialog = new SidechainWTPrimeHistoryDialog();
     wtPrimeHistoryDialog->setParent(this, Qt::Window);
+
+    connect(wtPrimeHistoryDialog, SIGNAL(doubleClickedWTPrime(uint256)),
+            this, SLOT(on_wtPrime_doubleClicked(uint256)));
 }
 
 SidechainPage::~SidechainPage()
@@ -331,6 +334,11 @@ void SidechainPage::on_checkBoxAutoWTPrimeRefresh_changed(int state)
     if (state == Qt::Checked) {
         UpdateToLatestWTPrime();
     }
+}
+
+void SidechainPage::on_wtPrime_doubleClicked(uint256 hashWTPrime)
+{
+    SetCurrentWTPrime(hashWTPrime.ToString(), true);
 }
 
 void SidechainPage::on_addressBookButton_clicked()
