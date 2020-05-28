@@ -11,6 +11,7 @@
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
+#include <qt/sidechainwtprimehistorydialog.h>
 #include <qt/walletmodel.h>
 
 #include <base58.h>
@@ -144,6 +145,11 @@ SidechainPage::SidechainPage(QWidget *parent) :
     }
 
     ui->bmmAmount->setValue(DEFAULT_CRITICAL_DATA_AMOUNT);
+
+    // Initialize WT^ history dialog. We want users to be able to keep
+    // this window open while using the rest of the software.
+    wtPrimeHistoryDialog = new SidechainWTPrimeHistoryDialog();
+    wtPrimeHistoryDialog->setParent(this, Qt::Window);
 }
 
 SidechainPage::~SidechainPage()
@@ -188,6 +194,7 @@ void SidechainPage::generateQR(std::string data)
 void SidechainPage::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
+    wtPrimeHistoryDialog->setWalletModel(model);
     if (model && model->getOptionsModel())
     {
         connect(model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)), this,
@@ -205,6 +212,7 @@ void SidechainPage::setWalletModel(WalletModel *model)
 void SidechainPage::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
+    wtPrimeHistoryDialog->setClientModel(model);
     if (model)
     {
         connect(model, SIGNAL(numBlocksChanged(int, QDateTime, double, bool)),
@@ -729,6 +737,11 @@ void SidechainPage::on_pushButtonShowLatestWTPrime_clicked()
 {
     ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
     UpdateToLatestWTPrime();
+}
+
+void SidechainPage::on_pushButtonShowPastWTPrimes_clicked()
+{
+    wtPrimeHistoryDialog->show();
 }
 
 void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {

@@ -16,9 +16,13 @@
 
 class CBlock;
 class ClientModel;
-class WalletModel;
-class QMessageBox;
 class ConfGeneratorDialog;
+class SidechainWTPrimeHistoryDialog;
+class WalletModel;
+
+QT_BEGIN_NAMESPACE
+class QMessageBox;
+QT_END_NAMESPACE
 
 namespace Ui {
 class SidechainPage;
@@ -89,6 +93,8 @@ private Q_SLOTS:
 
     void on_pushButtonShowLatestWTPrime_clicked();
 
+    void on_pushButtonShowPastWTPrimes_clicked();
+
     void on_checkBoxAutoWTPrimeRefresh_changed(int state);
 
 private:
@@ -98,6 +104,7 @@ private:
     ClientModel *clientModel;
 
     ConfGeneratorDialog *confGeneratorDialog;
+    SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;
 
     QTimer *bmmTimer;
     QTimer *trainTimer;
