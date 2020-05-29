@@ -5361,7 +5361,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     wjtx.vin[0].scriptSig = CScript() << OP_0;
     CAmount nSideFees = 0;
     for (const SidechainWT& wt : vWTFiltered) {
-        CAmount amountWT = wt.amount - (wt.fee / 2);
+        CAmount amountWT = wt.amount - wt.fee;
         joinAmount += amountWT;
 
         nSideFees += wt.fee / 2;
