@@ -59,9 +59,15 @@ static const char WTPRIME_SPENT = 'o';
 static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
 //mx3PT9t2kzCFgAURR9HeK6B5wN8egReUxY
 //cN5CqwXiaNWhNhx3oBQtA8iLjThSKxyZjfmieTsyMpG6NnHBzR7J
+//
+
+//! Key ID for fee script
+static const std::string feeKey = "5f8f196a4f0c212fee1b4eda31e3ef383c52d9fc";
+// 19iGcwHuZA1edpd6veLfbkHtbDPS9hAXbh
+// ed7565854e9b7a334e39e33614abce078a6c06603b048a9536a7e41abf3da504
 
 //! This sidechain's fee script
-static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << ToByteVector(testkey) << OP_EQUALVERIFY << OP_CHECKSIG;
+static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << ToByteVector(feeKey) << OP_EQUALVERIFY << OP_CHECKSIG;
 
 //! The default payment amount to mainchain miner for critical data commitment
 static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 0.0001 * COIN;
