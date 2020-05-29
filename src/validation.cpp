@@ -5477,8 +5477,8 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
             }
 
             // Check that the number of outputs equals the number of
-            // WT(s) listed in the WT^
-            if (wtPrime->wtPrime.vout.size() != vWT.size()) {
+            // WT(s) listed in the WT^ + one sidechain fee script output
+            if (wtPrime->wtPrime.vout.size() != vWT.size() + 1) {
                 strFail = "Invalid WT^ - too many outputs!\n";
                 return false;
             }
@@ -5487,7 +5487,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
             for (const SidechainWT& wt : vWT) {
                 bool fFound = false;
                 for (const CTxOut& out : wtPrime->wtPrime.vout) {
-                    if (out.nValue == wt.amount &&
+                    if (out.nValue == wt.amount - wt.fee &&
                             GetScriptForDestination(DecodeDestination(wt.strDestination, true)) == out.scriptPubKey) {
                         fFound = true;
                         break;
