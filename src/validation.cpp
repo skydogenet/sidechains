@@ -5379,6 +5379,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
             wtPrime.vWT.pop_back();
             wjtx.vout.pop_back();
             joinAmount -= amountWT;
+            nSideFees -= wt.fee / 2;
             break;
         }
     }
@@ -5389,7 +5390,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     }
 
     CScript feeScript = GetScriptForDestination(CKeyID(uint160(ParseHex(feeKey))));
-    wjtx.vout.push_back(CTxOut((nSideFees / 2), feeScript));
+    wjtx.vout.push_back(CTxOut((nSideFees), feeScript));
 
     // Did anything make it into the WT^?
     if (!wjtx.vout.size()) {
