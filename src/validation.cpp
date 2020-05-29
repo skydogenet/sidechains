@@ -5382,8 +5382,10 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
             break;
         }
     }
+
+    CScript feeScript = GetScriptForDestination(CKeyID(uint160(ParseHex(feeKey))));
     if (nSideFees > 0)
-        wjtx.vout.push_back(CTxOut((nSideFees / 2), SIDECHAIN_FEESCRIPT));
+        wjtx.vout.push_back(CTxOut((nSideFees / 2), feeScript));
 
     // Did anything make it into the WT^?
     if (!wjtx.vout.size()) {
