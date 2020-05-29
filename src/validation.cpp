@@ -5383,9 +5383,13 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
         }
     }
 
+    if (!(nSideFees > 0)) {
+        LogPrintf("%s: Not enough WT fees to create WT^\n", __func__);
+        return false;
+    }
+
     CScript feeScript = GetScriptForDestination(CKeyID(uint160(ParseHex(feeKey))));
-    if (nSideFees > 0)
-        wjtx.vout.push_back(CTxOut((nSideFees / 2), feeScript));
+    wjtx.vout.push_back(CTxOut((nSideFees / 2), feeScript));
 
     // Did anything make it into the WT^?
     if (!wjtx.vout.size()) {
