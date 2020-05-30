@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>594</width>
-    <height>544</height>
+    <height>553</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -757,6 +757,11 @@
              <column>
               <property name="text">
                <string>Amount</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Fee</string>
               </property>
              </column>
              <column>

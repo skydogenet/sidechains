@@ -914,20 +914,26 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
         ui->tableWidgetWTs->insertRow(nRows);
 
         // Add to total amount withdrawn
-        amountTotal += wt.amount;
+        amountTotal += wt.amount + wt.fee;
 
         // Add to table
 
         QString amount = BitcoinUnits::formatWithUnit(unit, wt.amount, false,
                 BitcoinUnits::separatorAlways);
 
+        QString fee = BitcoinUnits::formatWithUnit(unit, wt.fee, false,
+                BitcoinUnits::separatorAlways);
+
         QTableWidgetItem* amountItem = new QTableWidgetItem(amount);
+
+        QTableWidgetItem* feeItem = new QTableWidgetItem(fee);
 
         QTableWidgetItem* destItem = new QTableWidgetItem(
                 QString::fromStdString(wt.strDestination));
 
         ui->tableWidgetWTs->setItem(nRows /* row */, 0 /* col */, amountItem);
-        ui->tableWidgetWTs->setItem(nRows /* row */, 1 /* col */, destItem);
+        ui->tableWidgetWTs->setItem(nRows /* row */, 1 /* col */, feeItem);
+        ui->tableWidgetWTs->setItem(nRows /* row */, 2 /* col */, destItem);
     }
 
     // Set total amount withdrawn
