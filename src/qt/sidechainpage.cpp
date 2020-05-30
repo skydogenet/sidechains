@@ -894,6 +894,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
 
     // Add WTs to the table view
     CAmount amountTotal = 0;
+    CAmount amountFees = 0;
     for (const uint256& id : wtPrime.vWT) {
         SidechainWT wt;
         if (!psidechaintree->GetWT(id, wt)) {
@@ -915,6 +916,9 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
 
         // Add to total amount withdrawn
         amountTotal += wt.amount;
+
+        // Add to total fees
+        amountFees += wt.fee;
 
         // Add to table
 
@@ -941,6 +945,12 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
             BitcoinUnits::separatorAlways);
 
     ui->labelTotalAmount->setText(total);
+
+    // Set total fee amount
+    QString fees = BitcoinUnits::formatWithUnit(unit, amountFees, false,
+            BitcoinUnits::separatorAlways);
+
+    ui->labelTotalFees->setText(fees);
 }
 
 void SidechainPage::ClearWTPrimeExplorer()
