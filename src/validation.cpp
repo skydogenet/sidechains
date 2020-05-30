@@ -615,7 +615,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             for (const CTxOut& o : tx.vout) {
                 if (o.scriptPubKey.size()
                         && o.scriptPubKey[0] == OP_RETURN
-                        && o.nValue == wt->amount + wt->fee)
+                        && o.nValue == wt->amount)
                 {
                     fBurnFound = true;
                 }
@@ -2218,7 +2218,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     for (const CTxOut& o : tx->vout) {
                         if (o.scriptPubKey.size()
                                 && o.scriptPubKey[0] == OP_RETURN
-                                && o.nValue == wt->amount + wt->fee)
+                                && o.nValue == wt->amount)
                         {
                                 fBurnFound = true;
                         }
