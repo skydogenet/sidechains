@@ -554,7 +554,7 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     }
 
     // Process result, note that starting workscore on mainchain is 1
-    nWorkScore = ptree.get("result", 0);
+    nWorkScore = ptree.get("result", -1);
 
     return nWorkScore > 0;
 }

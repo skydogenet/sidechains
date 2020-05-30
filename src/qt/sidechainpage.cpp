@@ -875,9 +875,30 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     // Request the workscore and display it if there is any.
     //
 
+    // If the WT^ has WTPRIME_CREATED status, it should be being acked
+    // by the mainchain (if it's already made it there). Try to request
+    // the workscore and display it on the WT^ explorer if we can.
+    bool fWorkScore = false;
+    int nWorkScore = 0;
+    if (wtPrime.status == WTPRIME_CREATED) {
+        // Try to request the workscore
+        SidechainClient client;
+        if (client.GetWorkScore(uint256S(strHash), nWorkScore)) {
+            fWorkScore = true;
+        }
+    }
+
     QString qStatus = "";
     if (wtPrime.status == WTPRIME_CREATED) {
         qStatus = "Created";
+
+        if (fWorkScore) {
+            qStatus += " ";
+            qStatus += QString::number(nWorkScore);
+            qStatus += " / ";
+            qStatus += QString::number(MAINCHAIN_WTPRIME_MIN_WORKSCORE);
+            qStatus += " ACK(s)";
+        }
     }
     else
     if (wtPrime.status == WTPRIME_FAILED) {
