@@ -4281,6 +4281,19 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
 
 bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const std::string& strDestination, std::string& strFail, uint256& txid)
 {
+    if (!(nAmount > 0)) {
+        strFail = "Invalid amount - must be greater than 0.";
+        return false;
+    }
+    if (!(nFee > 0)) {
+        strFail = "Invalid fee - must be greater than 0.";
+        return false;
+    }
+    if (nAmount <= nFee) {
+        strFail = "Invalid amount - must be greater than fee.";
+        return false;
+    }
+
     CTxDestination dest = DecodeDestination(strDestination, true /*fMainchain */);
     if (!IsValidDestination(dest)) {
         strFail = "Invalid destination";

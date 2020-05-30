@@ -617,7 +617,9 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                         && o.scriptPubKey[0] == OP_RETURN
                         && o.nValue == wt->amount)
                 {
-                    fBurnFound = true;
+                    // Make sure that the burn amount & fee are valid
+                    if (wt->amount > 0 && wt->fee > 0 && wt->amount > wt->fee)
+                        fBurnFound = true;
                 }
             }
             if (!fBurnFound) {
@@ -2220,6 +2222,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                                 && o.scriptPubKey[0] == OP_RETURN
                                 && o.nValue == wt->amount)
                         {
+                            // Make sure that the burn amount & fee are valid
+                            if (wt->amount > 0 && wt->fee > 0 && wt->amount > wt->fee)
                                 fBurnFound = true;
                         }
                     }
