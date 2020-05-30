@@ -4281,6 +4281,9 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
 
 bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const std::string& strDestination, std::string& strFail, uint256& txid)
 {
+    // TODO check nAmount > nFee && nAmount - nFee !dust
+    //
+    //
     CTxDestination dest = DecodeDestination(strDestination, true /*fMainchain */);
     if (!IsValidDestination(dest)) {
         strFail = "Invalid destination";
@@ -4290,7 +4293,7 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const std::s
     LOCK2(cs_main, cs_wallet);
 
     // WT burn output
-    CRecipient burnRecipient = {CScript() << OP_RETURN, nAmount, false};
+    CRecipient burnRecipient = {CScript() << OP_RETURN, nAmount + nFee, false};
 
     CWalletTx wtx;
     CReserveKey reserve(this);
@@ -4312,7 +4315,7 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const std::s
     SidechainWT wt;
     wt.nSidechain = SIDECHAIN_TEST;
     wt.strDestination = strDestination;
-    wt.amount = burnRecipient.nAmount;
+    wt.amount = nAmount;
     wt.hashBlindWTX = wtx.GetHash();
     wt.fee = nFee;
     CRecipient dataRecipient = {wt.GetScript(), CENT, false};
