@@ -914,7 +914,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
         ui->tableWidgetWTs->insertRow(nRows);
 
         // Add to total amount withdrawn
-        amountTotal += wt.amount + wt.fee;
+        amountTotal += wt.amount;
 
         // Add to table
 
