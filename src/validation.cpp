@@ -621,7 +621,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                 }
             }
             if (!fBurnFound) {
-                return state.DoS(100, false, REJECT_INVALID, "invalid-wt-no-burn");
+                return state.DoS(100, false, REJECT_INVALID, "invalid-wt-missing-or-invalid-burn");
             }
         }
     }
@@ -2224,7 +2224,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                         }
                     }
                     if (!fBurnFound) {
-                        return state.Error("Invalid wt - no burn found!");
+                        return state.Error("Invalid WT: invalid-wt-missing-or-invalid-burn");
                     }
                 }
 
