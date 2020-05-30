@@ -836,16 +836,29 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
 
 void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequested)
 {
+    // If the user didn't request this update (fRequested) themselves, don't
+    // show error messages
+
     ClearWTPrimeExplorer();
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
 
-    // If the user didn't request this update (fRequested) themselves, don't
-    // show error messages
+    uint256 hash = uint256S(strHash);
+    if (hash.IsNull()) {
+        if (fRequested) {
+            QMessageBox messageBox;
+            messageBox.setDefaultButton(QMessageBox::Ok);
+
+            messageBox.setWindowTitle("Invalid WT^ hash");
+            messageBox.setText("The WT^ hash you have entered is invalid.");
+            messageBox.exec();
+        }
+        return;
+    }
 
     // Try to lookup the WT^
     SidechainWTPrime wtPrime;
-    if (!psidechaintree->GetWTPrime(uint256S(strHash), wtPrime)) {
+    if (!psidechaintree->GetWTPrime(hash, wtPrime)) {
         if (fRequested) {
             QMessageBox messageBox;
             messageBox.setDefaultButton(QMessageBox::Ok);
@@ -883,7 +896,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     if (wtPrime.status == WTPRIME_CREATED) {
         // Try to request the workscore
         SidechainClient client;
-        if (client.GetWorkScore(uint256S(strHash), nWorkScore)) {
+        if (client.GetWorkScore(hash, nWorkScore)) {
             fWorkScore = true;
         }
     }
