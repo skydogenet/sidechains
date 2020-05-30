@@ -998,6 +998,8 @@ void SidechainPage::ClearWTPrimeExplorer()
 
     ui->labelTotalAmount->setText(zero);
 
+    ui->labelTotalFees->setText(zero);
+
     ui->labelStatus->setText("");
 }
 
