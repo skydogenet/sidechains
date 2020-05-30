@@ -351,6 +351,13 @@ void SidechainPage::on_wtPrime_doubleClicked(uint256 hashWTPrime)
     SetCurrentWTPrime(hashWTPrime.ToString(), true);
 }
 
+void SidechainPage::on_lineEditWTPrimeHash_returnPressed()
+{
+    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
+    std::string strHash = ui->lineEditWTPrimeHash->text().toStdString();
+    SetCurrentWTPrime(strHash);
+}
+
 void SidechainPage::on_addressBookButton_clicked()
 {
 
@@ -763,14 +770,6 @@ void SidechainPage::on_pushButtonRetryConnection_clicked()
     bool fConnection = false;
     CheckConfiguration(fConfig, fConnection);
     UpdateNetworkActive(fConnection);
-}
-
-void SidechainPage::on_pushButtonLookup_clicked()
-{
-    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
-    // TODO check hash validity - show error message if not
-    std::string strHash = ui->lineEditWTPrimeHash->text().toStdString();
-    SetCurrentWTPrime(strHash);
 }
 
 void SidechainPage::on_pushButtonShowLatestWTPrime_clicked()

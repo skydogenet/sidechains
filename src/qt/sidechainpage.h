@@ -89,8 +89,6 @@ private Q_SLOTS:
 
     void on_pushButtonRetryConnection_clicked();
 
-    void on_pushButtonLookup_clicked();
-
     void on_pushButtonShowLatestWTPrime_clicked();
 
     void on_pushButtonShowPastWTPrimes_clicked();
@@ -98,6 +96,8 @@ private Q_SLOTS:
     void on_checkBoxAutoWTPrimeRefresh_changed(int state);
 
     void on_wtPrime_doubleClicked(uint256 hashWTPrime);
+
+    void on_lineEditWTPrimeHash_returnPressed();
 
 private:
     Ui::SidechainPage *ui;

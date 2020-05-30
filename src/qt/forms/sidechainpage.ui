@@ -794,17 +794,10 @@
               <enum>QFrame::Raised</enum>
              </property>
              <layout class="QGridLayout" name="gridLayout_16">
-              <item row="1" column="2">
+              <item row="1" column="1">
                <widget class="QPushButton" name="pushButtonShowLatestWTPrime">
                 <property name="text">
                  <string>Show Latest</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QPushButton" name="pushButtonLookup">
-                <property name="text">
-                 <string>Search</string>
                 </property>
                </widget>
               </item>
@@ -814,7 +807,7 @@
                  <number>64</number>
                 </property>
                 <property name="placeholderText">
-                 <string>Enter a WT^ hash</string>
+                 <string>Enter a WT^  and press enter</string>
                 </property>
                 <property name="clearButtonEnabled">
                  <bool>true</bool>
@@ -831,7 +824,7 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="3">
+              <item row="1" column="2">
                <widget class="QPushButton" name="pushButtonShowPastWTPrimes">
                 <property name="text">
                  <string>Past Withdrawals</string>
