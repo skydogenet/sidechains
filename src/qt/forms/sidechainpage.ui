@@ -807,7 +807,7 @@
                  <number>64</number>
                 </property>
                 <property name="placeholderText">
-                 <string>Enter a WT^  and press enter</string>
+                 <string>Enter a WT^ hash and press enter</string>
                 </property>
                 <property name="clearButtonEnabled">
                  <bool>true</bool>
