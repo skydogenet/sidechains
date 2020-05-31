@@ -5358,7 +5358,6 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     SidechainWTPrime wtPrime;
     wtPrime.nSidechain = SIDECHAIN_TEST;
 
-    CAmount joinAmount = 0;  // Total output
     CMutableTransaction wjtx; // WT^
     wjtx.nVersion = 2;
     wjtx.vin.resize(1); // Dummy vin for serialization...
@@ -5366,7 +5365,6 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     CAmount nSideFees = 0;
     for (const SidechainWT& wt : vWTFiltered) {
         CAmount amountWT = wt.amount - wt.fee;
-        joinAmount += amountWT;
 
         nSideFees += wt.fee / 2;
 
@@ -5382,7 +5380,6 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
             // If we went over size, undo this output and stop
             wtPrime.vWT.pop_back();
             wjtx.vout.pop_back();
-            joinAmount -= amountWT;
             nSideFees -= wt.fee / 2;
             break;
         }
