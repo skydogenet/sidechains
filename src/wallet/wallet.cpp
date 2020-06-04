@@ -4279,7 +4279,7 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
     }
 }
 
-bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const std::string& strDestination, std::string& strFail, uint256& txid)
+bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, std::string& strFail, uint256& txid)
 {
     if (!(nAmount > 0)) {
         strFail = "Invalid amount - must be greater than 0.";
@@ -4287,6 +4287,10 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const std::s
     }
     if (!(nFee > 0)) {
         strFail = "Invalid fee - must be greater than 0.";
+        return false;
+    }
+    if (!(nMainchainFee > 0)) {
+        strFail = "Invalid mainchain fee - must be greater than 0.";
         return false;
     }
     if (nAmount <= nFee) {
@@ -4300,51 +4304,123 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const std::s
         return false;
     }
 
+    CAmount nTotal = nAmount + nFee + nMainchainFee;
+
     LOCK2(cs_main, cs_wallet);
 
-    // WT burn output
-    CRecipient burnRecipient = {CScript() << OP_RETURN, nAmount, false};
-
-    CWalletTx wtx;
-    CReserveKey reserve(this);
-    CAmount nTxFee;
-    int nChangePos = -1;
-    CCoinControl control;
-    std::string strError;
-    if (!CreateTransaction(std::vector<CRecipient>{ burnRecipient }, wtx,
-                reserve, nTxFee, nChangePos, strError, control))
-    {
-        strFail = strError + " blind version.\n";
+    // Select coins to cover WT
+    std::vector<COutput> vCoins;
+    AvailableCoins(vCoins, true /* fOnlySafe */);
+    std::set<CInputCoin> setCoins;
+    CAmount nAmountRet = CAmount(0);
+    if (!SelectCoins(vCoins, nTotal, setCoins, nAmountRet)) {
+        strFail = "Could not collect enough coins to cover withdrawal!\n";
         return false;
     }
 
-    // We add the hash of the transaction before we've added the data output
-    // to the WT object to ensure its uniqueness
+    CMutableTransaction mtx;
+
+    // Handle change
+    const CAmount nChange = nAmountRet - nTotal;
+    CReserveKey reserveKey(this);
+    if (nChange > 0) {
+        CScript scriptChange;
+
+        // Reserve a new keypair from the pool
+        CPubKey vchPubKey;
+        if (!reserveKey.GetReservedKey(vchPubKey))
+        {
+            strFail = "Keypool ran out, please call keypoolrefill first!\n";
+            return false;
+        }
+        scriptChange = GetScriptForDestination(vchPubKey.GetID());
+
+        CTxOut out(nChange, scriptChange);
+        if (!IsDust(out, ::dustRelayFee))
+            mtx.vout.push_back(out);
+    }
+
+    // Add WT inputs
+    for (const auto& coin : setCoins) {
+        mtx.vin.push_back(CTxIn(coin.outpoint.hash, coin.outpoint.n, CScript()));
+    }
+
+    // Add WT burn output
+    mtx.vout.push_back(CTxOut(nAmount + nMainchainFee, CScript() << OP_RETURN));
 
     // WT data ouput
     SidechainWT wt;
     wt.nSidechain = SIDECHAIN_TEST;
     wt.strDestination = strDestination;
-    wt.amount = burnRecipient.nAmount;
-    wt.hashBlindWTX = wtx.GetHash();
-    wt.fee = nFee;
-    CRecipient dataRecipient = {wt.GetScript(), CENT, false};
+    wt.amount = nAmount;
+    wt.hashBlindWTX = CTransaction(mtx).GetHash();
+    wt.mainchainFee = nMainchainFee;
 
-    // This is the actual transaction that will be committed
+    mtx.vout.push_back(CTxOut(CENT, wt.GetScript()));
 
-    nChangePos = -1;
-    strError.clear();
-    if (!CreateTransaction(std::vector<CRecipient>{ burnRecipient, dataRecipient }, wtx,
-                reserve, nTxFee, nChangePos, strError, control))
-    {
-        strFail = strError;
+    // Dummy sign txn to calculate required feees
+    std::set<CInputCoin> setCoinsTemp = setCoins;
+    if (!DummySignTx(mtx, setCoinsTemp)) {
+        strFail = "Dummy signing transaction for required fee calculation failed!\n";
         return false;
     }
 
-    // Commit WT transaction (includes burn & psidechaintree wt object)
+    // Get transaction size with dummy signatures
+    unsigned int nBytes = GetVirtualTransactionSize(mtx);
+
+    // Calculate fee
+    CCoinControl coinControl;
+    FeeCalculation feeCalc;
+    CAmount nFeeNeeded = GetMinimumFee(nBytes, coinControl, ::mempool, ::feeEstimator, &feeCalc);
+
+    // Check that the fee is valid for relay
+    if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes)) {
+        strFail = "Transaction too large for fee policy!\n";
+        return false;
+    }
+
+    if (nFee < nFeeNeeded) {
+        strFail = "The fee you have set is too small!\n";
+        return false;
+    }
+
+    // Remove dummy signatures
+    for (auto& vin : mtx.vin) {
+        vin.scriptSig = CScript();
+        vin.scriptWitness.SetNull();
+    }
+
+    // Sign inputs
+    const CTransaction txToSign = mtx;
+    int nIn = 0;
+    for (const auto& coin : setCoins) {
+        const CScript& scriptPubKey = coin.txout.scriptPubKey;
+        SignatureData sigdata;
+
+        if (!ProduceSignature(
+                    TransactionSignatureCreator(this, &txToSign, nIn,
+                        coin.txout.nValue, SIGHASH_ALL),
+                    scriptPubKey, sigdata)) {
+            strFail = "Signing inputs failed!\n";
+            return false;
+        } else {
+            UpdateTransaction(mtx, nIn, sigdata);
+        }
+
+        nIn++;
+    }
+
+    // Broadcast transaction
+    CWalletTx wtx;
+    wtx.fTimeReceivedIsTxTime = true;
+    wtx.fFromMe = true;
+    wtx.BindWallet(this);
+
+    wtx.SetTx(MakeTransactionRef(std::move(mtx)));
+
     CValidationState state;
-    if (!CommitTransaction(wtx, reserve, g_connman.get(), state)) {
-        strFail = "Failed to commit wt transaction";
+    if (!CommitTransaction(wtx, reserveKey, g_connman.get(), state)) {
+        strFail = "Failed to commit WT! Reject reason: " + FormatStateMessage(state) + "\n";
         return false;
     }
 

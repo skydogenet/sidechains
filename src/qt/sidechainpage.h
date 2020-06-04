@@ -121,6 +121,8 @@ private:
 
     bool validateFeeAmount();
 
+    bool validateMainchainFeeAmount();
+
     void generateAddress();
 
     bool CreateBMMBlock(CBlock& block, QString error = "");

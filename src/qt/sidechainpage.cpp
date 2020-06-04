@@ -302,6 +302,15 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
+    // Check mainchain fee amount
+    if (!validateMainchainFeeAmount()) {
+        // Invalid mainchain fee amount message box
+        messageBox.setWindowTitle("Invalid mainchain fee amount!");
+        messageBox.setText("Check the amount you have entered and try again.");
+        messageBox.exec();
+        return;
+    }
+
     // Check destination
     std::string strDest = ui->payTo->text().toStdString();
     CTxDestination dest = DecodeDestination(strDest, true);
@@ -316,8 +325,9 @@ void SidechainPage::on_pushButtonWT_clicked()
     std::string strError = "";
     CAmount burnAmount = ui->payAmount->value();
     CAmount feeAmount = ui->feeAmount->value();
+    CAmount mainchainFeeAmount = ui->mainchainFeeAmount->value();
     uint256 txid;
-    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, strDest, strError, txid)) {
+    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strError, txid)) {
         // Create burn transaction error message box
         messageBox.setWindowTitle("Creating withdraw transaction failed!");
         QString createError = "Error creating transaction: ";
@@ -412,6 +422,28 @@ bool SidechainPage::validateFeeAmount()
     // Reject dust outputs:
     if (GUIUtil::isDust(ui->payTo->text(), ui->feeAmount->value())) {
         ui->feeAmount->setValid(false);
+        return false;
+    }
+
+    return true;
+}
+
+bool SidechainPage::validateMainchainFeeAmount()
+{
+    if (!ui->mainchainFeeAmount->validate()) {
+        ui->mainchainFeeAmount->setValid(false);
+        return false;
+    }
+
+    // Sending a zero amount is invalid
+    if (ui->mainchainFeeAmount->value(0) <= 0) {
+        ui->mainchainFeeAmount->setValid(false);
+        return false;
+    }
+
+    // Reject dust outputs:
+    if (GUIUtil::isDust(ui->payTo->text(), ui->mainchainFeeAmount->value())) {
+        ui->mainchainFeeAmount->setValid(false);
         return false;
     }
 
@@ -920,7 +952,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
 
     // Add WTs to the table view
     CAmount amountTotal = 0;
-    CAmount amountFees = 0;
+    CAmount amountMainchainFees = 0;
     for (const uint256& id : wtPrime.vWT) {
         SidechainWT wt;
         if (!psidechaintree->GetWT(id, wt)) {
@@ -944,14 +976,14 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
         amountTotal += wt.amount;
 
         // Add to total fees
-        amountFees += wt.fee;
+        amountMainchainFees += wt.mainchainFee;
 
         // Add to table
 
         QString amount = BitcoinUnits::formatWithUnit(unit, wt.amount, false,
                 BitcoinUnits::separatorAlways);
 
-        QString fee = BitcoinUnits::formatWithUnit(unit, wt.fee, false,
+        QString fee = BitcoinUnits::formatWithUnit(unit, wt.mainchainFee, false,
                 BitcoinUnits::separatorAlways);
 
         QTableWidgetItem* amountItem = new QTableWidgetItem(amount);
@@ -973,7 +1005,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     ui->labelTotalAmount->setText(total);
 
     // Set total fee amount
-    QString fees = BitcoinUnits::formatWithUnit(unit, amountFees, false,
+    QString fees = BitcoinUnits::formatWithUnit(unit, amountMainchainFees, false,
             BitcoinUnits::separatorAlways);
 
     ui->labelTotalFees->setText(fees);

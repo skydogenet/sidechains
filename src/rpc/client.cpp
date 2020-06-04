@@ -144,6 +144,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     // DriveChain
     { "createwt", 1, "namount"},
     { "createwt", 2, "nfee"},
+    { "createwt", 3, "nmainchainfee"},
     { "getaveragemainchainfees", 0, "blockcount" },
     { "getaveragemainchainfees", 1, "startheight" },
     { "refreshbmm", 0, "createnew" },

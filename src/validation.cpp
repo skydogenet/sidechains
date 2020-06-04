@@ -618,7 +618,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                         && o.nValue == wt->amount)
                 {
                     // Make sure that the burn amount & fee are valid
-                    if (wt->amount > 0 && wt->fee > 0 && wt->amount > wt->fee)
+                    if (wt->amount > 0 && wt->mainchainFee > 0 && wt->amount > wt->mainchainFee)
                         fBurnFound = true;
                 }
             }
@@ -2223,7 +2223,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                                 && o.nValue == wt->amount)
                         {
                             // Make sure that the burn amount & fee are valid
-                            if (wt->amount > 0 && wt->fee > 0 && wt->amount > wt->fee)
+                            if (wt->amount > 0 && wt->mainchainFee > 0 && wt->amount > wt->mainchainFee)
                                 fBurnFound = true;
                         }
                     }
@@ -5359,14 +5359,18 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     wtPrime.nSidechain = SIDECHAIN_TEST;
 
     CMutableTransaction wjtx; // WT^
+
+    // Add a dummy output for mainchain fees
+    CAmount amountMainchainFees = 0;
+    wjtx.vout.push_back(CTxOut(amountMainchainFees, CScript() << OP_TRUE));
+
     wjtx.nVersion = 2;
     wjtx.vin.resize(1); // Dummy vin for serialization...
     wjtx.vin[0].scriptSig = CScript() << OP_0;
-    CAmount nSideFees = 0;
     for (const SidechainWT& wt : vWTFiltered) {
-        CAmount amountWT = wt.amount - wt.fee;
+        CAmount amountWT = wt.amount - wt.mainchainFee;
 
-        nSideFees += wt.fee / 2;
+        amountMainchainFees += wt.mainchainFee;
 
         // Output to mainchain keyID
         CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
@@ -5380,18 +5384,14 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
             // If we went over size, undo this output and stop
             wtPrime.vWT.pop_back();
             wjtx.vout.pop_back();
-            nSideFees -= wt.fee / 2;
             break;
         }
     }
 
-    if (!(nSideFees > 0)) {
-        LogPrintf("%s: Not enough WT fees to create WT^\n", __func__);
-        return false;
-    }
-
-    CScript feeScript = GetScriptForDestination(CKeyID(uint160(ParseHex(feeKey))));
-    wjtx.vout.push_back(CTxOut((nSideFees), feeScript));
+    // Add a final dummy output which contains the sum of mainchain fees.
+    // The mainchain will remove this output when the WT^ is included as a
+    // mainchain transaction.
+    wjtx.vout.front().nValue = amountMainchainFees;
 
     // Did anything make it into the WT^?
     if (!wjtx.vout.size()) {
@@ -5440,6 +5440,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
     int nWTPrime = 0;
 
     // Loop through the blocks txns and look for WT^(s) to verify
+    CAmount amountMainchainFees = 0;
     for (const CTransactionRef& tx : vtx) {
         for (const CTxOut& txout : tx->vout) {
             const CScript& scriptPubKey = txout.scriptPubKey;
@@ -5460,9 +5461,6 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                 return false;
             }
 
-            // TODO for full determinism, check previous WT^ payout
-            // proof before allowing a new WT^
-
             const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
 
             // Check that every WT this WT^ has listed is in the db
@@ -5479,13 +5477,22 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                     return false;
                 }
 
+                amountMainchainFees += wt.mainchainFee;
+
                 vWT.push_back(wt);
             }
 
             // Check that the number of outputs equals the number of
-            // WT(s) listed in the WT^ + one sidechain fee script output
+            // WT(s) listed in the WT^ + one dummy mainchain fee output
             if (wtPrime->wtPrime.vout.size() != vWT.size() + 1) {
                 strFail = "Invalid WT^ - too many outputs!\n";
+                return false;
+            }
+
+            // Check that the amount of the dummy mainchain fee output is equal
+            // to the total amount of mainchain fees from the wt(s)
+            if (wtPrime->wtPrime.vout.front().nValue != amountMainchainFees) {
+                strFail = "Invalid WT^ - invalid dummy mainchain fee output!\n";
                 return false;
             }
 
@@ -5493,7 +5500,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
             for (const SidechainWT& wt : vWT) {
                 bool fFound = false;
                 for (const CTxOut& out : wtPrime->wtPrime.vout) {
-                    if (out.nValue == wt.amount - wt.fee &&
+                    if (out.nValue == wt.amount - wt.mainchainFee &&
                             GetScriptForDestination(DecodeDestination(wt.strDestination, true)) == out.scriptPubKey) {
                         fFound = true;
                         break;

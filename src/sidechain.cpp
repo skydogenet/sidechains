@@ -94,6 +94,7 @@ std::string SidechainWT::ToString() const
     str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
     str << "destination=" << strDestination << std::endl;
     str << "amount=" << FormatMoney(amount) << std::endl;
+    str << "mainchainFee=" << FormatMoney(mainchainFee) << std::endl;
 
     std::string strStatus;
     if (status == WT_UNSPENT) {
