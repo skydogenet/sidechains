@@ -882,12 +882,6 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     // Set number of WT outputs
     ui->labelNumWT->setText(QString::number(wtPrime.vWT.size()));
 
-    //
-    // TODO
-    // If the status is created, the WT^ might be being acked on the mainchain.
-    // Request the workscore and display it if there is any.
-    //
-
     // If the WT^ has WTPRIME_CREATED status, it should be being acked
     // by the mainchain (if it's already made it there). Try to request
     // the workscore and display it on the WT^ explorer if we can.
@@ -906,8 +900,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
         qStatus = "Created";
 
         if (fWorkScore) {
-            qStatus += " ";
-            qStatus += QString::number(nWorkScore);
+            qStatus = QString::number(nWorkScore);
             qStatus += " / ";
             qStatus += QString::number(MAINCHAIN_WTPRIME_MIN_WORKSCORE);
             qStatus += " ACK(s)";
