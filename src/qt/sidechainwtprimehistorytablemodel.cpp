@@ -82,7 +82,7 @@ QVariant SidechainWTPrimeHistoryTableModel::headerData(int section, Qt::Orientat
             case 0:
                 return QString("Hash");
             case 1:
-                return QString("Amount - mainchain fees");
+                return QString("Amount");
             case 2:
                 return QString("Status");
             }
