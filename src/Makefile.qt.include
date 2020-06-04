@@ -150,7 +150,6 @@ QT_MOC_CPP = \
   qt/moc_rpcconsole.cpp \
   qt/moc_sendcoinsdialog.cpp \
   qt/moc_sendcoinsentry.cpp \
-  qt/moc_sidechainhistorytablemodel.cpp \
   qt/moc_sidechainpage.cpp \
   qt/moc_sidechainwtprimehistorytablemodel.cpp \
   qt/moc_sidechainwtprimehistorydialog.cpp \
@@ -227,7 +226,6 @@ BITCOIN_QT_H = \
   qt/rpcconsole.h \
   qt/sendcoinsdialog.h \
   qt/sendcoinsentry.h \
-  qt/sidechainhistorytablemodel.h \
   qt/sidechainpage.h \
   qt/sidechainwtprimehistorytablemodel.h \
   qt/sidechainwtprimehistorydialog.h \
@@ -350,7 +348,6 @@ BITCOIN_QT_WALLET_CPP = \
   qt/recentrequeststablemodel.cpp \
   qt/sendcoinsdialog.cpp \
   qt/sendcoinsentry.cpp \
-  qt/sidechainhistorytablemodel.cpp \
   qt/sidechainpage.cpp \
   qt/sidechainwtprimehistorytablemodel.cpp \
   qt/sidechainwtprimehistorydialog.cpp \
