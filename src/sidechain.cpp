@@ -126,15 +126,15 @@ std::string SidechainWTPrime::ToString() const
 std::string SidechainWTPrime::GetStatusStr(void) const
 {
     if (status == WTPRIME_CREATED) {
-        return "WTPRIME_CREATED";
+        return "Created";
     }
     else
     if (status == WTPRIME_FAILED) {
-        return "WTPRIME_FAILED";
+        return "Failed";
     }
     else
     if (status == WTPRIME_SPENT) {
-        return "WTPRIME_SPENT";
+        return "Spent";
     }
     return "Unknown";
 }
