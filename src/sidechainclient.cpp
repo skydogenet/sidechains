@@ -556,7 +556,7 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     // Process result, note that starting workscore on mainchain is 1
     nWorkScore = ptree.get("result", -1);
 
-    return nWorkScore > 0;
+    return nWorkScore >= 0;
 }
 
 bool SidechainClient::ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime)
