@@ -5885,6 +5885,41 @@ void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
     }
 }
 
+CScript EncodeWTFees(const CAmount& amount)
+{
+    CScript script;
+    script << OP_RETURN;
+    script << CScriptNum::serialize(amount);
+
+    return script;
+}
+
+bool DecodeWTFees(const CScript& script, CAmount& amount)
+{
+    // EncodeWTFee & DecodeWTFee are currently limited to 4 byte integers.
+    // This allows a maximum of 21.48 BTC as encoded by CScriptNum::Serialize.
+    // CScriptNum takes an argument to override the size limit so this can be
+    // changed if needed.
+
+    if (script.size() < 3 || script[0] != OP_RETURN)
+        return false;
+
+    CScript::const_iterator it = script.begin() + 1;
+    std::vector<unsigned char> vch;
+    opcodetype opcode;
+
+    if (!script.GetOp(it, opcode, vch))
+        return false;
+
+    if (vch.size() > 4)
+        return false;
+
+    CScriptNum num(vch, false);
+    amount = CAmount(num.getint());
+
+    return true;
+}
+
 //! Guess how far we are in the verification process at the given block index
 //! require cs_main if pindex has not been validated yet (because nChainTx might be unset)
 double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex *pindex) {

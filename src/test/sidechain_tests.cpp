@@ -489,4 +489,47 @@ BOOST_AUTO_TEST_CASE(IsWTPrimeSpentCommit)
     BOOST_CHECK(hashWTPrime == hashWTPrimeFromCommit);
 }
 
+BOOST_AUTO_TEST_CASE(WTFeeEncoding)
+{
+    // Test that 0 amount will fail
+    CAmount amount = 0;
+    CScript script = EncodeWTFees(amount);
+    CAmount amountRead;
+    BOOST_CHECK(!DecodeWTFees(script, amountRead));
+
+    // Test 1 * COIN
+    amount = COIN;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amountRead == amount);
+
+    // Test 1 * CENT
+    amount = CENT;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amountRead == amount);
+
+    // Test with a negative number
+    amount = -1000000;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amountRead == amount);
+
+    // Test incrementing from 0.01 to 21 by 1 * CENT
+    amount = 0;
+    while (amount < 21 * COIN) {
+        amount += CENT;
+        script = EncodeWTFees(amount);
+
+        BOOST_CHECK(DecodeWTFees(script, amountRead));
+        BOOST_CHECK(amountRead == amount);
+    }
+
+    // Test that number greater than CScriptNum default limit (4 byte integer)
+    // will fail
+    amount = 100 * COIN;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(!DecodeWTFees(script, amountRead));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

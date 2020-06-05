@@ -564,4 +564,8 @@ bool VerifyMainBlockCache(std::string& strError);
 /** Disconnect blocks with a BMM commit from an orphan mainchain block */
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan);
 
+CScript EncodeWTFees(const CAmount& amount);
+
+bool DecodeWTFees(const CScript& script, CAmount& amount);
+
 #endif // BITCOIN_VALIDATION_H
