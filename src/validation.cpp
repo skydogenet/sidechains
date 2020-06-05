@@ -5487,10 +5487,16 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                 return false;
             }
 
-            // Check that the amount of the dummy mainchain fee output is equal
-            // to the total amount of mainchain fees from the wt(s)
-            if (wtPrime->wtPrime.vout.front().nValue != amountMainchainFees) {
-                strFail = "Invalid WT^ - invalid dummy mainchain fee output!\n";
+            // Check that the amount in the encoded mainchain fee output is
+            // equal to the sum of fees from the wt(s)
+            CAmount amountRead = 0;
+            if (!DecodeWTFees(wtPrime->wtPrime.vout.front().scriptPubKey, amountRead)) {
+                strFail = "Invalid WT^ - failed to decode mainchain fee output!\n";
+                return false;
+            }
+
+            if (amountRead != amountMainchainFees) {
+                strFail = "Invalid WT^ - invalid encoded mainchain fee output!\n";
                 return false;
             }
 
