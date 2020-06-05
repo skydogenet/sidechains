@@ -5360,9 +5360,9 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
 
     CMutableTransaction wjtx; // WT^
 
-    // Add a dummy output for mainchain fees
+    // Add a dummy output for mainchain fee encoding (updated later)
     CAmount amountMainchainFees = 0;
-    wjtx.vout.push_back(CTxOut(amountMainchainFees, CScript() << OP_TRUE));
+    wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << CScriptNum(1LL << 40)));
 
     wjtx.nVersion = 2;
     wjtx.vin.resize(1); // Dummy vin for serialization...
@@ -5388,10 +5388,8 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
         }
     }
 
-    // Add a final dummy output which contains the sum of mainchain fees.
-    // The mainchain will remove this output when the WT^ is included as a
-    // mainchain transaction.
-    wjtx.vout.front().nValue = amountMainchainFees;
+    // Update mainchain fee encoding output.
+    wjtx.vout.front().scriptPubKey = EncodeWTFees(amountMainchainFees);
 
     // Did anything make it into the WT^?
     if (!wjtx.vout.size()) {
@@ -5483,7 +5481,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
             }
 
             // Check that the number of outputs equals the number of
-            // WT(s) listed in the WT^ + one dummy mainchain fee output
+            // WT(s) listed in the WT^ + one encoded mainchain fee output
             if (wtPrime->wtPrime.vout.size() != vWT.size() + 1) {
                 strFail = "Invalid WT^ - too many outputs!\n";
                 return false;
