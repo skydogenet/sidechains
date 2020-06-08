@@ -99,6 +99,8 @@ private Q_SLOTS:
 
     void on_lineEditWTPrimeHash_returnPressed();
 
+    void UpdateWTTotal();
+
 private:
     Ui::SidechainPage *ui;
 

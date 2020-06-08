@@ -153,6 +153,14 @@ SidechainPage::SidechainPage(QWidget *parent) :
 
     connect(wtPrimeHistoryDialog, SIGNAL(doubleClickedWTPrime(uint256)),
             this, SLOT(on_wtPrime_doubleClicked(uint256)));
+
+    // Update the total WT amount when withdrawal values are changed
+    connect(ui->payAmount, SIGNAL(valueChanged()),
+            this, SLOT(UpdateWTTotal()));
+    connect(ui->feeAmount, SIGNAL(valueChanged()),
+            this, SLOT(UpdateWTTotal()));
+    connect(ui->mainchainFeeAmount, SIGNAL(valueChanged()),
+            this, SLOT(UpdateWTTotal()));
 }
 
 SidechainPage::~SidechainPage()
@@ -209,6 +217,9 @@ void SidechainPage::setWalletModel(WalletModel *model)
 
         // Set the sidechain wealth, which also requires the wallet model
         UpdateSidechainWealth();
+
+        // Set WT total to 0, formatting requires wallet model -> options model
+        UpdateWTTotal();
     }
 }
 
@@ -366,6 +377,19 @@ void SidechainPage::on_lineEditWTPrimeHash_returnPressed()
     ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
     std::string strHash = ui->lineEditWTPrimeHash->text().toStdString();
     SetCurrentWTPrime(strHash);
+}
+
+void SidechainPage::UpdateWTTotal()
+{
+    // Update the total amount on the sidechain withdrawal area
+    int unit = walletModel->getOptionsModel()->getDisplayUnit();
+
+    CAmount amountTotal = 0;
+    amountTotal += ui->payAmount->value();
+    amountTotal += ui->feeAmount->value();
+    amountTotal += ui->mainchainFeeAmount->value();
+
+    ui->labelTotalWT->setText(BitcoinUnits::formatWithUnit(unit, amountTotal, false, BitcoinUnits::separatorAlways));
 }
 
 void SidechainPage::on_addressBookButton_clicked()
@@ -980,7 +1004,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
 
         // Add to table
 
-        QString amount = BitcoinUnits::formatWithUnit(unit, wt.amount, false,
+        QString amount = BitcoinUnits::formatWithUnit(unit, wt.amount - wt.mainchainFee, false,
                 BitcoinUnits::separatorAlways);
 
         QString fee = BitcoinUnits::formatWithUnit(unit, wt.mainchainFee, false,
