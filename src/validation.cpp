@@ -2254,8 +2254,13 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     // If we find a WT^ we will call VerifyWTPrimes later
                     fFoundWTPrime = true;
 
-                    const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
+                    SidechainWTPrime *wtPrime = (SidechainWTPrime *) obj;
+
+                    // Insert block height
+                    wtPrime->nHeight = pindex->nHeight;
+
                     id = wtPrime->GetID();
+                    obj = (SidechainObj *) wtPrime;
 
                     LogPrintf("%s: Found new WT^: %s.\n", __func__, wtPrime->wtPrime.GetHash().ToString());
                 }

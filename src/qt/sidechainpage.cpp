@@ -1033,6 +1033,9 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
             BitcoinUnits::separatorAlways);
 
     ui->labelTotalFees->setText(fees);
+
+    // Set block height
+    ui->labelBlockHeight->setText(QString::number(wtPrime.nHeight));
 }
 
 void SidechainPage::ClearWTPrimeExplorer()

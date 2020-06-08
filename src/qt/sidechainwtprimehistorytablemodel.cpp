@@ -30,7 +30,7 @@ int SidechainWTPrimeHistoryTableModel::rowCount(const QModelIndex & /*parent*/) 
 
 int SidechainWTPrimeHistoryTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 3;
+    return 4;
 }
 
 QVariant SidechainWTPrimeHistoryTableModel::data(const QModelIndex &index, int role) const
@@ -69,6 +69,10 @@ QVariant SidechainWTPrimeHistoryTableModel::data(const QModelIndex &index, int r
         if (col == 2) {
             return object.status;
         }
+        // Height
+        if (col == 3) {
+            return QString::number(object.height);
+        }
     }
     }
     return QVariant();
@@ -85,6 +89,8 @@ QVariant SidechainWTPrimeHistoryTableModel::headerData(int section, Qt::Orientat
                 return QString("Amount");
             case 2:
                 return QString("Status");
+            case 3:
+                return QString("Height");
             }
         }
     }
@@ -188,6 +194,7 @@ void SidechainWTPrimeHistoryTableModel::UpdateModel()
         object.hash = QString::fromStdString(wt.wtPrime.GetHash().ToString());
         object.amount = CTransaction(wt.wtPrime).GetValueOut();
         object.status = QString::fromStdString(wt.GetStatusStr());
+        object.height = wt.nHeight;
         model.append(QVariant::fromValue(object));
     }
     endInsertRows();

@@ -23,6 +23,7 @@ struct WTPrimeHistoryTableObject
     QString hash;
     CAmount amount;
     QString status;
+    int height;
 };
 
 class SidechainWTPrimeHistoryTableModel : public QAbstractTableModel

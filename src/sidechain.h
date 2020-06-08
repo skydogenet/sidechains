@@ -132,9 +132,10 @@ struct SidechainWTPrime: public SidechainObj {
     uint8_t nSidechain;
     CMutableTransaction wtPrime;
     std::vector<uint256> vWT; // The id in ldb of WT(s) that this WT^ is using
+    int nHeight;
     char status;
 
-    SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; status = WTPRIME_CREATED; }
+    SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; status = WTPRIME_CREATED; nHeight = 0;}
     virtual ~SidechainWTPrime(void) { }
 
     ADD_SERIALIZE_METHODS
@@ -146,11 +147,13 @@ struct SidechainWTPrime: public SidechainObj {
         READWRITE(wtPrime);
         READWRITE(vWT);
         READWRITE(status);
+        READWRITE(nHeight);
     }
 
     uint256 GetID() const {
         SidechainWTPrime wt(*this);
         wt.status = WTPRIME_CREATED;
+        wt.nHeight = 0;
         return wt.GetHash();
     }
 
