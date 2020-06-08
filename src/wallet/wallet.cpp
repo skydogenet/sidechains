@@ -4352,11 +4352,11 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
     SidechainWT wt;
     wt.nSidechain = SIDECHAIN_TEST;
     wt.strDestination = strDestination;
-    wt.amount = nAmount;
+    wt.amount = nAmount + nMainchainFee;
     wt.hashBlindWTX = CTransaction(mtx).GetHash();
     wt.mainchainFee = nMainchainFee;
 
-    mtx.vout.push_back(CTxOut(CENT, wt.GetScript()));
+    mtx.vout.push_back(CTxOut(CAmount(0), wt.GetScript()));
 
     // Dummy sign txn to calculate required feees
     std::set<CInputCoin> setCoinsTemp = setCoins;
