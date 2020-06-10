@@ -401,10 +401,8 @@
             </spacer>
            </item>
           </layout>
-          <zorder></zorder>
           <zorder>reqAmount</zorder>
           <zorder>frame_3</zorder>
-          <zorder>verticalSpacer_2</zorder>
          </widget>
          <widget class="QWidget" name="tab_8">
           <attribute name="title">
