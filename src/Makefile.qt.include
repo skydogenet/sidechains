@@ -152,6 +152,7 @@ QT_MOC_CPP = \
   qt/moc_sendcoinsentry.cpp \
   qt/moc_sidechainpage.cpp \
   qt/moc_sidechainwtprimehistorytablemodel.cpp \
+  qt/moc_sidechainwttablemodel.cpp \
   qt/moc_sidechainwtprimehistorydialog.cpp \
   qt/moc_signverifymessagedialog.cpp \
   qt/moc_splashscreen.cpp \
@@ -228,6 +229,7 @@ BITCOIN_QT_H = \
   qt/sendcoinsentry.h \
   qt/sidechainpage.h \
   qt/sidechainwtprimehistorytablemodel.h \
+  qt/sidechainwttablemodel.h \
   qt/sidechainwtprimehistorydialog.h \
   qt/signverifymessagedialog.h \
   qt/splashscreen.h \
@@ -350,6 +352,7 @@ BITCOIN_QT_WALLET_CPP = \
   qt/sendcoinsentry.cpp \
   qt/sidechainpage.cpp \
   qt/sidechainwtprimehistorytablemodel.cpp \
+  qt/sidechainwttablemodel.cpp \
   qt/sidechainwtprimehistorydialog.cpp \
   qt/signverifymessagedialog.cpp \
   qt/transactiondesc.cpp \
