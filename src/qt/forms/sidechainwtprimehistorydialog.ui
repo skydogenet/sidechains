@@ -25,7 +25,7 @@
     <widget class="QTableView" name="tableView">
      <property name="font">
       <font>
-       <family>Noto Mono</family>
+       <family>Noto Sans</family>
       </font>
      </property>
     </widget>
