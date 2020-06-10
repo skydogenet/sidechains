@@ -102,6 +102,8 @@ private Q_SLOTS:
 
     void UpdateWTTotal();
 
+    void on_pushButtonWTHelp_clicked();
+
 private:
     Ui::SidechainPage *ui;
 

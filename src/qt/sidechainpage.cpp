@@ -440,6 +440,34 @@ void SidechainPage::UpdateWTTotal()
     ui->labelTotalWT->setText(BitcoinUnits::formatWithUnit(unit, amountTotal, false, BitcoinUnits::separatorAlways));
 }
 
+void SidechainPage::on_pushButtonWTHelp_clicked()
+{
+    QString help;
+    help =
+        "Withdrawal:\n"
+        "The exact number of coins you'd like your mainchain address to "
+        "receive.\n\n"
+
+        "Transaction Fee:\n"
+        "The usual transaction fee — every sidechain transaction pays a "
+        "sidechain transaction fee, including this one.\n\n"
+
+        "Mainchain Withdrawal Fee:\n"
+        "Your withdrawal will be paid out in a mainchain txn. That txn needs "
+        "to pay a transaction fee (in BTC) over there on the mainchain, "
+        "to encourage mainchain miners to include it in a block. If your "
+        "mainchain txn fee is too low, it may not be included in the "
+        "withdrawal-constructor. The constructor automatically sorts all "
+        "withdrawals by their mainchain fee/byte rate — you can view other "
+        "withdrawal-candidates on the Withdrawal Explorer page.";
+
+    QMessageBox messageBox;
+    messageBox.setIcon(QMessageBox::Information);
+    messageBox.setWindowTitle("Sidechain withdrawal info");
+    messageBox.setText(help);
+    messageBox.exec();
+}
+
 void SidechainPage::on_addressBookButton_clicked()
 {
 
