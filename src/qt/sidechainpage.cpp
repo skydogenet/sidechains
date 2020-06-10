@@ -195,17 +195,18 @@ SidechainPage::SidechainPage(QWidget *parent) :
     connect(ui->mainchainFeeAmount, SIGNAL(valueChanged()),
             this, SLOT(UpdateWTTotal()));
 
-    // Add wealth tab. This isn't a usable tab (right now) and is actually just
-    // a trick to show a label next to the tabs on the tab widget.
-    ui->tabWidget->addTab(new QWidget(this), "Total sidechain wealth:");
+    // Style wealth tab. This isn't a usable tab (right now) and is actually
+    // just a trick to show a label next to the tabs on the tab widget. There's
+    // also an unused (hidden) spacer tab to move the wealth label over a bit.
 
     // TODO consts for tab index
     // Hide the spacer tab that seperates the label we have inserted from the
     // other tabs. We have a custom style sheet for disabled tabs.
     ui->tabWidget->setTabEnabled(3, false);
-    // Set the total wealth tab disabled as well, so that is uses the custom
-    // style for the last disabled tab (different from other disabled tabs).
+    // Set the total wealth tab disabled as well
     ui->tabWidget->setTabEnabled(4, false);
+
+    ui->tabWidget->tabBar()->setTabTextColor(4, QApplication::palette().text().color());
 }
 
 SidechainPage::~SidechainPage()
