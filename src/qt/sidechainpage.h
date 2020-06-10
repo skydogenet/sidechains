@@ -18,6 +18,7 @@ class CBlock;
 class ClientModel;
 class ConfGeneratorDialog;
 class SidechainWTPrimeHistoryDialog;
+class SidechainWTTableModel;
 class WalletModel;
 
 QT_BEGIN_NAMESPACE
@@ -109,6 +110,7 @@ private:
 
     ConfGeneratorDialog *confGeneratorDialog;
     SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;
+    SidechainWTTableModel *unspentWTModel;
 
     QTimer *bmmTimer;
     QTimer *trainTimer;

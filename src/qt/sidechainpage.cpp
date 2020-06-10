@@ -12,6 +12,7 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/sidechainwtprimehistorydialog.h>
+#include <qt/sidechainwttablemodel.h>
 #include <qt/walletmodel.h>
 
 #include <base58.h>
@@ -35,6 +36,7 @@
 #include <QClipboard>
 #include <QMessageBox>
 #include <QStackedWidget>
+#include <QScrollBar>
 
 #include <sstream>
 
@@ -106,14 +108,45 @@ SidechainPage::SidechainPage(QWidget *parent) :
 
     trainErrorMessageBox->setText(QString::fromStdString(str));
 
+    // Initialize pending WT table model
+    unspentWTModel = new SidechainWTTableModel(this);
+
     // Table style
 #if QT_VERSION < 0x050000
     ui->tableWidgetWTs->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
     ui->tableWidgetWTs->verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #else
     ui->tableWidgetWTs->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableWidgetWTs->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #endif
+
+    // Hide vertical header
+    ui->tableWidgetWTs->verticalHeader()->setVisible(false);
+    ui->tableViewUnspentWT->verticalHeader()->setVisible(false);
+    // Left align the horizontal header text
+    ui->tableWidgetWTs->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewUnspentWT->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    // Set horizontal scroll speed to per 3 pixels
+    ui->tableWidgetWTs->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewUnspentWT->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableWidgetWTs->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewUnspentWT->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    // Select entire row
+    ui->tableWidgetWTs->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewUnspentWT->setSelectionBehavior(QAbstractItemView::SelectRows);
+    // Select only one row
+    ui->tableWidgetWTs->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->tableViewUnspentWT->setSelectionMode(QAbstractItemView::SingleSelection);
+    // Disable word wrap
+    ui->tableWidgetWTs->setWordWrap(false);
+    ui->tableViewUnspentWT->setWordWrap(false);
+
+    // Set unspent WT table model
+    ui->tableViewUnspentWT->setModel(unspentWTModel);
 
     generateAddress();
     RefreshTrain();
@@ -206,6 +239,7 @@ void SidechainPage::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
     wtPrimeHistoryDialog->setWalletModel(model);
+    unspentWTModel->setWalletModel(model);
     if (model && model->getOptionsModel())
     {
         connect(model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)), this,
@@ -227,6 +261,7 @@ void SidechainPage::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     wtPrimeHistoryDialog->setClientModel(model);
+    unspentWTModel->setClientModel(model);
     if (model)
     {
         connect(model, SIGNAL(numBlocksChanged(int, QDateTime, double, bool)),
@@ -933,7 +968,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     ui->lineEditWTPrimeHash->setCursorPosition(0);
 
     // Set the WT^ hash label
-    ui->labelWTPrimeHash->setText("Hash: " + qHash);
+    ui->labelWTPrimeHash->setText("WT^: " + qHash);
 
     // Set number of WT outputs
     ui->labelNumWT->setText(QString::number(wtPrime.vWT.size()));
@@ -1041,7 +1076,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
 void SidechainPage::ClearWTPrimeExplorer()
 {
     ui->tableWidgetWTs->setRowCount(0);
-    ui->labelWTPrimeHash->setText("");
+    ui->labelWTPrimeHash->setText("WT^: ");
     ui->labelNumWT->setText(QString::number(0));
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
