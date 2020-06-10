@@ -194,6 +194,18 @@ SidechainPage::SidechainPage(QWidget *parent) :
             this, SLOT(UpdateWTTotal()));
     connect(ui->mainchainFeeAmount, SIGNAL(valueChanged()),
             this, SLOT(UpdateWTTotal()));
+
+    // Add wealth tab. This isn't a usable tab (right now) and is actually just
+    // a trick to show a label next to the tabs on the tab widget.
+    ui->tabWidget->addTab(new QWidget(this), "Total sidechain wealth:");
+
+    // TODO consts for tab index
+    // Hide the spacer tab that seperates the label we have inserted from the
+    // other tabs. We have a custom style sheet for disabled tabs.
+    ui->tabWidget->setTabEnabled(3, false);
+    // Set the total wealth tab disabled as well, so that is uses the custom
+    // style for the last disabled tab (different from other disabled tabs).
+    ui->tabWidget->setTabEnabled(4, false);
 }
 
 SidechainPage::~SidechainPage()
@@ -1108,7 +1120,9 @@ void SidechainPage::UpdateSidechainWealth()
     QString wealth = BitcoinUnits::formatWithUnit(unit, amountCtip, false,
             BitcoinUnits::separatorAlways);
 
-    ui->labelTotalWealth->setText(wealth);
+    QString label = "Total sidechain wealth: ";
+    label += wealth;
+    ui->tabWidget->setTabText(4, label);
 }
 
 void SidechainPage::UpdateToLatestWTPrime(bool fRequested)
