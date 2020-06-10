@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>594</width>
-    <height>481</height>
+    <width>642</width>
+    <height>523</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -184,19 +184,6 @@ QTabBar::tab:disabled {
                   </item>
                  </layout>
                 </widget>
-               </item>
-               <item>
-                <spacer name="verticalSpacer_7">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
                </item>
                <item>
                 <widget class="QFrame" name="frame_8">
@@ -482,6 +469,19 @@ QTabBar::tab:disabled {
                   </item>
                  </layout>
                 </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_7">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </widget>
