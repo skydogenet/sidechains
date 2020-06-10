@@ -117,6 +117,7 @@ struct SidechainWT: public SidechainObj {
     }
 
     std::string ToString(void) const;
+    std::string GetStatusStr(void) const;
 
     uint256 GetID() const {
         SidechainWT wt(*this);

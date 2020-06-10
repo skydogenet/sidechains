@@ -95,23 +95,25 @@ std::string SidechainWT::ToString() const
     str << "destination=" << strDestination << std::endl;
     str << "amount=" << FormatMoney(amount) << std::endl;
     str << "mainchainFee=" << FormatMoney(mainchainFee) << std::endl;
+    str << "status=" << GetStatusStr() << std::endl;
+    str << "hashBlindWTX=" << hashBlindWTX.ToString() << std::endl;
+    return str.str();
+}
 
-    std::string strStatus;
+std::string SidechainWT::GetStatusStr(void) const
+{
     if (status == WT_UNSPENT) {
-        strStatus = "WT_UNSPENT";
+        return "Unspent";
     }
     else
     if (status == WT_IN_WTPRIME) {
-        strStatus = "WT_IN_WTPRIME";
+        return "Pending - in WT^";
     }
     else
-    {
-        strStatus = "WT_SPENT";
+    if (status == WT_SPENT) {
+        return "Spent";
     }
-
-    str << "status=" << strStatus << std::endl;
-    str << "hashBlindWTX=" << hashBlindWTX.ToString() << std::endl;
-    return str.str();
+    return "Unknown";
 }
 
 std::string SidechainWTPrime::ToString() const
