@@ -94,101 +94,22 @@ QVariant SidechainWTTableModel::headerData(int section, Qt::Orientation orientat
 
 void SidechainWTTableModel::UpdateModel()
 {
-    // TODO there are many ways to improve the efficiency of this
+    beginResetModel();
+    model.clear();
+    endResetModel();
 
-    // Get all of the current WT(s) into one vector
     std::vector<SidechainWT> vWT;
     vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
 
-    // Look for updates to WT(s) & their status already cached by the model
-    // and update our model / view.
-    //
-    // Also look for WT(s) which have been removed, and remove them from our
-    // model / view.
-    std::vector<WTTableObject> vRemoved;
-    for (int i = 0; i < model.size(); i++) {
-        if (!model[i].canConvert<WTTableObject>())
-            return;
+    SelectUnspentWT(vWT);
+    SortWTByFee(vWT);
 
-        WTTableObject object = model[i].value<WTTableObject>();
-
-        bool fFound = false;
-
-        // Check if the WT should still be in the table and make sure we set
-        // it with the current status
-        for (const SidechainWT& wt : vWT) {
-            // Check if the WT was removed or the status has changed.
-            if (wt.GetID() == object.id) {
-                if (wt.status != WT_UNSPENT)
-                    break;
-
-                fFound = true;
-
-                // Check for updates to status
-                QString status = QString::fromStdString(wt.GetStatusStr());
-                if (object.status != status) {
-                    // Update the status of the object in the table
-                    object.status = status;
-
-                    QModelIndex topLeft = index(i, 0);
-                    QModelIndex topRight = index(i, columnCount() - 1);
-                    Q_EMIT QAbstractItemModel::dataChanged(topLeft, topRight, {Qt::DecorationRole});
-
-                    model[i] = QVariant::fromValue(object);
-                }
-            }
-        }
-
-        // Add to vector of WT(s) to be removed from model / view
-        if (!fFound) {
-            vRemoved.push_back(object);
-        }
-    }
-
-    // Loop through the model and remove deleted WT(s)
-    for (int i = 0; i < model.size(); i++) {
-        if (!model[i].canConvert<WTTableObject>())
-            return;
-
-        WTTableObject object = model[i].value<WTTableObject>();
-
-        for (const WTTableObject& wt : vRemoved) {
-            if (wt.id == object.id) {
-                beginRemoveRows(QModelIndex(), i, i);
-                model[i] = model.back();
-                model.pop_back();
-                endRemoveRows();
-            }
-        }
-    }
-
-    // Check for new WT(s)
-    std::vector<SidechainWT> vNew;
-    for (const SidechainWT& wt : vWT) {
-        if (wt.status != WT_UNSPENT)
-            continue;
-
-        bool fFound = false;
-
-        for (const QVariant& qv : model) {
-            if (!qv.canConvert<WTTableObject>())
-                return;
-
-            WTTableObject object = qv.value<WTTableObject>();
-
-            if (wt.GetID() == object.id)
-                fFound = true;
-        }
-        if (!fFound)
-            vNew.push_back(wt);
-    }
-
-    if (vNew.empty())
+    if (vWT.empty())
         return;
 
-    // Add new WT(s) if we need to
-    beginInsertRows(QModelIndex(), model.size(), model.size() + vNew.size() - 1);
-    for (const SidechainWT& wt : vNew) {
+    // Add WT(s) to model
+    beginInsertRows(QModelIndex(), model.size(), model.size() + vWT.size() - 1);
+    for (const SidechainWT& wt : vWT) {
         WTTableObject object;
 
         // Insert new WT into table
@@ -217,3 +138,4 @@ void SidechainWTTableModel::setClientModel(ClientModel *model)
         UpdateModel();
     }
 }
+
