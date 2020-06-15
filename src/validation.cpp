@@ -5315,13 +5315,6 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     unsigned int nMinWT = gArgs.GetArg("-minwt", DEFAULT_MIN_WT_CREATE_WTPRIME);
     bool fReplace = gArgs.GetBoolArg("-replacewtprime", false);
 
-    // Get WT(s) from psidechaintree
-    const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
-    if (vWT.empty()) {
-        LogPrintf("%s: No wt(s) to create WT^\n", __func__);
-        return false;
-    }
-
     if (!fReplicationCheck) {
         // Get the mainchain's chain height
         SidechainClient client;
@@ -5345,14 +5338,20 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
         }
     }
 
-    // Check the status / zone of wt(s) before including them in a WT^
-    std::vector<SidechainWT> vWTFiltered;
-    for (const SidechainWT& wt : vWT) {
-        if (wt.status == WT_UNSPENT)
-            vWTFiltered.push_back(wt);
+    // Get WT(s) from psidechaintree
+    std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
+    if (vWT.empty()) {
+        LogPrintf("%s: No wt(s) to create WT^\n", __func__);
+        return false;
     }
 
-    if (!fReplicationCheck && vWTFiltered.size() < nMinWT) {
+    // Select only WTs with WT_UNSPENT status
+    SelectUnspentWT(vWT);
+
+    // Sort WTs by mainchain fee amount
+    SortWTByFee(vWT);
+
+    if (!fReplicationCheck && vWT.size() < nMinWT) {
         LogPrintf("%s: Not enough WT(s) to create WT^\n", __func__);
         return false;
     }
@@ -5372,7 +5371,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     wjtx.nVersion = 2;
     wjtx.vin.resize(1); // Dummy vin for serialization...
     wjtx.vin[0].scriptSig = CScript() << OP_0;
-    for (const SidechainWT& wt : vWTFiltered) {
+    for (const SidechainWT& wt : vWT) {
         CAmount amountWT = wt.amount - wt.mainchainFee;
 
         amountMainchainFees += wt.mainchainFee;

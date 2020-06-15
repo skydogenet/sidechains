@@ -10,6 +10,7 @@
 #include "streams.h"
 #include "utilmoneystr.h"
 
+#include <algorithm>
 #include <sstream>
 
 const uint32_t nType = 1;
@@ -45,39 +46,6 @@ CScript SidechainObj::GetScript(void) const
     CScript script;
     script << std::vector<unsigned char>(ds.begin(), ds.end()) << OP_SIDECHAIN;
     return script;
-}
-
-SidechainObj *SidechainObjCtr(const CScript &script)
-{
-    CScript::const_iterator pc = script.begin();
-    std::vector<unsigned char> vch;
-    opcodetype opcode;
-
-    if (!script.GetOp(pc, opcode, vch))
-        return NULL;
-    if (vch.size() == 0)
-        return NULL;
-    const char *vch0 = (const char *) &vch.begin()[0];
-    CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
-
-    if (*vch0 == DB_SIDECHAIN_WT_OP) {
-        SidechainWT *obj = new SidechainWT;
-        obj->Unserialize(ds);
-        return obj;
-    }
-    else
-    if (*vch0 == DB_SIDECHAIN_WTPRIME_OP) {
-        SidechainWTPrime *obj = new SidechainWTPrime;
-        obj->Unserialize(ds);
-        return obj;
-    }
-    else
-    if (*vch0 == DB_SIDECHAIN_DEPOSIT_OP) {
-        SidechainDeposit *obj = new SidechainDeposit;
-        obj->Unserialize(ds);
-        return obj;
-    }
-    return NULL;
 }
 
 std::string SidechainObj::ToString(void) const
@@ -157,4 +125,57 @@ std::string SidechainDeposit::ToString() const
         str << in.prevout.ToString() << std::endl;
     }
     return str.str();
+}
+
+SidechainObj *SidechainObjCtr(const CScript &script)
+{
+    CScript::const_iterator pc = script.begin();
+    std::vector<unsigned char> vch;
+    opcodetype opcode;
+
+    if (!script.GetOp(pc, opcode, vch))
+        return NULL;
+    if (vch.size() == 0)
+        return NULL;
+    const char *vch0 = (const char *) &vch.begin()[0];
+    CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
+
+    if (*vch0 == DB_SIDECHAIN_WT_OP) {
+        SidechainWT *obj = new SidechainWT;
+        obj->Unserialize(ds);
+        return obj;
+    }
+    else
+    if (*vch0 == DB_SIDECHAIN_WTPRIME_OP) {
+        SidechainWTPrime *obj = new SidechainWTPrime;
+        obj->Unserialize(ds);
+        return obj;
+    }
+    else
+    if (*vch0 == DB_SIDECHAIN_DEPOSIT_OP) {
+        SidechainDeposit *obj = new SidechainDeposit;
+        obj->Unserialize(ds);
+        return obj;
+    }
+    return NULL;
+}
+
+struct CompareWTMainchainFee
+{
+    bool operator()(const SidechainWT& a, const SidechainWT& b) const
+    {
+        return a.mainchainFee > b.mainchainFee;
+    }
+};
+
+void SortWTByFee(std::vector<SidechainWT>& vWT)
+{
+    std::sort(vWT.begin(), vWT.end(), CompareWTMainchainFee());
+}
+
+void SelectUnspentWT(std::vector<SidechainWT>& vWT)
+{
+    vWT.erase(std::remove_if(vWT.begin(), vWT.end(),[](const SidechainWT& wt)
+                {return wt.status != WT_UNSPENT;}), vWT.end());
+
 }

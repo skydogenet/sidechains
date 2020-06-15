@@ -231,4 +231,14 @@ struct SidechainBMMProof
  */
 SidechainObj *SidechainObjCtr(const CScript &);
 
+// Functions for both WT^ creation and the GUI to use in order to make sure that
+// what the GUI displays (on the pending WT table) is the same as what the WT^
+// creation code will actually select.
+
+// Sort a vector of SidechainWT by mainchain fee in descending order
+void SortWTByFee(std::vector<SidechainWT>& vWT);
+
+// Erase all SidechainWT from a vector which do not have WT_UNSPENT status
+void SelectUnspentWT(std::vector<SidechainWT>& vWT);
+
 #endif // BITCOIN_PRIMITIVES_SIDECHAIN_H
