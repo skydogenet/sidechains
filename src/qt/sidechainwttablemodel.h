@@ -24,7 +24,6 @@ struct WTTableObject
     CAmount amount;
     CAmount amountMainchainFee;
     QString destination;
-    QString status;
     uint256 id;
 };
 

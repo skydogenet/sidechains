@@ -30,7 +30,7 @@ int SidechainWTTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int SidechainWTTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 4;
+    return 3;
 }
 
 QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
@@ -66,12 +66,8 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
                     BitcoinUnits::separatorAlways);
             return fee;
         }
-        // Status
-        if (col == 2) {
-            return object.status;
-        }
         // Destination address
-        if (col == 3) {
+        if (col == 2) {
             return object.destination;
         }
     }
@@ -89,8 +85,6 @@ QVariant SidechainWTTableModel::headerData(int section, Qt::Orientation orientat
             case 1:
                 return QString("Mainchain Fee");
             case 2:
-                return QString("Status");
-            case 3:
                 return QString("Destination");
             }
         }
@@ -201,7 +195,6 @@ void SidechainWTTableModel::UpdateModel()
         object.id = wt.GetID();
         object.amount = wt.amount;
         object.amountMainchainFee = wt.mainchainFee;
-        object.status = QString::fromStdString(wt.GetStatusStr());
         object.destination = QString::fromStdString(wt.strDestination);
         model.append(QVariant::fromValue(object));
     }
