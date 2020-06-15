@@ -24,6 +24,7 @@ struct WTTableObject
     CAmount amount;
     CAmount amountMainchainFee;
     QString destination;
+    unsigned int nCumulativeWeight;
     uint256 id;
 };
 
