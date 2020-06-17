@@ -180,4 +180,3 @@ void SidechainWTTableModel::setClientModel(ClientModel *model)
         UpdateModel();
     }
 }
-
