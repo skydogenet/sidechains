@@ -919,8 +919,13 @@ QTabBar::tab:disabled {
               <layout class="QVBoxLayout" name="verticalLayout_4">
                <item>
                 <widget class="QLabel" name="label_34">
+                 <property name="font">
+                  <font>
+                   <italic>true</italic>
+                  </font>
+                 </property>
                  <property name="text">
-                  <string>Unspent WT(s) - sorted by mainchain fee amount</string>
+                  <string>Candidate WT(s) -- sorted by mainchain fee. (Each WT consumes 136 mainchain wBytes.)</string>
                  </property>
                 </widget>
                </item>
