@@ -97,10 +97,12 @@ SidechainPage::SidechainPage(QWidget *parent) :
     // Initialize the train error message box
     trainErrorMessageBox = new QMessageBox(this);
     trainErrorMessageBox->setDefaultButton(QMessageBox::Ok);
-    trainErrorMessageBox->setWindowTitle("Train schedule update failed!");
+    trainErrorMessageBox->setWindowTitle("Failed to connect to the mainchain!");
     std::string str;
     str = "The sidechain has failed to connect to the mainchain!\n\n";
-    str += "This may be due to configuration issues. ";
+    str += "If this is your first time running the sidechain ";
+    str += "please visit the \"Parent Chain\" tab.\n\n";
+    str += "This may also be due to configuration issues. ";
     str += "Please check that you have set up configuration files.\n\n";
     str += "Also make sure that the mainchain node is running!\n\n";
     str += "Networking will be disabled until the connection is restored\n\n";
