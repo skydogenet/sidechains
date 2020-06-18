@@ -491,11 +491,9 @@ BOOST_AUTO_TEST_CASE(IsWTPrimeSpentCommit)
 
 BOOST_AUTO_TEST_CASE(WTFeeEncoding)
 {
-    // Test that 0 amount will fail
-    CAmount amount = 0;
-    CScript script = EncodeWTFees(amount);
+    CAmount amount;
     CAmount amountRead;
-    BOOST_CHECK(!DecodeWTFees(script, amountRead));
+    CScript script;
 
     // Test 1 * COIN
     amount = COIN;
@@ -525,11 +523,19 @@ BOOST_AUTO_TEST_CASE(WTFeeEncoding)
         BOOST_CHECK(amountRead == amount);
     }
 
-    // Test that number greater than CScriptNum default limit (4 byte integer)
-    // will fail
-    amount = 100 * COIN;
+    // Test number greater than CScriptNum default 4 byte integer limit
+    amount = 22 * COIN;
+    amountRead = 0;
     script = EncodeWTFees(amount);
-    BOOST_CHECK(!DecodeWTFees(script, amountRead));
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amount == amountRead);
+
+    // Test high number
+    amount = MAX_MONEY;
+    amountRead = 0;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amount == amountRead);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -5895,35 +5895,49 @@ void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
 
 CScript EncodeWTFees(const CAmount& amount)
 {
+    CDataStream s(SER_NETWORK, PROTOCOL_VERSION);
+    s << amount;
+
     CScript script;
     script << OP_RETURN;
-    script << CScriptNum::serialize(amount);
+    script << std::vector<unsigned char>(s.begin(), s.end());
 
     return script;
 }
 
 bool DecodeWTFees(const CScript& script, CAmount& amount)
 {
-    // EncodeWTFee & DecodeWTFee are currently limited to 4 byte integers.
-    // This allows a maximum of 21.48 BTC as encoded by CScriptNum::Serialize.
-    // CScriptNum takes an argument to override the size limit so this can be
-    // changed if needed.
-
-    if (script.size() < 3 || script[0] != OP_RETURN)
+    if (script[0] != OP_RETURN || script.size() != 10) {
+        LogPrintf("%s: Error: Invalid script size!\n", __func__);
         return false;
+    }
 
     CScript::const_iterator it = script.begin() + 1;
     std::vector<unsigned char> vch;
     opcodetype opcode;
 
-    if (!script.GetOp(it, opcode, vch))
+    if (!script.GetOp(it, opcode, vch)) {
+        LogPrintf("%s: Error: GetOp failed!\n", __func__);
         return false;
+    }
 
-    if (vch.size() > 4)
+    if (vch.empty()) {
+        LogPrintf("%s: Error: Amount bytes empty!\n", __func__);
         return false;
+    }
 
-    CScriptNum num(vch, false);
-    amount = CAmount(num.getint());
+    if (vch.size() > 8) {
+        LogPrintf("%s: Error: Amount bytes too large!\n", __func__);
+        return false;
+    }
+
+    try {
+        CDataStream ds(vch, SER_NETWORK, PROTOCOL_VERSION);
+        ds >> amount;
+    } catch (const std::exception&) {
+        LogPrintf("%s: Error: Failed to deserialize amount!\n", __func__);
+        return false;
+    }
 
     return true;
 }
