@@ -74,8 +74,6 @@ private Q_SLOTS:
 
     void on_pushButtonSendCriticalRequest_clicked();
 
-    void on_checkBoxEnableAutomation_toggled(bool fChecked);
-
     void on_pushButtonSubmitBlock_clicked();
 
     void on_spinBoxRefreshInterval_valueChanged(int n);
@@ -103,6 +101,10 @@ private Q_SLOTS:
     void UpdateWTTotal();
 
     void on_pushButtonWTHelp_clicked();
+
+    void on_pushButtonStartBMM_clicked();
+
+    void on_pushButtonStopBMM_clicked();
 
 private:
     Ui::SidechainPage *ui;
@@ -137,10 +139,7 @@ private:
 
     bool SubmitBMMBlock(const CBlock& block);
 
-    // This function checks if the user has any optional verification settings
-    // enabled which require a connection to the mainchain and disables
-    // networking if fMainchainConnected is set to false. If fMainchainConnected
-    // is set to true - re enable networking.
+    // Handle networking being enabled / disabled
     void UpdateNetworkActive(bool fMainchainConnected);
 
     // Check if configuration files are setup and connection works
@@ -153,6 +152,10 @@ private:
     void UpdateToLatestWTPrime(bool fRequested = true);
 
     void SetCurrentWTPrime(const std::string& strHash, bool fRequested = true);
+
+    void StartBMM();
+
+    void StopBMM();
 };
 
 #endif // SIDECHAINPAGE_H

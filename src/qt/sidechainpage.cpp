@@ -23,6 +23,7 @@
 #include <init.h>
 #include <miner.h>
 #include <net.h>
+#include <policy/wtprime.h>
 #include <primitives/block.h>
 #include <sidechain.h>
 #include <sidechainclient.h>
@@ -88,11 +89,6 @@ SidechainPage::SidechainPage(QWidget *parent) :
     // a bunch of times quickly when blocks are connected
     trainWarningSleepTimer = new QTimer(this);
     connect(trainWarningSleepTimer, SIGNAL(timeout()), this, SLOT(ResetTrainWarningSleep()));
-
-    // TODO save & load the checkbox state
-    // TODO save & load timer setting
-    if (ui->checkBoxEnableAutomation->isChecked())
-        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
 
     // Initialize the train error message box
     trainErrorMessageBox = new QMessageBox(this);
@@ -209,6 +205,9 @@ SidechainPage::SidechainPage(QWidget *parent) :
     ui->tabWidget->setTabEnabled(4, false);
 
     ui->tabWidget->tabBar()->setTabTextColor(4, QApplication::palette().text().color());
+
+    // Start with the stopBMM button disabled
+    ui->pushButtonStopBMM->setEnabled(false);
 }
 
 SidechainPage::~SidechainPage()
@@ -470,6 +469,16 @@ void SidechainPage::on_pushButtonWTHelp_clicked()
     messageBox.exec();
 }
 
+void SidechainPage::on_pushButtonStartBMM_clicked()
+{
+    StartBMM();
+}
+
+void SidechainPage::on_pushButtonStopBMM_clicked()
+{
+    StopBMM();
+}
+
 void SidechainPage::on_addressBookButton_clicked()
 {
 
@@ -657,16 +666,6 @@ void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
 
 }
 
-void SidechainPage::on_checkBoxEnableAutomation_toggled(bool fChecked)
-{
-    // Start or stop timer
-    if (fChecked) {
-        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
-    } else {
-        bmmTimer->stop();
-    }
-}
-
 void SidechainPage::on_pushButtonSubmitBlock_clicked()
 {
     // TODO improve error messages
@@ -764,7 +763,7 @@ void SidechainPage::RefreshBMM()
     // Get & check the BMM amount
     CAmount amount = ui->bmmAmount->value();
     if (amount <= 0) {
-        ui->checkBoxEnableAutomation->setChecked(false);
+        StopBMM();
 
         messageBox.setWindowTitle("Automated BMM failed - invalid BMM amount!");
         std::string str;
@@ -779,7 +778,7 @@ void SidechainPage::RefreshBMM()
 
     if (!CheckMainchainConnection()) {
         UpdateNetworkActive(false /* fMainchainConnected */);
-        ui->checkBoxEnableAutomation->setChecked(false);
+        StopBMM();
 
         messageBox.setWindowTitle("Automated BMM failed - mainchain connection failed!");
         std::string str;
@@ -813,7 +812,7 @@ void SidechainPage::RefreshBMM()
     uint256 hashConnected;
     if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected)) {
         UpdateNetworkActive(false /* fMainchainConnected */);
-        ui->checkBoxEnableAutomation->setChecked(false);
+        StopBMM();
 
         messageBox.setWindowTitle("Automated BMM failed!");
         std::string str;
@@ -834,7 +833,7 @@ void SidechainPage::RefreshBMM()
     // Update GUI
 
     uint256 hashBlock = bmmCache.GetLastMainBlockHash();
-    ui->pushButtonHashBlockLastSeen->setText(QString::fromStdString(hashBlock.ToString()));
+    ui->labelLastMainchainBlock->setText(QString::fromStdString(hashBlock.ToString()));
 
     if (!hashCreated.IsNull())
         new QListWidgetItem(QString::fromStdString(hashCreated.ToString()), ui->listWidgetBMMCreated);
@@ -875,9 +874,11 @@ void SidechainPage::RefreshTrain()
 
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
 {
-    if (ui->checkBoxEnableAutomation->isChecked()) {
-        bmmTimer->stop();
-        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
+    // Check if the StartBMM button has been pushed
+    if (ui->pushButtonStartBMM->isEnabled()) {
+        // Restart BMM with the new refresh interval
+        StopBMM();
+        StartBMM();
     }
 }
 
@@ -1010,9 +1011,6 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     ui->lineEditWTPrimeHash->setText(qHash);
     ui->lineEditWTPrimeHash->setCursorPosition(0);
 
-    // Set the WT^ hash label
-    ui->labelWTPrimeHash->setText("WT^: " + qHash);
-
     // Set number of WT outputs
     ui->labelNumWT->setText(QString::number(wtPrime.vWT.size()));
 
@@ -1114,12 +1112,36 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
 
     // Set block height
     ui->labelBlockHeight->setText(QString::number(wtPrime.nHeight));
+
+    // Set transaction size
+    int64_t sz = GetTransactionWeight(wtPrime.wtPrime);
+
+    QString size;
+    size += QString::number(sz);
+    size += " / ";
+    size += QString::number(MAX_WTPRIME_WEIGHT);
+    size += " wBytes";
+
+    ui->labelTotalSize->setText(size);
+}
+
+void SidechainPage::StartBMM()
+{
+    bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
+    ui->pushButtonStartBMM->setEnabled(false);
+    ui->pushButtonStopBMM->setEnabled(true);
+}
+
+void SidechainPage::StopBMM()
+{
+    bmmTimer->stop();
+    ui->pushButtonStartBMM->setEnabled(true);
+    ui->pushButtonStopBMM->setEnabled(false);
 }
 
 void SidechainPage::ClearWTPrimeExplorer()
 {
     ui->tableWidgetWTs->setRowCount(0);
-    ui->labelWTPrimeHash->setText("WT^: ");
     ui->labelNumWT->setText(QString::number(0));
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
