@@ -722,6 +722,51 @@ QTabBar::tab:disabled {
              <property name="currentIndex">
               <number>0</number>
              </property>
+             <widget class="QWidget" name="tab_2">
+              <attribute name="title">
+               <string>Candidate WTs</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_4">
+               <item>
+                <widget class="QLabel" name="label_34">
+                 <property name="font">
+                  <font>
+                   <italic>true</italic>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Candidate WTs -- sorted by mainchain fee. (Each WT consumes 136 mainchain wBytes.)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QTableView" name="tableViewUnspentWT">
+                 <property name="font">
+                  <font>
+                   <family>Noto Sans</family>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="editTriggers">
+                  <set>QAbstractItemView::NoEditTriggers</set>
+                 </property>
+                 <property name="sortingEnabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>false</bool>
+                 </property>
+                 <property name="cornerButtonEnabled">
+                  <bool>false</bool>
+                 </property>
+                 <attribute name="horizontalHeaderStretchLastSection">
+                  <bool>true</bool>
+                 </attribute>
+                </widget>
+               </item>
+              </layout>
+             </widget>
              <widget class="QWidget" name="tab">
               <attribute name="title">
                <string>WT-Bundles</string>
@@ -1027,51 +1072,6 @@ QTabBar::tab:disabled {
                    <string>Destination</string>
                   </property>
                  </column>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tab_2">
-              <attribute name="title">
-               <string>Candidate WTs</string>
-              </attribute>
-              <layout class="QVBoxLayout" name="verticalLayout_4">
-               <item>
-                <widget class="QLabel" name="label_34">
-                 <property name="font">
-                  <font>
-                   <italic>true</italic>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Candidate WTs -- sorted by mainchain fee. (Each WT consumes 136 mainchain wBytes.)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QTableView" name="tableViewUnspentWT">
-                 <property name="font">
-                  <font>
-                   <family>Noto Sans</family>
-                   <weight>50</weight>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="editTriggers">
-                  <set>QAbstractItemView::NoEditTriggers</set>
-                 </property>
-                 <property name="sortingEnabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="wordWrap">
-                  <bool>false</bool>
-                 </property>
-                 <property name="cornerButtonEnabled">
-                  <bool>false</bool>
-                 </property>
-                 <attribute name="horizontalHeaderStretchLastSection">
-                  <bool>true</bool>
-                 </attribute>
                 </widget>
                </item>
               </layout>
