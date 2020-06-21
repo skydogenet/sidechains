@@ -5388,6 +5388,10 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
             // If we went over size, undo this output and stop
             wtPrime.vWT.pop_back();
             wjtx.vout.pop_back();
+
+            // Also remove added fees
+            amountMainchainFees -= wt.mainchainFee;
+
             break;
         }
     }
