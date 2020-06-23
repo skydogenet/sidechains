@@ -11,6 +11,8 @@
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
+#include <qt/sidechainwtprimehistorydialog.h>
+#include <qt/sidechainwttablemodel.h>
 #include <qt/walletmodel.h>
 
 #include <base58.h>
@@ -21,6 +23,7 @@
 #include <init.h>
 #include <miner.h>
 #include <net.h>
+#include <policy/wtprime.h>
 #include <primitives/block.h>
 #include <sidechain.h>
 #include <sidechainclient.h>
@@ -34,6 +37,7 @@
 #include <QClipboard>
 #include <QMessageBox>
 #include <QStackedWidget>
+#include <QScrollBar>
 
 #include <sstream>
 
@@ -86,18 +90,15 @@ SidechainPage::SidechainPage(QWidget *parent) :
     trainWarningSleepTimer = new QTimer(this);
     connect(trainWarningSleepTimer, SIGNAL(timeout()), this, SLOT(ResetTrainWarningSleep()));
 
-    // TODO save & load the checkbox state
-    // TODO save & load timer setting
-    if (ui->checkBoxEnableAutomation->isChecked())
-        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
-
     // Initialize the train error message box
     trainErrorMessageBox = new QMessageBox(this);
     trainErrorMessageBox->setDefaultButton(QMessageBox::Ok);
-    trainErrorMessageBox->setWindowTitle("Train schedule update failed!");
+    trainErrorMessageBox->setWindowTitle("Failed to connect to the mainchain!");
     std::string str;
     str = "The sidechain has failed to connect to the mainchain!\n\n";
-    str += "This may be due to configuration issues. ";
+    str += "If this is your first time running the sidechain ";
+    str += "please visit the \"Parent Chain\" tab.\n\n";
+    str += "This may also be due to configuration issues. ";
     str += "Please check that you have set up configuration files.\n\n";
     str += "Also make sure that the mainchain node is running!\n\n";
     str += "Networking will be disabled until the connection is restored\n\n";
@@ -105,14 +106,45 @@ SidechainPage::SidechainPage(QWidget *parent) :
 
     trainErrorMessageBox->setText(QString::fromStdString(str));
 
+    // Initialize pending WT table model
+    unspentWTModel = new SidechainWTTableModel(this);
+
     // Table style
 #if QT_VERSION < 0x050000
     ui->tableWidgetWTs->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
     ui->tableWidgetWTs->verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #else
     ui->tableWidgetWTs->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableWidgetWTs->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #endif
+
+    // Hide vertical header
+    ui->tableWidgetWTs->verticalHeader()->setVisible(false);
+    ui->tableViewUnspentWT->verticalHeader()->setVisible(false);
+    // Left align the horizontal header text
+    ui->tableWidgetWTs->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewUnspentWT->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    // Set horizontal scroll speed to per 3 pixels
+    ui->tableWidgetWTs->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewUnspentWT->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableWidgetWTs->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewUnspentWT->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    // Select entire row
+    ui->tableWidgetWTs->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewUnspentWT->setSelectionBehavior(QAbstractItemView::SelectRows);
+    // Select only one row
+    ui->tableWidgetWTs->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->tableViewUnspentWT->setSelectionMode(QAbstractItemView::SingleSelection);
+    // Disable word wrap
+    ui->tableWidgetWTs->setWordWrap(false);
+    ui->tableViewUnspentWT->setWordWrap(false);
+
+    // Set unspent WT table model
+    ui->tableViewUnspentWT->setModel(unspentWTModel);
 
     generateAddress();
     RefreshTrain();
@@ -142,6 +174,40 @@ SidechainPage::SidechainPage(QWidget *parent) :
     } else {
         ui->stackedWidget->setCurrentIndex(PAGE_DEFAULT_INDEX);
     }
+
+    ui->bmmAmount->setValue(DEFAULT_CRITICAL_DATA_AMOUNT);
+
+    // Initialize WT^ history dialog. We want users to be able to keep
+    // this window open while using the rest of the software.
+    wtPrimeHistoryDialog = new SidechainWTPrimeHistoryDialog();
+    wtPrimeHistoryDialog->setParent(this, Qt::Window);
+
+    connect(wtPrimeHistoryDialog, SIGNAL(doubleClickedWTPrime(uint256)),
+            this, SLOT(on_wtPrime_doubleClicked(uint256)));
+
+    // Update the total WT amount when withdrawal values are changed
+    connect(ui->payAmount, SIGNAL(valueChanged()),
+            this, SLOT(UpdateWTTotal()));
+    connect(ui->feeAmount, SIGNAL(valueChanged()),
+            this, SLOT(UpdateWTTotal()));
+    connect(ui->mainchainFeeAmount, SIGNAL(valueChanged()),
+            this, SLOT(UpdateWTTotal()));
+
+    // Style wealth tab. This isn't a usable tab (right now) and is actually
+    // just a trick to show a label next to the tabs on the tab widget. There's
+    // also an unused (hidden) spacer tab to move the wealth label over a bit.
+
+    // TODO consts for tab index
+    // Hide the spacer tab that seperates the label we have inserted from the
+    // other tabs. We have a custom style sheet for disabled tabs.
+    ui->tabWidget->setTabEnabled(3, false);
+    // Set the total wealth tab disabled as well
+    ui->tabWidget->setTabEnabled(4, false);
+
+    ui->tabWidget->tabBar()->setTabTextColor(4, QApplication::palette().text().color());
+
+    // Start with the stopBMM button disabled
+    ui->pushButtonStopBMM->setEnabled(false);
 }
 
 SidechainPage::~SidechainPage()
@@ -186,6 +252,8 @@ void SidechainPage::generateQR(std::string data)
 void SidechainPage::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
+    wtPrimeHistoryDialog->setWalletModel(model);
+    unspentWTModel->setWalletModel(model);
     if (model && model->getOptionsModel())
     {
         connect(model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)), this,
@@ -197,12 +265,17 @@ void SidechainPage::setWalletModel(WalletModel *model)
 
         // Set the sidechain wealth, which also requires the wallet model
         UpdateSidechainWealth();
+
+        // Set WT total to 0, formatting requires wallet model -> options model
+        UpdateWTTotal();
     }
 }
 
 void SidechainPage::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
+    wtPrimeHistoryDialog->setClientModel(model);
+    unspentWTModel->setClientModel(model);
     if (model)
     {
         connect(model, SIGNAL(numBlocksChanged(int, QDateTime, double, bool)),
@@ -280,6 +353,24 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
+    // Check fee amount
+    if (!validateFeeAmount()) {
+        // Invalid fee amount message box
+        messageBox.setWindowTitle("Invalid fee amount!");
+        messageBox.setText("Check the amount you have entered and try again.");
+        messageBox.exec();
+        return;
+    }
+
+    // Check mainchain fee amount
+    if (!validateMainchainFeeAmount()) {
+        // Invalid mainchain fee amount message box
+        messageBox.setWindowTitle("Invalid mainchain fee amount!");
+        messageBox.setText("Check the amount you have entered and try again.");
+        messageBox.exec();
+        return;
+    }
+
     // Check destination
     std::string strDest = ui->payTo->text().toStdString();
     CTxDestination dest = DecodeDestination(strDest, true);
@@ -293,8 +384,10 @@ void SidechainPage::on_pushButtonWT_clicked()
 
     std::string strError = "";
     CAmount burnAmount = ui->payAmount->value();
+    CAmount feeAmount = ui->feeAmount->value();
+    CAmount mainchainFeeAmount = ui->mainchainFeeAmount->value();
     uint256 txid;
-    if (!vpwallets[0]->CreateWT(burnAmount, strDest, strError, txid)) {
+    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strError, txid)) {
         // Create burn transaction error message box
         messageBox.setWindowTitle("Creating withdraw transaction failed!");
         QString createError = "Error creating transaction: ";
@@ -321,6 +414,69 @@ void SidechainPage::on_checkBoxAutoWTPrimeRefresh_changed(int state)
     if (state == Qt::Checked) {
         UpdateToLatestWTPrime();
     }
+}
+
+void SidechainPage::on_wtPrime_doubleClicked(uint256 hashWTPrime)
+{
+    SetCurrentWTPrime(hashWTPrime.ToString(), true);
+}
+
+void SidechainPage::on_lineEditWTPrimeHash_returnPressed()
+{
+    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
+    std::string strHash = ui->lineEditWTPrimeHash->text().toStdString();
+    SetCurrentWTPrime(strHash);
+}
+
+void SidechainPage::UpdateWTTotal()
+{
+    // Update the total amount on the sidechain withdrawal area
+    int unit = walletModel->getOptionsModel()->getDisplayUnit();
+
+    CAmount amountTotal = 0;
+    amountTotal += ui->payAmount->value();
+    amountTotal += ui->feeAmount->value();
+    amountTotal += ui->mainchainFeeAmount->value();
+
+    ui->labelTotalWT->setText(BitcoinUnits::formatWithUnit(unit, amountTotal, false, BitcoinUnits::separatorAlways));
+}
+
+void SidechainPage::on_pushButtonWTHelp_clicked()
+{
+    QString help;
+    help =
+        "Withdrawal:\n"
+        "The exact number of coins you'd like your mainchain address to "
+        "receive.\n\n"
+
+        "Transaction Fee:\n"
+        "The usual transaction fee — every sidechain transaction pays a "
+        "sidechain transaction fee, including this one.\n\n"
+
+        "Mainchain Withdrawal Fee:\n"
+        "Your withdrawal will be paid out in a mainchain txn. That txn needs "
+        "to pay a transaction fee (in BTC) over there on the mainchain, "
+        "to encourage mainchain miners to include it in a block. If your "
+        "mainchain txn fee is too low, it may not be included in the "
+        "withdrawal-constructor. The constructor automatically sorts all "
+        "withdrawals by their mainchain fee/byte rate — you can view other "
+        "withdrawal-candidates on the Withdrawal Explorer page.";
+
+    QMessageBox messageBox;
+    messageBox.setIcon(QMessageBox::Information);
+    messageBox.setWindowTitle("Sidechain withdrawal info");
+    messageBox.setText(help);
+    messageBox.exec();
+}
+
+void SidechainPage::on_pushButtonStartBMM_clicked()
+{
+    StartBMM();
+}
+
+void SidechainPage::on_pushButtonStopBMM_clicked()
+{
+    StopBMM();
 }
 
 void SidechainPage::on_addressBookButton_clicked()
@@ -355,6 +511,50 @@ bool SidechainPage::validateWTAmount()
     // Reject dust outputs:
     if (GUIUtil::isDust(ui->payTo->text(), ui->payAmount->value())) {
         ui->payAmount->setValid(false);
+        return false;
+    }
+
+    return true;
+}
+
+bool SidechainPage::validateFeeAmount()
+{
+    if (!ui->feeAmount->validate()) {
+        ui->feeAmount->setValid(false);
+        return false;
+    }
+
+    // Sending a zero amount is invalid
+    if (ui->feeAmount->value(0) <= 0) {
+        ui->feeAmount->setValid(false);
+        return false;
+    }
+
+    // Reject dust outputs:
+    if (GUIUtil::isDust(ui->payTo->text(), ui->feeAmount->value())) {
+        ui->feeAmount->setValid(false);
+        return false;
+    }
+
+    return true;
+}
+
+bool SidechainPage::validateMainchainFeeAmount()
+{
+    if (!ui->mainchainFeeAmount->validate()) {
+        ui->mainchainFeeAmount->setValid(false);
+        return false;
+    }
+
+    // Sending a zero amount is invalid
+    if (ui->mainchainFeeAmount->value(0) <= 0) {
+        ui->mainchainFeeAmount->setValid(false);
+        return false;
+    }
+
+    // Reject dust outputs:
+    if (GUIUtil::isDust(ui->payTo->text(), ui->mainchainFeeAmount->value())) {
+        ui->mainchainFeeAmount->setValid(false);
         return false;
     }
 
@@ -466,16 +666,6 @@ void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
 
 }
 
-void SidechainPage::on_checkBoxEnableAutomation_toggled(bool fChecked)
-{
-    // Start or stop timer
-    if (fChecked) {
-        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
-    } else {
-        bmmTimer->stop();
-    }
-}
-
 void SidechainPage::on_pushButtonSubmitBlock_clicked()
 {
     // TODO improve error messages
@@ -570,9 +760,25 @@ void SidechainPage::RefreshBMM()
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
+    // Get & check the BMM amount
+    CAmount amount = ui->bmmAmount->value();
+    if (amount <= 0) {
+        StopBMM();
+
+        messageBox.setWindowTitle("Automated BMM failed - invalid BMM amount!");
+        std::string str;
+        str = "The amount set for the BMM request is invalid!\n\n";
+        str += "The BMM request must pay the mainchain miner an amount ";
+        str += "greater than zero. Please set an amount greater than ";
+        str += "zero and try again.\n";
+        messageBox.setText(QString::fromStdString(str));
+        messageBox.exec();
+        return;
+    }
+
     if (!CheckMainchainConnection()) {
         UpdateNetworkActive(false /* fMainchainConnected */);
-        ui->checkBoxEnableAutomation->setChecked(false);
+        StopBMM();
 
         messageBox.setWindowTitle("Automated BMM failed - mainchain connection failed!");
         std::string str;
@@ -604,9 +810,9 @@ void SidechainPage::RefreshBMM()
     std::string strError = "";
     uint256 hashCreated;
     uint256 hashConnected;
-    if (!client.RefreshBMM(strError, hashCreated, hashConnected)) {
+    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected)) {
         UpdateNetworkActive(false /* fMainchainConnected */);
-        ui->checkBoxEnableAutomation->setChecked(false);
+        StopBMM();
 
         messageBox.setWindowTitle("Automated BMM failed!");
         std::string str;
@@ -627,7 +833,7 @@ void SidechainPage::RefreshBMM()
     // Update GUI
 
     uint256 hashBlock = bmmCache.GetLastMainBlockHash();
-    ui->pushButtonHashBlockLastSeen->setText(QString::fromStdString(hashBlock.ToString()));
+    ui->labelLastMainchainBlock->setText(QString::fromStdString(hashBlock.ToString()));
 
     if (!hashCreated.IsNull())
         new QListWidgetItem(QString::fromStdString(hashCreated.ToString()), ui->listWidgetBMMCreated);
@@ -662,22 +868,17 @@ void SidechainPage::RefreshTrain()
     trainRetryTimer->stop();
     trainTimer->start(nTrainRefresh);
 
-    int nBlocksLeft = GetBlocksVerificationPeriod(nMainchainBlocks);
-    std::string strTrain = "";
-    // Show the "leaving now" message a little bit before it's actually leaving
-    if (nBlocksLeft > 5)
-        strTrain = std::to_string(GetBlocksVerificationPeriod(nMainchainBlocks)) + " blocks";
-    else
-        strTrain = "Leaving now - all aboard!";
-
+    std::string strTrain = "N/A";
     ui->train->setText(QString::fromStdString(strTrain));
 }
 
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
 {
-    if (ui->checkBoxEnableAutomation->isChecked()) {
-        bmmTimer->stop();
-        bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
+    // Check if the StartBMM button has been pushed
+    if (ui->pushButtonStartBMM->isEnabled()) {
+        // Restart BMM with the new refresh interval
+        StopBMM();
+        StartBMM();
     }
 }
 
@@ -706,18 +907,15 @@ void SidechainPage::on_pushButtonRetryConnection_clicked()
     UpdateNetworkActive(fConnection);
 }
 
-void SidechainPage::on_pushButtonLookup_clicked()
-{
-    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
-    // TODO check hash validity - show error message if not
-    std::string strHash = ui->lineEditWTPrimeHash->text().toStdString();
-    SetCurrentWTPrime(strHash);
-}
-
 void SidechainPage::on_pushButtonShowLatestWTPrime_clicked()
 {
     ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
     UpdateToLatestWTPrime();
+}
+
+void SidechainPage::on_pushButtonShowPastWTPrimes_clicked()
+{
+    wtPrimeHistoryDialog->show();
 }
 
 void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
@@ -773,16 +971,29 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
 
 void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequested)
 {
+    // If the user didn't request this update (fRequested) themselves, don't
+    // show error messages
+
     ClearWTPrimeExplorer();
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
 
-    // If the user didn't request this update (fRequested) themselves, don't
-    // show error messages
+    uint256 hash = uint256S(strHash);
+    if (hash.IsNull()) {
+        if (fRequested) {
+            QMessageBox messageBox;
+            messageBox.setDefaultButton(QMessageBox::Ok);
+
+            messageBox.setWindowTitle("Invalid WT^ hash");
+            messageBox.setText("The WT^ hash you have entered is invalid.");
+            messageBox.exec();
+        }
+        return;
+    }
 
     // Try to lookup the WT^
     SidechainWTPrime wtPrime;
-    if (!psidechaintree->GetWTPrime(uint256S(strHash), wtPrime)) {
+    if (!psidechaintree->GetWTPrime(hash, wtPrime)) {
         if (fRequested) {
             QMessageBox messageBox;
             messageBox.setDefaultButton(QMessageBox::Ok);
@@ -800,14 +1011,48 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     ui->lineEditWTPrimeHash->setText(qHash);
     ui->lineEditWTPrimeHash->setCursorPosition(0);
 
-    // Set the WT^ hash label
-    ui->labelWTPrimeHash->setText("Hash: " + qHash);
-
     // Set number of WT outputs
     ui->labelNumWT->setText(QString::number(wtPrime.vWT.size()));
 
+    // If the WT^ has WTPRIME_CREATED status, it should be being acked
+    // by the mainchain (if it's already made it there). Try to request
+    // the workscore and display it on the WT^ explorer if we can.
+    bool fWorkScore = false;
+    int nWorkScore = 0;
+    if (wtPrime.status == WTPRIME_CREATED) {
+        // Try to request the workscore
+        SidechainClient client;
+        if (client.GetWorkScore(hash, nWorkScore)) {
+            fWorkScore = true;
+        }
+    }
+
+    QString qStatus = "";
+    if (wtPrime.status == WTPRIME_CREATED) {
+        qStatus = "Created";
+
+        if (fWorkScore) {
+            qStatus = QString::number(nWorkScore);
+            qStatus += " / ";
+            qStatus += QString::number(MAINCHAIN_WTPRIME_MIN_WORKSCORE);
+            qStatus += " ACK(s)";
+        }
+    }
+    else
+    if (wtPrime.status == WTPRIME_FAILED) {
+        qStatus = "Failed";
+    }
+    else
+    if (wtPrime.status == WTPRIME_SPENT) {
+        qStatus = "Spent";
+    }
+
+    // Set the status
+    ui->labelStatus->setText(qStatus);
+
     // Add WTs to the table view
     CAmount amountTotal = 0;
+    CAmount amountMainchainFees = 0;
     for (const uint256& id : wtPrime.vWT) {
         SidechainWT wt;
         if (!psidechaintree->GetWT(id, wt)) {
@@ -830,18 +1075,27 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
         // Add to total amount withdrawn
         amountTotal += wt.amount;
 
+        // Add to total fees
+        amountMainchainFees += wt.mainchainFee;
+
         // Add to table
 
-        QString amount = BitcoinUnits::formatWithUnit(unit, wt.amount, false,
+        QString amount = BitcoinUnits::formatWithUnit(unit, wt.amount - wt.mainchainFee, false,
+                BitcoinUnits::separatorAlways);
+
+        QString fee = BitcoinUnits::formatWithUnit(unit, wt.mainchainFee, false,
                 BitcoinUnits::separatorAlways);
 
         QTableWidgetItem* amountItem = new QTableWidgetItem(amount);
+
+        QTableWidgetItem* feeItem = new QTableWidgetItem(fee);
 
         QTableWidgetItem* destItem = new QTableWidgetItem(
                 QString::fromStdString(wt.strDestination));
 
         ui->tableWidgetWTs->setItem(nRows /* row */, 0 /* col */, amountItem);
-        ui->tableWidgetWTs->setItem(nRows /* row */, 1 /* col */, destItem);
+        ui->tableWidgetWTs->setItem(nRows /* row */, 1 /* col */, feeItem);
+        ui->tableWidgetWTs->setItem(nRows /* row */, 2 /* col */, destItem);
     }
 
     // Set total amount withdrawn
@@ -849,12 +1103,45 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
             BitcoinUnits::separatorAlways);
 
     ui->labelTotalAmount->setText(total);
+
+    // Set total fee amount
+    QString fees = BitcoinUnits::formatWithUnit(unit, amountMainchainFees, false,
+            BitcoinUnits::separatorAlways);
+
+    ui->labelTotalFees->setText(fees);
+
+    // Set block height
+    ui->labelBlockHeight->setText(QString::number(wtPrime.nHeight));
+
+    // Set transaction size
+    int64_t sz = GetTransactionWeight(wtPrime.wtPrime);
+
+    QString size;
+    size += QString::number(sz);
+    size += " / ";
+    size += QString::number(MAX_WTPRIME_WEIGHT);
+    size += " wBytes";
+
+    ui->labelTotalSize->setText(size);
+}
+
+void SidechainPage::StartBMM()
+{
+    bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
+    ui->pushButtonStartBMM->setEnabled(false);
+    ui->pushButtonStopBMM->setEnabled(true);
+}
+
+void SidechainPage::StopBMM()
+{
+    bmmTimer->stop();
+    ui->pushButtonStartBMM->setEnabled(true);
+    ui->pushButtonStopBMM->setEnabled(false);
 }
 
 void SidechainPage::ClearWTPrimeExplorer()
 {
     ui->tableWidgetWTs->setRowCount(0);
-    ui->labelWTPrimeHash->setText("");
     ui->labelNumWT->setText(QString::number(0));
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
@@ -862,6 +1149,10 @@ void SidechainPage::ClearWTPrimeExplorer()
             BitcoinUnits::separatorAlways);
 
     ui->labelTotalAmount->setText(zero);
+
+    ui->labelTotalFees->setText(zero);
+
+    ui->labelStatus->setText("");
 }
 
 void SidechainPage::UpdateSidechainWealth()
@@ -882,7 +1173,9 @@ void SidechainPage::UpdateSidechainWealth()
     QString wealth = BitcoinUnits::formatWithUnit(unit, amountCtip, false,
             BitcoinUnits::separatorAlways);
 
-    ui->labelTotalWealth->setText(wealth);
+    QString label = "Total sidechain wealth: ";
+    label += wealth;
+    ui->tabWidget->setTabText(4, label);
 }
 
 void SidechainPage::UpdateToLatestWTPrime(bool fRequested)

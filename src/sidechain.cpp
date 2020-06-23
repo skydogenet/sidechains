@@ -10,6 +10,7 @@
 #include "streams.h"
 #include "utilmoneystr.h"
 
+#include <algorithm>
 #include <sstream>
 
 const uint32_t nType = 1;
@@ -47,6 +48,85 @@ CScript SidechainObj::GetScript(void) const
     return script;
 }
 
+std::string SidechainObj::ToString(void) const
+{
+    std::stringstream str;
+    str << "sidechainop=" << sidechainop << std::endl;
+    return str.str();
+}
+
+std::string SidechainWT::ToString() const
+{
+    std::stringstream str;
+    str << "sidechainop=" << sidechainop << std::endl;
+    str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
+    str << "destination=" << strDestination << std::endl;
+    str << "amount=" << FormatMoney(amount) << std::endl;
+    str << "mainchainFee=" << FormatMoney(mainchainFee) << std::endl;
+    str << "status=" << GetStatusStr() << std::endl;
+    str << "hashBlindWTX=" << hashBlindWTX.ToString() << std::endl;
+    return str.str();
+}
+
+std::string SidechainWT::GetStatusStr(void) const
+{
+    if (status == WT_UNSPENT) {
+        return "Unspent";
+    }
+    else
+    if (status == WT_IN_WTPRIME) {
+        return "Pending - in WT^";
+    }
+    else
+    if (status == WT_SPENT) {
+        return "Spent";
+    }
+    return "Unknown";
+}
+
+std::string SidechainWTPrime::ToString() const
+{
+    std::stringstream str;
+    str << "sidechainop=" << sidechainop << std::endl;
+    str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
+    str << "wtprime=" << CTransaction(wtPrime).ToString() << std::endl;
+    str << "status=" << GetStatusStr() << std::endl;
+    return str.str();
+}
+
+std::string SidechainWTPrime::GetStatusStr(void) const
+{
+    if (status == WTPRIME_CREATED) {
+        return "Created";
+    }
+    else
+    if (status == WTPRIME_FAILED) {
+        return "Failed";
+    }
+    else
+    if (status == WTPRIME_SPENT) {
+        return "Spent";
+    }
+    return "Unknown";
+}
+
+std::string SidechainDeposit::ToString() const
+{
+    std::stringstream str;
+    str << "sidechainop=" << sidechainop << std::endl;
+    str << "nSidechain=" << (unsigned int)nSidechain << std::endl;
+    str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
+    str << "keyID=" << keyID.ToString() << std::endl;
+    str << "payout=" << FormatMoney(amtUserPayout) << std::endl;
+    str << "mainchaintxid=" << dtx.GetHash().ToString() << std::endl;
+    str << "n=" << std::to_string(n) << std::endl;
+    str << "inputs:\n";
+    for (const CTxIn& in : dtx.vin) {
+        str << in.prevout.ToString() << std::endl;
+    }
+    return str.str();
+}
+
 SidechainObj *SidechainObjCtr(const CScript &script)
 {
     CScript::const_iterator pc = script.begin();
@@ -80,47 +160,22 @@ SidechainObj *SidechainObjCtr(const CScript &script)
     return NULL;
 }
 
-std::string SidechainObj::ToString(void) const
+struct CompareWTMainchainFee
 {
-    std::stringstream str;
-    str << "sidechainop=" << sidechainop << std::endl;
-    return str.str();
-}
-
-std::string SidechainWT::ToString() const
-{
-    std::stringstream str;
-    str << "sidechainop=" << sidechainop << std::endl;
-    str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
-    str << "destination=" << strDestination << std::endl;
-    str << "amount=" << FormatMoney(amount) << std::endl;
-    str << "status=" << status << std::endl;
-    str << "hashBlindWTX=" << hashBlindWTX.ToString() << std::endl;
-    return str.str();
-}
-
-std::string SidechainWTPrime::ToString() const
-{
-    std::stringstream str;
-    str << "sidechainop=" << sidechainop << std::endl;
-    str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
-    str << "wtprime=" << CTransaction(wtPrime).ToString() << std::endl;
-    return str.str();
-}
-
-std::string SidechainDeposit::ToString() const
-{
-    std::stringstream str;
-    str << "sidechainop=" << sidechainop << std::endl;
-    str << "nSidechain=" << (unsigned int)nSidechain << std::endl;
-    str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
-    str << "keyID=" << keyID.ToString() << std::endl;
-    str << "payout=" << FormatMoney(amtUserPayout) << std::endl;
-    str << "mainchaintxid=" << dtx.GetHash().ToString() << std::endl;
-    str << "n=" << std::to_string(n) << std::endl;
-    str << "inputs:\n";
-    for (const CTxIn& in : dtx.vin) {
-        str << in.prevout.ToString() << std::endl;
+    bool operator()(const SidechainWT& a, const SidechainWT& b) const
+    {
+        return a.mainchainFee > b.mainchainFee;
     }
-    return str.str();
+};
+
+void SortWTByFee(std::vector<SidechainWT>& vWT)
+{
+    std::sort(vWT.begin(), vWT.end(), CompareWTMainchainFee());
+}
+
+void SelectUnspentWT(std::vector<SidechainWT>& vWT)
+{
+    vWT.erase(std::remove_if(vWT.begin(), vWT.end(),[](const SidechainWT& wt)
+                {return wt.status != WT_UNSPENT;}), vWT.end());
+
 }

@@ -617,11 +617,13 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                         && o.scriptPubKey[0] == OP_RETURN
                         && o.nValue == wt->amount)
                 {
-                    fBurnFound = true;
+                    // Make sure that the burn amount & fee are valid
+                    if (wt->amount > 0 && wt->mainchainFee > 0 && wt->amount > wt->mainchainFee)
+                        fBurnFound = true;
                 }
             }
             if (!fBurnFound) {
-                return state.DoS(100, false, REJECT_INVALID, "invalid-wt-no-burn");
+                return state.DoS(100, false, REJECT_INVALID, "invalid-wt-missing-or-invalid-burn");
             }
         }
     }
@@ -1191,7 +1193,6 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
-    // TODO
     return 0;
 }
 
@@ -1670,7 +1671,37 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
                         vWT[w].status = WT_UNSPENT;
 
                     // Write to ldb
-                    psidechaintree->WriteWTUpdate(vWT);
+
+                    if (!psidechaintree->WriteWTUpdate(vWT)) {
+                        error("DisconnectBlock(): Failed to write wt update!");
+                        return DISCONNECT_FAILED;
+                    }
+
+                    SidechainWTPrime wtPrimeUpdate = *wtPrime;
+                    wtPrimeUpdate.status = WTPRIME_FAILED;
+                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrimeUpdate)) {
+                        error("DisconnectBlock(): Failed to write WT^ update!");
+                        return DISCONNECT_FAILED;
+                    }
+                }
+            }
+
+            // If this output is a WT^ status update commit - undo the update
+            uint256 hashWTPrime;
+            if (scriptPubKey.IsWTPrimeFailCommit(hashWTPrime) ||
+                    scriptPubKey.IsWTPrimeSpentCommit(hashWTPrime)) {
+
+                SidechainWTPrime wtPrime;
+                if (!psidechaintree->GetWTPrime(hashWTPrime, wtPrime)) {
+                    error("DisconnectBlock(): Failed to read WT^ to undo update!");
+                    return DISCONNECT_FAILED;
+                }
+
+                wtPrime.status = WTPRIME_CREATED;
+
+                if (!psidechaintree->WriteWTPrimeUpdate(wtPrime)) {
+                    error("DisconnectBlock(): Failed to write WT^ undo update!");
+                    return DISCONNECT_FAILED;
                 }
             }
         }
@@ -1992,6 +2023,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
     std::vector<PrecomputedTransactionData> txdata;
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
+    CAmount nDepositPayout = 0;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -2021,6 +2053,27 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             if (!SequenceLocks(tx, nLockTimeFlags, &prevheights, *pindex)) {
                 return state.DoS(100, error("%s: contains a non-BIP68-final transaction", __func__),
                                  REJECT_INVALID, "bad-txns-nonfinal");
+            }
+        } else {
+            // Count deposit output amounts
+            for (const CTxOut& out : tx.vout) {
+                const CScript& scriptPubKey = out.scriptPubKey;
+                const size_t script_sz = scriptPubKey.size();
+                if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+                    continue;
+
+                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+                if (!obj)
+                    continue;
+
+                if (obj->sidechainop != DB_SIDECHAIN_DEPOSIT_OP)
+                    continue;
+
+                const SidechainDeposit *deposit = (const SidechainDeposit *) obj;
+
+                nDepositPayout += deposit->amtUserPayout;
+
+                delete obj;
             }
         }
 
@@ -2053,15 +2106,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
-    // TODO add deposit output amounts and re-enable
-    /*
-    CAmount blockReward = nFees));
+    CAmount blockReward = nFees + nDepositPayout;
     if (block.vtx[0]->GetValueOut() > blockReward)
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
                                block.vtx[0]->GetValueOut(), blockReward),
                                REJECT_INVALID, "bad-cb-amount");
-    */
 
     if (!control.Wait())
         return state.DoS(100, error("%s: CheckQueue failed", __func__), REJECT_INVALID, "block-validation-failed");
@@ -2083,21 +2133,63 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         return false;
 
     if (fSidechainIndex) {
+        SidechainClient client;
+
         // Send latest WT^ to the mainchain if it hasn't been broadcasted yet
-        SidechainWTPrime wtPrime;
+        SidechainWTPrime wtPrimeLatest;
         uint256 hashLatestWTPrime;
         psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
-        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrime)) {
+        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrimeLatest)) {
             // If we haven't broadcasted the latest WT^ yet, do it now
             if (!bmmCache.HaveBroadcastedWTPrime(hashLatestWTPrime)) {
-                SidechainClient client;
-                std::string strHex = EncodeHexTx(wtPrime.wtPrime);
+                std::string strHex = EncodeHexTx(wtPrimeLatest.wtPrime);
                 if (client.BroadcastWTPrime(strHex)) {
                     bmmCache.StoreBroadcastedWTPrime(hashLatestWTPrime);
                 }
             }
         } else {
             LogPrintf("%s: Failed to get latest WT^ from ldb: %s!\n", __func__, hashLatestWTPrime.ToString());
+        }
+
+        // Check for & validate WT^ status updates
+        for (const CTxOut& txout : block.vtx[0]->vout) {
+            const CScript& scriptPubKey = txout.scriptPubKey;
+
+            uint256 hashWTPrime;
+            bool fFailCommit = scriptPubKey.IsWTPrimeFailCommit(hashWTPrime);
+
+            if (fFailCommit || scriptPubKey.IsWTPrimeSpentCommit(hashWTPrime)) {
+                // Verify commit state with the mainchain
+                if (!fSkipBMMChecks) {
+                    bool fVerified = fFailCommit ?
+                        client.HaveFailedWTPrime(hashWTPrime) :
+                        client.HaveSpentWTPrime(hashWTPrime);
+
+                    if (!fVerified)
+                        return state.Error(strprintf("%s: Invalid WT^ update : %s - %s!\n",
+                                    __func__, fFailCommit ? "Failed" : "Paid out",
+                                    hashWTPrime.ToString()));
+                }
+
+                // Load the WT^ object from LDB if we need to and then write an
+                // update with the new WT^ status. If the commit is for the
+                // current WT^ (which it always should be in practice) we have
+                // already loaded it.
+                if (hashWTPrime == wtPrimeLatest.wtPrime.GetHash()) {
+                    wtPrimeLatest.status = fFailCommit ? WTPRIME_FAILED : WTPRIME_SPENT;
+                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrimeLatest))
+                        return state.Error(strprintf("%s: Failed to write WT^ update!\n", __func__));
+                } else {
+                    SidechainWTPrime wtPrime;
+                    if (!psidechaintree->GetWTPrime(hashWTPrime, wtPrime))
+                        return state.Error(strprintf("%s: Failed to read WT^ for update!\n", __func__));
+
+                    wtPrime.status = fFailCommit ? WTPRIME_FAILED : WTPRIME_SPENT;
+
+                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrime))
+                        return state.Error(strprintf("%s: Failed to write WT^ update!\n", __func__));
+                }
+            }
         }
 
         // Collect & verify sidechain objects
@@ -2130,17 +2222,15 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                                 && o.scriptPubKey[0] == OP_RETURN
                                 && o.nValue == wt->amount)
                         {
+                            // Make sure that the burn amount & fee are valid
+                            if (wt->amount > 0 && wt->mainchainFee > 0 && wt->amount > wt->mainchainFee)
                                 fBurnFound = true;
                         }
                     }
                     if (!fBurnFound) {
-                        return state.Error("Invalid wt - no burn found!");
+                        return state.Error("Invalid WT: invalid-wt-missing-or-invalid-burn");
                     }
                 }
-
-                // If we find a WT^ we will call VerifyWTPrimes later
-                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP)
-                    fFoundWTPrime = true;
 
                 // If the object is a wt we do not want the ID to change when
                 // the wt status is changed so that we can update the status
@@ -2152,8 +2242,27 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 }
                 else
                 if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
-                    const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
+                    // A block is invalid if it adds a new WT^ when the current
+                    // WT^ status hasn't been updated to either WTPRIME_FAILED
+                    // or WTPRIME_SPENT
+                    if (!hashLatestWTPrime.IsNull()) {
+                        if (wtPrimeLatest.status == WTPRIME_CREATED) {
+                            return state.Error(strprintf("%s Invalid WT^ - current WT^ still pending!\n", __func__));
+                        }
+                    }
+
+                    // If we find a WT^ we will call VerifyWTPrimes later
+                    fFoundWTPrime = true;
+
+                    SidechainWTPrime *wtPrime = (SidechainWTPrime *) obj;
+
+                    // Insert block height
+                    wtPrime->nHeight = pindex->nHeight;
+
                     id = wtPrime->GetID();
+                    obj = (SidechainObj *) wtPrime;
+
+                    LogPrintf("%s: Found new WT^: %s.\n", __func__, wtPrime->wtPrime.GetHash().ToString());
                 }
                 else
                 if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
@@ -2165,19 +2274,22 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         }
 
         // Handle WT^ verification & wt status update
-        if (fFoundWTPrime && !fSkipBMMChecks) {
+        if (fFoundWTPrime) {
             std::string strFail = "";
             std::vector<SidechainWT> vWT;
             uint256 hashWTPrime;
             uint256 hashWTPrimeID;
 
-            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, true /* fReplicate */))
+            // This will also return a list of wt(s) from the WT^
+            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, !fSkipBMMChecks /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
                 return state.Error(strprintf("%s: hashWTPrime shouldn't be null if VerifyWTPrimes passed!\n", __func__));
 
-            psidechaintree->WriteWTUpdate(vWT);
+            // Write the updated status of wt(s) in the WT^ (WT_IN_WTPRIME)
+            if (!psidechaintree->WriteWTUpdate(vWT))
+                return state.Error(strprintf("%s: Failed to write wt update!\n", __func__));
         }
 
         // Write sidechain objects to db
@@ -2286,9 +2398,6 @@ bool static FlushStateToDisk(const CChainParams& chainparams, CValidationState &
                 }
                 if (!pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
                     return AbortNode(state, "Failed to write to block index database");
-                }
-                if (!psidechaintree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
-                    return AbortNode(state, "Failed to write to sidechain index database");
                 }
             }
             // Finally remove any pruned files
@@ -3377,6 +3486,50 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
     return commitment;
 }
 
+CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime)
+{
+    /*
+     * Generate a script commit indicating that the WT^ failed on the mainchain
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(37);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xFA;
+    scriptPubKey[2] = 0x86;
+    scriptPubKey[3] = 0xC6;
+    scriptPubKey[4] = 0x89;
+
+    // Add WT^ hash
+    memcpy(&scriptPubKey[5], &hashWTPrime, 32);
+
+    return scriptPubKey;
+}
+
+CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime)
+{
+    /*
+     * Generate a script commit indicating that the WT^ was spent by mainchain
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(37);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xFB;
+    scriptPubKey[2] = 0x53;
+    scriptPubKey[3] = 0x45;
+    scriptPubKey[4] = 0xDE;
+
+    // Add WT^ hash
+    memcpy(&scriptPubKey[5], &hashWTPrime, 32);
+
+    return scriptPubKey;
+}
+
 /** Context-dependent validity checks.
  *  By "context", we mean only the previous block headers, but not the UTXO
  *  set; UTXO-related validity checks are done in ConnectBlock().
@@ -3711,7 +3864,6 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
             return error("%s: invalid WT^! Error: %s", __func__, strFail);
         }
     }
-
 
     // Header is valid/has work, merkle tree and segwit merkle tree are good...RELAY NOW
     // (but if it does not build on our best tip, let the SendMessages loop relay it)
@@ -4268,7 +4420,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
                 return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
             if (!g_chainstate.ConnectBlock(block, state, pindex, coins,
                         chainparams, false /* fJustCheck */, true /* fSkipBMMChecks */))
-                return error("VerifyDB(): *** found unconnectable block at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
+                return error("VerifyDB(): *** found unconnectable block at %d, hash=%s.\n Error: %s\n", pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         }
     }
 
@@ -5064,7 +5216,7 @@ void LoadBMMCache()
 
 void DumpBMMCache()
 {
-    std::vector<uint256> vHash = bmmCache.GetBMMWTPrimeCache();
+    std::vector<uint256> vHash = bmmCache.GetBroadcastedWTPrimeCache();
     if (vHash.empty())
         return;
 
@@ -5157,61 +5309,51 @@ void DumpMainBlockCache()
     }
 }
 
-int GetBlocksVerificationPeriod(int nMainchainHeight)
-{
-    if (nMainchainHeight % MAINCHAIN_WTPRIME_VERIFICATION_PERIOD == 0)
-        return MAINCHAIN_WTPRIME_VERIFICATION_PERIOD;
-
-    int nBlocks = 0;
-    for (;;) {
-        nBlocks++;
-        if ((nMainchainHeight + nBlocks) % MAINCHAIN_WTPRIME_VERIFICATION_PERIOD == 0)
-            break;
-    }
-
-    return nBlocks;
-}
-
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck)
+bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck, bool fCheckUnique)
 {
-    // Get WT(s) from psidechaintree
-    const std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
-    if (vWT.empty()) {
-        LogPrintf("%s: No wt(s) to create WT^\n", __func__);
-        return false;
-    }
+    unsigned int nMinWT = gArgs.GetArg("-minwt", DEFAULT_MIN_WT_CREATE_WTPRIME);
+    bool fReplace = gArgs.GetBoolArg("-replacewtprime", false);
 
     if (!fReplicationCheck) {
         // Get the mainchain's chain height
         SidechainClient client;
-        int nMainchainHeight = 0;
-        if (!client.GetBlockCount(nMainchainHeight)) {
-            LogPrintf("%s: Failed to request mainchain block count!");
-            return false;
-        }
 
-        // Check if remaining mainchain WT^ verification period blocks are enough
-        // to get minimum workscore
-        int nBlocksRemaining = GetBlocksVerificationPeriod(nMainchainHeight);
-        if (nBlocksRemaining < MAINCHAIN_WTPRIME_MIN_WORKSCORE) {
-            LogPrintf("%s: Not enough blocks left in mainchain verification period to achieve minimim workscore\n", __func__);
-            return false;
+        // Check if the current WT^ is still pending
+        uint256 hashLatestWTPrime;
+        SidechainWTPrime wtPrimeLatest;
+        psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
+        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrimeLatest)) {
+            if (wtPrimeLatest.status == WTPRIME_CREATED) {
+                LogPrintf("%s: Current WT^ for this sidechain still pending!\n", __func__);
+                return false;
+            }
         }
 
         // Check for existing WT^ in mainchain SCDB for this sidechain
         std::vector<uint256> vHashWTPrime;
-        if (client.ListWTPrimeStatus(vHashWTPrime)) {
+        if (!fReplace && client.ListWTPrimeStatus(vHashWTPrime)) {
             LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
             return false;
         }
     }
 
-    // Check the status / zone of wt(s) before including them in a WT^
-    std::vector<SidechainWT> vWTFiltered;
-    for (const SidechainWT& wt : vWT) {
-        if (wt.status == WT_UNSPENT)
-            vWTFiltered.push_back(wt);
+    // Get WT(s) from psidechaintree
+    std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
+    if (vWT.empty()) {
+        LogPrintf("%s: No wt(s) to create WT^\n", __func__);
+        return false;
+    }
+
+    // Select only WTs with WT_UNSPENT status
+    SelectUnspentWT(vWT);
+
+    // Sort WTs by mainchain fee amount
+    SortWTByFee(vWT);
+
+    if (!fReplicationCheck && vWT.size() < nMinWT) {
+        LogPrintf("%s: Not enough WT(s) to create WT^\n", __func__);
+        return false;
     }
 
     // TODO sort vWT by fees
@@ -5220,18 +5362,23 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     SidechainWTPrime wtPrime;
     wtPrime.nSidechain = SIDECHAIN_TEST;
 
-    CAmount joinAmount = 0;  // Total output
     CMutableTransaction wjtx; // WT^
+
+    // Add a dummy output for mainchain fee encoding (updated later)
+    CAmount amountMainchainFees = 0;
+    wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << CScriptNum(1LL << 40)));
+
     wjtx.nVersion = 2;
     wjtx.vin.resize(1); // Dummy vin for serialization...
     wjtx.vin[0].scriptSig = CScript() << OP_0;
-    for (const SidechainWT& wt : vWTFiltered) {
-        CAmount amountWTBurn = wt.amount;
-        joinAmount += amountWTBurn;
+    for (const SidechainWT& wt : vWT) {
+        CAmount amountWT = wt.amount - wt.mainchainFee;
+
+        amountMainchainFees += wt.mainchainFee;
 
         // Output to mainchain keyID
         CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
-        wjtx.vout.push_back(CTxOut(amountWTBurn, GetScriptForDestination(dest)));
+        wjtx.vout.push_back(CTxOut(amountWT, GetScriptForDestination(dest)));
 
         // Add WT objid to WT^ obj
         wtPrime.vWT.push_back(wt.GetID());
@@ -5241,10 +5388,16 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
             // If we went over size, undo this output and stop
             wtPrime.vWT.pop_back();
             wjtx.vout.pop_back();
-            joinAmount -= amountWTBurn;
+
+            // Also remove added fees
+            amountMainchainFees -= wt.mainchainFee;
+
             break;
         }
     }
+
+    // Update mainchain fee encoding output.
+    wjtx.vout.front().scriptPubKey = EncodeWTFees(amountMainchainFees);
 
     // Did anything make it into the WT^?
     if (!wjtx.vout.size()) {
@@ -5252,29 +5405,16 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
         return false;
     }
 
-    // TODO deterministic WT^ creation will need to handle fees another way
-    // TODO improve fee calculation
-    //CAmount nBaseFee = CENT;
-    // Calculate total group fee to be split evenly between sidechain & mainchain
-    //unsigned int nBytes = GetSerializeSize(wjtx, SER_NETWORK, PROTOCOL_VERSION);
-    //CCoinControl coin_control;
-    //coin_control.m_feerate.reset();
-    //FeeCalculation feeCalc;
-    // 2 * the fee as it is split in two
-    //CAmount nJoinFee = (nBaseFee + 2*GetMinimumFee(nBytes, coin_control, mempool, ::feeEstimator, &feeCalc));
-    //CAmount nFeePerOutput = nJoinFee / wjtx.vout.size();
-
-    // TODO deterministic WT^ creation will need to handle fees another way
-    // TODO drop outputs with < nFeePerOutput nValue & recalculate
-    // Split fee equally among output(s)
-    //for (size_t i = 0; i < wjtx.vout.size(); i++)
-    //    wjtx.vout[i].nValue -= nFeePerOutput;
-
-    // TODO deterministic WT^ creation will need to handle fees another way
-    // Pay sidechain miners their half of the join fee,
-    // leaving the rest for the mainchain miners
-    //if (nJoinFee > 0)
-    //    wjtx.vout.push_back(CTxOut((nJoinFee / 2), SIDECHAIN_FEESCRIPT));
+    // If the WT^ hash will be the same as a previous WT^ return false. It is
+    // possible for a new WT^ to have the same hash as a previous WT^ if all of
+    // the outputs (destinations & amounts) are exactly the same. In that case,
+    // wait for a new WT to be added to the database so that this WT^ will have
+    // a unique hash. It would also be possible to remove one of the outputs to
+    // obtain a unique WT^ hash (TODO?)
+    if (fCheckUnique && psidechaintree->HaveWTPrime(wjtx.GetHash())) {
+        LogPrintf("%s: ERROR: WT^ is not unique!\n", __func__);
+        return false;
+    }
 
     // Check that the WT^ is valid by mainchain policy
     CFeeRate dust = CFeeRate(DUST_RELAY_TX_FEE);
@@ -5306,6 +5446,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
     int nWTPrime = 0;
 
     // Loop through the blocks txns and look for WT^(s) to verify
+    CAmount amountMainchainFees = 0;
     for (const CTransactionRef& tx : vtx) {
         for (const CTxOut& txout : tx->vout) {
             const CScript& scriptPubKey = txout.scriptPubKey;
@@ -5326,9 +5467,6 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                 return false;
             }
 
-            // TODO for full determinism, check previous WT^ payout
-            // proof before allowing a new WT^
-
             const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
 
             // Check that every WT this WT^ has listed is in the db
@@ -5345,13 +5483,28 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                     return false;
                 }
 
+                amountMainchainFees += wt.mainchainFee;
+
                 vWT.push_back(wt);
             }
 
             // Check that the number of outputs equals the number of
-            // WT(s) listed in the WT^
-            if (wtPrime->wtPrime.vout.size() != vWT.size()) {
+            // WT(s) listed in the WT^ + one encoded mainchain fee output
+            if (wtPrime->wtPrime.vout.size() != vWT.size() + 1) {
                 strFail = "Invalid WT^ - too many outputs!\n";
+                return false;
+            }
+
+            // Check that the amount in the encoded mainchain fee output is
+            // equal to the sum of fees from the wt(s)
+            CAmount amountRead = 0;
+            if (!DecodeWTFees(wtPrime->wtPrime.vout.front().scriptPubKey, amountRead)) {
+                strFail = "Invalid WT^ - failed to decode mainchain fee output!\n";
+                return false;
+            }
+
+            if (amountRead != amountMainchainFees) {
+                strFail = "Invalid WT^ - invalid encoded mainchain fee output!\n";
                 return false;
             }
 
@@ -5359,7 +5512,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
             for (const SidechainWT& wt : vWT) {
                 bool fFound = false;
                 for (const CTxOut& out : wtPrime->wtPrime.vout) {
-                    if (out.nValue == wt.amount &&
+                    if (out.nValue == wt.amount - wt.mainchainFee &&
                             GetScriptForDestination(DecodeDestination(wt.strDestination, true)) == out.scriptPubKey) {
                         fFound = true;
                         break;
@@ -5742,6 +5895,55 @@ void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
             return;
         }
     }
+}
+
+CScript EncodeWTFees(const CAmount& amount)
+{
+    CDataStream s(SER_NETWORK, PROTOCOL_VERSION);
+    s << amount;
+
+    CScript script;
+    script << OP_RETURN;
+    script << std::vector<unsigned char>(s.begin(), s.end());
+
+    return script;
+}
+
+bool DecodeWTFees(const CScript& script, CAmount& amount)
+{
+    if (script[0] != OP_RETURN || script.size() != 10) {
+        LogPrintf("%s: Error: Invalid script!\n", __func__);
+        return false;
+    }
+
+    CScript::const_iterator it = script.begin() + 1;
+    std::vector<unsigned char> vch;
+    opcodetype opcode;
+
+    if (!script.GetOp(it, opcode, vch)) {
+        LogPrintf("%s: Error: GetOp failed!\n", __func__);
+        return false;
+    }
+
+    if (vch.empty()) {
+        LogPrintf("%s: Error: Amount bytes empty!\n", __func__);
+        return false;
+    }
+
+    if (vch.size() > 8) {
+        LogPrintf("%s: Error: Amount bytes too large!\n", __func__);
+        return false;
+    }
+
+    try {
+        CDataStream ds(vch, SER_NETWORK, PROTOCOL_VERSION);
+        ds >> amount;
+    } catch (const std::exception&) {
+        LogPrintf("%s: Error: Failed to deserialize amount!\n", __func__);
+        return false;
+    }
+
+    return true;
 }
 
 //! Guess how far we are in the verification process at the given block index

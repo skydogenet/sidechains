@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>663</width>
-    <height>528</height>
+    <width>728</width>
+    <height>534</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Form</string>
@@ -25,6 +31,17 @@
         <widget class="QTabWidget" name="tabWidget">
          <property name="enabled">
           <bool>true</bool>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">/* Make disabled tabs invisible besides text*/
+QTabBar::tab:disabled {
+		background: transparent;
+}
+
+</string>
+         </property>
+         <property name="tabPosition">
+          <enum>QTabWidget::North</enum>
          </property>
          <property name="currentIndex">
           <number>0</number>
@@ -72,55 +89,248 @@
               <attribute name="toolTip">
                <string>Withdraw from the Sidechain to the parent chain (DriveNetTESTDRIVE)</string>
               </attribute>
-              <layout class="QVBoxLayout" name="verticalLayout_11">
-               <item>
-                <widget class="QFrame" name="frame_7">
+              <layout class="QGridLayout" name="gridLayout_2">
+               <item row="1" column="4">
+                <spacer name="horizontalSpacer_13">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Fixed</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="1" column="3">
+                <widget class="QPushButton" name="pushButtonWTHelp">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>64</width>
+                   <height>64</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../bitcoin.qrc">
+                   <normaloff>:/icons/transaction_0</normaloff>:/icons/transaction_0</iconset>
+                 </property>
+                </widget>
+               </item>
+               <item row="6" column="0" colspan="5">
+                <spacer name="verticalSpacer_9">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="1" column="2">
+                <spacer name="horizontalSpacer_14">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Fixed</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="1" column="5">
+                <widget class="QFrame" name="frame">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <property name="lineWidth">
+                  <number>0</number>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_6">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <layout class="QHBoxLayout" name="horizontalLayoutAmount" stretch="0,0,0">
+                    <item>
+                     <widget class="QLabel" name="label_26">
+                      <property name="text">
+                       <string>Withdrawal</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="horizontalSpacer_6">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>35</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="BitcoinAmountField" name="payAmount"/>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="horizontalLayoutAmount_2" stretch="0,0,0">
+                    <item>
+                     <widget class="QLabel" name="label_28">
+                      <property name="text">
+                       <string>Transaction Fee</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="horizontalSpacer_5">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>9</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="BitcoinAmountField" name="feeAmount"/>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="horizontalLayoutAmount_3" stretch="0,0,0">
+                    <item>
+                     <widget class="QLabel" name="label_31">
+                      <property name="text">
+                       <string>Mainchain Fee</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="horizontalSpacer_4">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>16</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item>
+                     <widget class="BitcoinAmountField" name="mainchainFeeAmount"/>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="1" column="6">
+                <spacer name="horizontalSpacer_15">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::MinimumExpanding</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="5" column="0" colspan="7">
+                <widget class="QFrame" name="frame_11">
                  <property name="frameShape">
                   <enum>QFrame::StyledPanel</enum>
                  </property>
                  <property name="frameShadow">
                   <enum>QFrame::Raised</enum>
                  </property>
-                 <layout class="QHBoxLayout" name="horizontalLayout_2">
-                  <item>
-                   <widget class="QLabel" name="label_7">
+                 <layout class="QGridLayout" name="gridLayout_19">
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="label_32">
+                    <property name="text">
+                     <string>Total cost:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="labelTotalWT">
+                    <property name="text">
+                     <string>0</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="4">
+                   <widget class="QPushButton" name="pushButtonWT">
                     <property name="sizePolicy">
-                     <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>96</width>
+                      <height>45</height>
+                     </size>
+                    </property>
                     <property name="text">
-                     <string>Available to withdraw:</string>
+                     <string>Withdraw</string>
                     </property>
                    </widget>
                   </item>
-                  <item>
-                   <widget class="QLabel" name="available">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="text">
-                     <string>0.0</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <spacer name="horizontalSpacer_2">
+                  <item row="0" column="5">
+                   <spacer name="horizontalSpacer_10">
                     <property name="orientation">
                      <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeType">
-                     <enum>QSizePolicy::MinimumExpanding</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -130,130 +340,123 @@
                     </property>
                    </spacer>
                   </item>
-                  <item>
-                   <widget class="QLabel" name="label_3">
-                    <property name="text">
-                     <string>Next Train: </string>
+                  <item row="0" column="0">
+                   <spacer name="horizontalSpacer">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
                     </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QLabel" name="train">
-                    <property name="text">
-                     <string>? - not connected to mainchain</string>
+                    <property name="sizeType">
+                     <enum>QSizePolicy::Fixed</enum>
                     </property>
-                   </widget>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>240</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
                   </item>
                  </layout>
                 </widget>
                </item>
-               <item>
-                <widget class="QFrame" name="frame_8">
+               <item row="4" column="0" colspan="7">
+                <widget class="Line" name="line_3">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="frameShape">
-                  <enum>QFrame::StyledPanel</enum>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
                  </property>
-                 <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
-                 </property>
-                 <layout class="QGridLayout" name="gridLayout_5">
-                  <item row="1" column="0">
-                   <layout class="QHBoxLayout" name="payToLayout">
-                    <property name="spacing">
-                     <number>0</number>
-                    </property>
-                    <item>
-                     <widget class="QValidatedLineEdit" name="payTo">
-                      <property name="toolTip">
-                       <string>The Bitcoin address to send the payment to</string>
-                      </property>
-                      <property name="text">
-                       <string/>
-                      </property>
-                      <property name="placeholderText">
-                       <string>Mainchain Bitcoin Address</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QToolButton" name="pasteButton">
-                      <property name="toolTip">
-                       <string>Paste address from clipboard</string>
-                      </property>
-                      <property name="text">
-                       <string/>
-                      </property>
-                      <property name="icon">
-                       <iconset resource="../bitcoin.qrc">
-                        <normaloff>:/icons/editpaste</normaloff>:/icons/editpaste</iconset>
-                      </property>
-                      <property name="iconSize">
-                       <size>
-                        <width>22</width>
-                        <height>22</height>
-                       </size>
-                      </property>
-                      <property name="shortcut">
-                       <string>Alt+P</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QToolButton" name="deleteButton">
-                      <property name="toolTip">
-                       <string>Remove this entry</string>
-                      </property>
-                      <property name="text">
-                       <string/>
-                      </property>
-                      <property name="icon">
-                       <iconset resource="../bitcoin.qrc">
-                        <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
-                      </property>
-                      <property name="iconSize">
-                       <size>
-                        <width>22</width>
-                        <height>22</height>
-                       </size>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_9">
-                    <property name="text">
-                     <string>Withdraw Address:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="0">
-                   <layout class="QHBoxLayout" name="horizontalLayoutAmount" stretch="0">
-                    <item>
-                     <widget class="BitcoinAmountField" name="payAmount"/>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="1" column="1" rowspan="2">
-                   <widget class="QPushButton" name="pushButtonWT">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="text">
-                     <string>Withdraw</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
                 </widget>
+               </item>
+               <item row="0" column="1" colspan="6">
+                <layout class="QHBoxLayout" name="payToLayout">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label">
+                   <property name="text">
+                    <string>Destination</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_7">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeType">
+                    <enum>QSizePolicy::Fixed</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>10</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QValidatedLineEdit" name="payTo">
+                   <property name="toolTip">
+                    <string>The Bitcoin address to send the payment to</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Mainchain Bitcoin Address</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="pasteButton">
+                   <property name="toolTip">
+                    <string>Paste address from clipboard</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../bitcoin.qrc">
+                     <normaloff>:/icons/editpaste</normaloff>:/icons/editpaste</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>22</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="shortcut">
+                    <string>Alt+P</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="deleteButton">
+                   <property name="toolTip">
+                    <string>Remove this entry</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../bitcoin.qrc">
+                     <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>22</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
               </layout>
              </widget>
@@ -268,8 +471,8 @@
               <attribute name="toolTip">
                <string>Get an address to make a deposit from the parent chain to this Sidechain</string>
               </attribute>
-              <layout class="QHBoxLayout" name="horizontalLayout_9">
-               <item>
+              <layout class="QGridLayout" name="gridLayout_18">
+               <item row="0" column="0">
                 <widget class="QFrame" name="frame_6">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -354,7 +557,7 @@
                  </layout>
                 </widget>
                </item>
-               <item>
+               <item row="0" column="1">
                 <widget class="QRImageWidget" name="QRCode">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -388,47 +591,21 @@
                  </property>
                 </widget>
                </item>
+               <item row="1" column="0" colspan="2">
+                <spacer name="verticalSpacer_8">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
               </layout>
              </widget>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QFrame" name="frame_2">
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_3">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_2">
-                <property name="text">
-                 <string>Sidechain: Testchain</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QPushButton" name="pushButtonSidechain">
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="../bitcoin.qrc">
-                  <normaloff>:/icons/bitcoin</normaloff>:/icons/bitcoin</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>96</width>
-                  <height>96</height>
-                 </size>
-                </property>
-                <property name="flat">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
             </widget>
            </item>
            <item row="4" column="0" colspan="2">
@@ -437,7 +614,7 @@
               <enum>Qt::Vertical</enum>
              </property>
              <property name="sizeType">
-              <enum>QSizePolicy::Minimum</enum>
+              <enum>QSizePolicy::MinimumExpanding</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -447,60 +624,79 @@
              </property>
             </spacer>
            </item>
-           <item row="0" column="0">
-            <widget class="QFrame" name="frame">
+           <item row="0" column="0" colspan="2">
+            <widget class="QFrame" name="frame_7">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
              <property name="frameShadow">
               <enum>QFrame::Raised</enum>
              </property>
-             <layout class="QGridLayout" name="gridLayout_2">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label">
+             <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <item>
+               <widget class="QLabel" name="label_7">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
-                 <string>Parent Chain: DriveNetTESTDRIVE</string>
+                 <string>Your sidechain balance</string>
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
-               <widget class="QPushButton" name="pushButtonMainchain">
+              <item>
+               <widget class="QLabel" name="available">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
-                 <string/>
+                 <string>0.0</string>
                 </property>
-                <property name="icon">
-                 <iconset resource="../bitcoin.qrc">
-                  <normaloff>:/icons/drivenet</normaloff>:/icons/drivenet</iconset>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
                 </property>
-                <property name="iconSize">
+                <property name="sizeType">
+                 <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
                  <size>
-                  <width>96</width>
-                  <height>96</height>
+                  <width>40</width>
+                  <height>20</height>
                  </size>
                 </property>
-                <property name="flat">
-                 <bool>true</bool>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_3">
+                <property name="text">
+                 <string>Next Train: </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="train">
+                <property name="text">
+                 <string>? - not connected to mainchain</string>
                 </property>
                </widget>
               </item>
              </layout>
             </widget>
-           </item>
-           <item row="1" column="0" colspan="2">
-            <spacer name="verticalSpacer_5">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Maximum</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>5</width>
-               <height>5</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </widget>
@@ -516,211 +712,386 @@
            <string>Withdrawal Explorer</string>
           </attribute>
           <layout class="QGridLayout" name="gridLayout_6">
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_12">
-             <property name="text">
-              <string>WT^ info:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_29">
-             <property name="text">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Search for a WT^ or display the latest&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QFrame" name="frame_9">
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_7">
-              <item row="2" column="1">
-               <widget class="QLabel" name="labelNumWT">
-                <property name="text">
-                 <string>0</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_25">
-                <property name="text">
-                 <string>Total withdrawal amount:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLabel" name="labelTotalAmount">
-                <property name="text">
-                 <string>0</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_27">
-                <property name="text">
-                 <string>Number of WT(s): </string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0" colspan="2">
-               <widget class="QLabel" name="labelWTPrimeHash">
-                <property name="text">
-                 <string>Hash: </string>
-                </property>
-                <property name="textInteractionFlags">
-                 <set>Qt::TextSelectableByMouse</set>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="7" column="0">
-            <widget class="QLabel" name="label_24">
-             <property name="text">
-              <string>WT(s) included:</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0">
-            <widget class="Line" name="line_3">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QTableWidget" name="tableWidgetWTs">
-             <property name="sizeAdjustPolicy">
-              <enum>QAbstractScrollArea::AdjustIgnored</enum>
-             </property>
-             <property name="editTriggers">
-              <set>QAbstractItemView::NoEditTriggers</set>
-             </property>
-             <property name="selectionMode">
-              <enum>QAbstractItemView::NoSelection</enum>
-             </property>
-             <property name="textElideMode">
-              <enum>Qt::ElideRight</enum>
-             </property>
-             <property name="wordWrap">
-              <bool>false</bool>
-             </property>
-             <property name="rowCount">
-              <number>0</number>
-             </property>
-             <attribute name="horizontalHeaderCascadingSectionResizes">
-              <bool>false</bool>
-             </attribute>
-             <attribute name="horizontalHeaderStretchLastSection">
-              <bool>true</bool>
-             </attribute>
-             <attribute name="verticalHeaderStretchLastSection">
-              <bool>false</bool>
-             </attribute>
-             <column>
-              <property name="text">
-               <string>Amount</string>
-              </property>
-             </column>
-             <column>
-              <property name="text">
-               <string>Destination</string>
-              </property>
-             </column>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QFrame" name="frame_5">
-             <property name="frameShape">
-              <enum>QFrame::StyledPanel</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Raised</enum>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_16">
-              <item row="1" column="2">
-               <widget class="QPushButton" name="pushButtonShowLatestWTPrime">
-                <property name="text">
-                 <string>Show Latest</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QPushButton" name="pushButtonLookup">
-                <property name="text">
-                 <string>Search</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLineEdit" name="lineEditWTPrimeHash">
-                <property name="maxLength">
-                 <number>64</number>
-                </property>
-                <property name="placeholderText">
-                 <string>Enter a WT^ hash</string>
-                </property>
-                <property name="clearButtonEnabled">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QCheckBox" name="checkBoxAutoWTPrimeRefresh">
-                <property name="text">
-                 <string>Automatically update to latest</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QFrame" name="frame_4">
+            <widget class="QFrame" name="frame_15">
              <property name="frameShape">
               <enum>QFrame::NoFrame</enum>
              </property>
              <property name="frameShadow">
               <enum>QFrame::Raised</enum>
              </property>
+             <property name="lineWidth">
+              <number>0</number>
+             </property>
              <layout class="QHBoxLayout" name="horizontalLayout_3">
-              <item>
-               <widget class="QLabel" name="label_10">
-                <property name="text">
-                 <string>Total sidechain wealth: </string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="labelTotalWealth">
-                <property name="text">
-                 <string>0.0000,0000</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="horizontalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
              </layout>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QTabWidget" name="tabWidget_3">
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="tab_2">
+              <attribute name="title">
+               <string>Candidate WTs</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_4">
+               <item>
+                <widget class="QLabel" name="label_34">
+                 <property name="font">
+                  <font>
+                   <italic>true</italic>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Candidate WTs -- sorted by mainchain fee. (Each WT consumes 136 mainchain wBytes.)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QTableView" name="tableViewUnspentWT">
+                 <property name="font">
+                  <font>
+                   <family>Noto Sans</family>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="editTriggers">
+                  <set>QAbstractItemView::NoEditTriggers</set>
+                 </property>
+                 <property name="sortingEnabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>false</bool>
+                 </property>
+                 <property name="cornerButtonEnabled">
+                  <bool>false</bool>
+                 </property>
+                 <attribute name="horizontalHeaderStretchLastSection">
+                  <bool>true</bool>
+                 </attribute>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab">
+              <attribute name="title">
+               <string>WT-Bundles</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_5">
+               <item>
+                <widget class="QLabel" name="label_29">
+                 <property name="text">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Search for a WT-Bundle&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QFrame" name="frame_5">
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_16">
+                  <item row="1" column="0">
+                   <widget class="QLineEdit" name="lineEditWTPrimeHash">
+                    <property name="maxLength">
+                     <number>64</number>
+                    </property>
+                    <property name="placeholderText">
+                     <string>Enter a WT^ (WT-Bundle) hash and press enter</string>
+                    </property>
+                    <property name="clearButtonEnabled">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QCheckBox" name="checkBoxAutoWTPrimeRefresh">
+                    <property name="text">
+                     <string>Automatically update to latest</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pushButtonShowPastWTPrimes">
+                    <property name="text">
+                     <string>Withdrawal History</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QFrame" name="frame_2">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="frameShape">
+                  <enum>QFrame::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_4">
+                  <item>
+                   <widget class="QFrame" name="frame_8">
+                    <property name="frameShape">
+                     <enum>QFrame::NoFrame</enum>
+                    </property>
+                    <property name="frameShadow">
+                     <enum>QFrame::Raised</enum>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_3">
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="label_33">
+                       <property name="text">
+                        <string>Height created:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2" rowspan="3">
+                      <spacer name="horizontalSpacer_8">
+                       <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                       </property>
+                       <property name="sizeType">
+                        <enum>QSizePolicy::Maximum</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>40</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                     <item row="1" column="1">
+                      <widget class="QLabel" name="labelNumWT">
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="1">
+                      <widget class="QLabel" name="labelBlockHeight">
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_27">
+                       <property name="text">
+                        <string>Numer of WT(s):</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_11">
+                       <property name="text">
+                        <string>Mainchain status:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLabel" name="labelStatus">
+                       <property name="text">
+                        <string/>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0" colspan="3">
+                      <spacer name="verticalSpacer_5">
+                       <property name="orientation">
+                        <enum>Qt::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>20</width>
+                         <height>40</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QFrame" name="frame_4">
+                    <property name="frameShape">
+                     <enum>QFrame::NoFrame</enum>
+                    </property>
+                    <property name="frameShadow">
+                     <enum>QFrame::Raised</enum>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_5">
+                     <item row="1" column="1">
+                      <widget class="QLabel" name="labelTotalFees">
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2" rowspan="3">
+                      <spacer name="horizontalSpacer_9">
+                       <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>40</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_30">
+                       <property name="text">
+                        <string>Total mainchain fees:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLabel" name="labelTotalAmount">
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0" colspan="3">
+                      <spacer name="verticalSpacer_7">
+                       <property name="orientation">
+                        <enum>Qt::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>20</width>
+                         <height>40</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="label_2">
+                       <property name="text">
+                        <string>Total transaction size:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_25">
+                       <property name="text">
+                        <string>Total withdrawal amount:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="1">
+                      <widget class="QLabel" name="labelTotalSize">
+                       <property name="text">
+                        <string>0 wBytes</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <spacer name="horizontalSpacer_11">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeType">
+                     <enum>QSizePolicy::MinimumExpanding</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_24">
+                 <property name="text">
+                  <string>WT(s) included:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QTableWidget" name="tableWidgetWTs">
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustIgnored</enum>
+                 </property>
+                 <property name="editTriggers">
+                  <set>QAbstractItemView::NoEditTriggers</set>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::NoSelection</enum>
+                 </property>
+                 <property name="textElideMode">
+                  <enum>Qt::ElideRight</enum>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>false</bool>
+                 </property>
+                 <property name="cornerButtonEnabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="rowCount">
+                  <number>0</number>
+                 </property>
+                 <attribute name="horizontalHeaderCascadingSectionResizes">
+                  <bool>false</bool>
+                 </attribute>
+                 <attribute name="horizontalHeaderStretchLastSection">
+                  <bool>true</bool>
+                 </attribute>
+                 <attribute name="verticalHeaderStretchLastSection">
+                  <bool>false</bool>
+                 </attribute>
+                 <column>
+                  <property name="text">
+                   <string>Amount</string>
+                  </property>
+                 </column>
+                 <column>
+                  <property name="text">
+                   <string>Mainchain Fee</string>
+                  </property>
+                 </column>
+                 <column>
+                  <property name="text">
+                   <string>Destination</string>
+                  </property>
+                 </column>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
           </layout>
@@ -744,14 +1115,23 @@
                <string>Automated</string>
               </attribute>
               <layout class="QGridLayout" name="gridLayout_14">
-               <item row="2" column="0" colspan="2">
-                <widget class="Line" name="line_2">
+               <item row="14" column="0" colspan="2">
+                <spacer name="verticalSpacer_3">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Vertical</enum>
                  </property>
-                </widget>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Maximum</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
-               <item row="9" column="0" colspan="2">
+               <item row="13" column="0" colspan="2">
                 <widget class="QFrame" name="frame_13">
                  <property name="frameShape">
                   <enum>QFrame::StyledPanel</enum>
@@ -761,10 +1141,22 @@
                  </property>
                  <layout class="QGridLayout" name="gridLayout_11">
                   <item row="1" column="1">
-                   <widget class="QListWidget" name="listWidgetBMMConnected"/>
+                   <widget class="QListWidget" name="listWidgetBMMConnected">
+                    <property name="font">
+                     <font>
+                      <family>Noto Mono</family>
+                     </font>
+                    </property>
+                   </widget>
                   </item>
                   <item row="1" column="0">
-                   <widget class="QListWidget" name="listWidgetBMMCreated"/>
+                   <widget class="QListWidget" name="listWidgetBMMCreated">
+                    <property name="font">
+                     <font>
+                      <family>Noto Mono</family>
+                     </font>
+                    </property>
+                   </widget>
                   </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label_18">
@@ -783,39 +1175,7 @@
                  </layout>
                 </widget>
                </item>
-               <item row="10" column="0" colspan="2">
-                <spacer name="verticalSpacer_3">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeType">
-                  <enum>QSizePolicy::Maximum</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item row="4" column="1">
-                <widget class="QSpinBox" name="spinBoxRefreshInterval">
-                 <property name="suffix">
-                  <string> Second(s)</string>
-                 </property>
-                 <property name="minimum">
-                  <number>1</number>
-                 </property>
-                 <property name="maximum">
-                  <number>600</number>
-                 </property>
-                 <property name="value">
-                  <number>1</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="5" column="0" colspan="2">
+               <item row="9" column="0" colspan="2">
                 <widget class="QFrame" name="frame_14">
                  <property name="frameShape">
                   <enum>QFrame::StyledPanel</enum>
@@ -823,103 +1183,182 @@
                  <property name="frameShadow">
                   <enum>QFrame::Raised</enum>
                  </property>
-                 <layout class="QVBoxLayout" name="verticalLayout">
+                 <layout class="QHBoxLayout" name="horizontalLayout_5">
                   <item>
                    <widget class="QLabel" name="label_15">
                     <property name="text">
-                     <string>Hash of last mainchain block scanned: </string>
+                     <string>Last Mainchain Block:</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QPushButton" name="pushButtonHashBlockLastSeen">
-                    <property name="cursor">
-                     <cursorShape>ArrowCursor</cursorShape>
-                    </property>
+                   <widget class="QLabel" name="labelLastMainchainBlock">
                     <property name="text">
-                     <string>0000000000000000000000000000000000000000000000000000000000000000</string>
+                     <string>N/A</string>
                     </property>
-                    <property name="flat">
-                     <bool>true</bool>
+                    <property name="textInteractionFlags">
+                     <set>Qt::TextSelectableByMouse</set>
                     </property>
                    </widget>
+                  </item>
+                  <item>
+                   <spacer name="horizontalSpacer_12">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
                   </item>
                  </layout>
                 </widget>
                </item>
-               <item row="4" column="0">
-                <widget class="QDoubleSpinBox" name="doubleSpinBoxBMMAmount">
-                 <property name="prefix">
-                  <string/>
+               <item row="2" column="0" colspan="2">
+                <widget class="QFrame" name="frame_10">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
                  </property>
-                 <property name="suffix">
-                  <string> BTC</string>
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
                  </property>
-                 <property name="decimals">
-                  <number>2</number>
+                 <property name="frameShadow">
+                  <enum>QFrame::Plain</enum>
                  </property>
-                 <property name="minimum">
-                  <double>0.000000000000000</double>
+                 <property name="lineWidth">
+                  <number>0</number>
                  </property>
-                 <property name="maximum">
-                  <double>1.000000000000000</double>
-                 </property>
-                 <property name="singleStep">
-                  <double>0.001000000000000</double>
-                 </property>
-                 <property name="value">
-                  <double>0.010000000000000</double>
-                 </property>
+                 <layout class="QGridLayout" name="gridLayout_17">
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="label_14">
+                    <property name="text">
+                     <string>Refresh Interval</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="BitcoinAmountField" name="bmmAmount">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QSpinBox" name="spinBoxRefreshInterval">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="suffix">
+                     <string> Second(s)</string>
+                    </property>
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>600</number>
+                    </property>
+                    <property name="value">
+                     <number>1</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_13">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Critical Transaction Amount</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1" rowspan="2">
+                   <spacer name="horizontalSpacer_3">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeType">
+                     <enum>QSizePolicy::Maximum</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                 </layout>
                 </widget>
                </item>
-               <item row="3" column="1">
-                <widget class="QLabel" name="label_14">
-                 <property name="text">
-                  <string>Refresh Interval</string>
+               <item row="3" column="0" colspan="2">
+                <widget class="QFrame" name="frame_9">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
                  </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QLabel" name="label_13">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
+                 <property name="frameShadow">
+                  <enum>QFrame::Raised</enum>
                  </property>
-                 <property name="text">
-                  <string>Critical Transaction Amount</string>
+                 <property name="lineWidth">
+                  <number>0</number>
                  </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QCheckBox" name="checkBoxEnableAutomation">
-                 <property name="statusTip">
-                  <string/>
-                 </property>
-                 <property name="whatsThis">
-                  <string/>
-                 </property>
-                 <property name="text">
-                  <string>Enable Automated BMM</string>
-                 </property>
-                 <property name="checked">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QPushButton" name="pushButtonConfigureBMM">
-                 <property name="text">
-                  <string>Redo Mainchain Connection</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0" colspan="2">
-                <widget class="QLabel" name="label_23">
-                 <property name="text">
-                  <string>Make sure you set --minerbreakforbmm on the mainchain!</string>
-                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_6">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QPushButton" name="pushButtonStartBMM">
+                    <property name="text">
+                     <string>Start BMM</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButtonStopBMM">
+                    <property name="text">
+                     <string>Stop BMM</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <spacer name="horizontalSpacer_16">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButtonConfigureBMM">
+                    <property name="text">
+                     <string>Redo Mainchain Connection</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </widget>
                </item>
               </layout>
@@ -1077,6 +1516,16 @@
             </widget>
            </item>
           </layout>
+         </widget>
+         <widget class="QWidget" name="tabSpacer">
+          <attribute name="title">
+           <string/>
+          </attribute>
+         </widget>
+         <widget class="QWidget" name="tabWealth">
+          <attribute name="title">
+           <string>Total sidechain wealth:</string>
+          </attribute>
          </widget>
         </widget>
        </item>
@@ -1256,19 +1705,6 @@
       </layout>
      </widget>
     </widget>
-   </item>
-   <item>
-    <spacer name="verticalSpacer_8">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
    </item>
   </layout>
  </widget>

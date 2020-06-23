@@ -50,7 +50,7 @@ public:
     /*
      * Send BMM critical data request
      */
-    uint256 SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight = 0, const CAmount& amount = CAmount(0));
+    uint256 SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight = 0, CAmount amount = CAmount(0));
 
     /*
      * Request the CTIP - Critical Transaction Index Pair for this sidechain
@@ -61,7 +61,7 @@ public:
      * Automatically check our BMM requests on the mainchain and create new BMM
      * requests if needed.
      */
-    bool RefreshBMM(std::string& strError, uint256& hashCreated, uint256& hashConnected, bool fCreateNew = true, const uint256& hashPrevBlock = uint256());
+    bool RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreated, uint256& hashConnected, bool fCreateNew = true, const uint256& hashPrevBlock = uint256());
 
     bool CreateBMMBlock(CBlock& block, std::string& strError, const uint256& hashPrevBlock = uint256());
 
@@ -76,6 +76,10 @@ public:
     bool ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime);
 
     bool GetBlockHash(int nHeight, uint256& hashBlock);
+
+    bool HaveSpentWTPrime(const uint256& hashWTPrime);
+
+    bool HaveFailedWTPrime(const uint256& hashWTPrime);
 
 private:
     /*

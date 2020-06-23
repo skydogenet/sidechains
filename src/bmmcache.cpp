@@ -43,7 +43,7 @@ std::vector<CBlock> BMMCache::GetBMMBlockCache() const
     return vBlock;
 }
 
-std::vector<uint256> BMMCache::GetBMMWTPrimeCache() const
+std::vector<uint256> BMMCache::GetBroadcastedWTPrimeCache() const
 {
     std::vector<uint256> vHash;
     for (const auto& u : setWTPrimeBroadcasted) {

@@ -16,9 +16,14 @@
 
 class CBlock;
 class ClientModel;
-class WalletModel;
-class QMessageBox;
 class ConfGeneratorDialog;
+class SidechainWTPrimeHistoryDialog;
+class SidechainWTTableModel;
+class WalletModel;
+
+QT_BEGIN_NAMESPACE
+class QMessageBox;
+QT_END_NAMESPACE
 
 namespace Ui {
 class SidechainPage;
@@ -69,8 +74,6 @@ private Q_SLOTS:
 
     void on_pushButtonSendCriticalRequest_clicked();
 
-    void on_checkBoxEnableAutomation_toggled(bool fChecked);
-
     void on_pushButtonSubmitBlock_clicked();
 
     void on_spinBoxRefreshInterval_valueChanged(int n);
@@ -85,11 +88,23 @@ private Q_SLOTS:
 
     void on_pushButtonRetryConnection_clicked();
 
-    void on_pushButtonLookup_clicked();
-
     void on_pushButtonShowLatestWTPrime_clicked();
 
+    void on_pushButtonShowPastWTPrimes_clicked();
+
     void on_checkBoxAutoWTPrimeRefresh_changed(int state);
+
+    void on_wtPrime_doubleClicked(uint256 hashWTPrime);
+
+    void on_lineEditWTPrimeHash_returnPressed();
+
+    void UpdateWTTotal();
+
+    void on_pushButtonWTHelp_clicked();
+
+    void on_pushButtonStartBMM_clicked();
+
+    void on_pushButtonStopBMM_clicked();
 
 private:
     Ui::SidechainPage *ui;
@@ -98,6 +113,8 @@ private:
     ClientModel *clientModel;
 
     ConfGeneratorDialog *confGeneratorDialog;
+    SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;
+    SidechainWTTableModel *unspentWTModel;
 
     QTimer *bmmTimer;
     QTimer *trainTimer;
@@ -110,6 +127,10 @@ private:
 
     bool validateWTAmount();
 
+    bool validateFeeAmount();
+
+    bool validateMainchainFeeAmount();
+
     void generateAddress();
 
     bool CreateBMMBlock(CBlock& block, QString error = "");
@@ -118,22 +139,23 @@ private:
 
     bool SubmitBMMBlock(const CBlock& block);
 
-    // This function checks if the user has any optional verification settings
-    // enabled which require a connection to the mainchain and disables
-    // networking if fMainchainConnected is set to false. If fMainchainConnected
-    // is set to true - re enable networking.
+    // Handle networking being enabled / disabled
     void UpdateNetworkActive(bool fMainchainConnected);
 
     // Check if configuration files are setup and connection works
     void CheckConfiguration(bool& fConfig, bool& fConnection);
-
-    void SetCurrentWTPrime(const std::string& strHash, bool fRequested = true);
 
     void ClearWTPrimeExplorer();
 
     void UpdateSidechainWealth();
 
     void UpdateToLatestWTPrime(bool fRequested = true);
+
+    void SetCurrentWTPrime(const std::string& strHash, bool fRequested = true);
+
+    void StartBMM();
+
+    void StopBMM();
 };
 
 #endif // SIDECHAINPAGE_H

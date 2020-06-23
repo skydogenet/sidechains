@@ -141,7 +141,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
         return false;
     }
 
-    // Write new configuration file
+    // Write new mainchain configuration file
     QFile file(QString::fromStdString(pathConf.string()));
     if (!file.open(QIODevice::ReadWrite | QIODevice::Text)) {
         QString strError = "Error while opening for write: ";
@@ -159,11 +159,11 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
     out << "rpcpassword=";
     out << strPass;
     out << "\n";
-
     out << "server=1\n";
+    out << "minerbreakforbmm=1\n";
     file.close();
 
-    // write sidechain version
+    // Write sidechain configuration file
     // Do we need to backup the old config file?
     fs::path pathConfSide = pathSide / "testchain.conf";
     if (fs::exists(pathConfSide)) {

@@ -28,8 +28,9 @@ static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "0b0dee00eb2b494b7541f81c
 //! Sidechain build tar hash
 static const std::string SIDECHAIN_BUILD_TAR_HASH = "d1e200d2aa7eee51b29938065b08c5d7168ab7e895b1c3758d611a5ce8fa1f2c";
 
-static const int MAINCHAIN_WTPRIME_VERIFICATION_PERIOD = 300;
 static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 140;
+
+static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
 
 struct Sidechain {
     uint8_t nSidechain;
@@ -49,16 +50,23 @@ static const char WT_UNSPENT = 'u';
 static const char WT_IN_WTPRIME = 'p';
 static const char WT_SPENT = 's';
 
+//! WT^ status / zone
+static const char WTPRIME_CREATED = 'c';
+static const char WTPRIME_FAILED = 'f';
+static const char WTPRIME_SPENT = 'o';
+
 //! KeyID for testing
 static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
 //mx3PT9t2kzCFgAURR9HeK6B5wN8egReUxY
 //cN5CqwXiaNWhNhx3oBQtA8iLjThSKxyZjfmieTsyMpG6NnHBzR7J
 
-//! This sidechain's fee script
-static const CScript SIDECHAIN_FEESCRIPT = CScript() << OP_DUP << OP_HASH160 << ToByteVector(testkey) << OP_EQUALVERIFY << OP_CHECKSIG;
+//! Key ID for fee script
+static const std::string feeKey = "5f8f196a4f0c212fee1b4eda31e3ef383c52d9fc";
+// 19iGcwHuZA1edpd6veLfbkHtbDPS9hAXbh
+// ed7565854e9b7a334e39e33614abce078a6c06603b048a9536a7e41abf3da504
 
 //! The default payment amount to mainchain miner for critical data commitment
-static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 1 * CENT;
+static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 0.0001 * COIN;
 
 //! The fee for sidechain deposits on this sidechain
 static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
@@ -88,6 +96,7 @@ struct SidechainWT: public SidechainObj {
     uint8_t nSidechain;
     std::string strDestination;
     CAmount amount;
+    CAmount mainchainFee;
     char status;
     uint256 hashBlindWTX; // The hash of the WT transaction minus the WT script
 
@@ -102,11 +111,13 @@ struct SidechainWT: public SidechainObj {
         READWRITE(nSidechain);
         READWRITE(strDestination);
         READWRITE(amount);
+        READWRITE(mainchainFee);
         READWRITE(status);
         READWRITE(hashBlindWTX);
     }
 
     std::string ToString(void) const;
+    std::string GetStatusStr(void) const;
 
     uint256 GetID() const {
         SidechainWT wt(*this);
@@ -122,8 +133,10 @@ struct SidechainWTPrime: public SidechainObj {
     uint8_t nSidechain;
     CMutableTransaction wtPrime;
     std::vector<uint256> vWT; // The id in ldb of WT(s) that this WT^ is using
+    int nHeight;
+    char status;
 
-    SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; }
+    SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; status = WTPRIME_CREATED; nHeight = 0;}
     virtual ~SidechainWTPrime(void) { }
 
     ADD_SERIALIZE_METHODS
@@ -134,13 +147,20 @@ struct SidechainWTPrime: public SidechainObj {
         READWRITE(nSidechain);
         READWRITE(wtPrime);
         READWRITE(vWT);
+        READWRITE(status);
+        READWRITE(nHeight);
     }
 
     uint256 GetID() const {
-        return GetHash();
+        SidechainWTPrime wt(*this);
+        wt.status = WTPRIME_CREATED;
+        wt.nHeight = 0;
+        return wt.GetHash();
     }
 
     std::string ToString(void) const;
+
+    std::string GetStatusStr(void) const;
 };
 
 /**
@@ -210,5 +230,15 @@ struct SidechainBMMProof
  * Create sidechain object
  */
 SidechainObj *SidechainObjCtr(const CScript &);
+
+// Functions for both WT^ creation and the GUI to use in order to make sure that
+// what the GUI displays (on the pending WT table) is the same as what the WT^
+// creation code will actually select.
+
+// Sort a vector of SidechainWT by mainchain fee in descending order
+void SortWTByFee(std::vector<SidechainWT>& vWT);
+
+// Erase all SidechainWT from a vector which do not have WT_UNSPENT status
+void SelectUnspentWT(std::vector<SidechainWT>& vWT);
 
 #endif // BITCOIN_PRIMITIVES_SIDECHAIN_H

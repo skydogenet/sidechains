@@ -9,6 +9,7 @@
 #include <QDateTime>
 
 #include <atomic>
+#include <mutex>
 
 class BanTableModel;
 class OptionsModel;
@@ -56,7 +57,7 @@ public:
     long getMempoolSize() const;
     //! Return the dynamic memory usage of the mempool
     size_t getMempoolDynamicUsage() const;
-    
+
     quint64 getTotalBytesRecv() const;
     quint64 getTotalBytesSent() const;
 
@@ -80,6 +81,11 @@ public:
     QString formatClientStartupTime() const;
     QString dataDir() const;
 
+    void UpdateBlockCountLater(const int count, const QDateTime& date,
+            const double nVerificationProgress, const bool fHeader);
+
+    void StopIgnoredBlockChangeTimer();
+
     // caches for the best header
     mutable std::atomic<int> cachedBestHeaderHeight;
     mutable std::atomic<int64_t> cachedBestHeaderTime;
@@ -90,9 +96,29 @@ private:
     BanTableModel *banTableModel;
 
     QTimer *pollTimer;
+    QTimer *ignoredBlockChangeTimer;
 
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
+
+    struct IgnoredBlockChange {
+        int count;
+        QDateTime date;
+        double nVerificationProgress;
+        bool fHeader;
+
+        void clear()
+        {
+            count = 0;
+            date.setTime(QTime());
+            nVerificationProgress = 0;
+            fHeader = false;
+        }
+    };
+
+    IgnoredBlockChange lastIgnoredBlockChange;
+
+    std::mutex blockChangeMutex;
 
 Q_SIGNALS:
     void numConnectionsChanged(int count);
@@ -114,6 +140,7 @@ public Q_SLOTS:
     void updateNetworkActive(bool networkActive);
     void updateAlert();
     void updateBanlist();
+    void updateIgnoredBlockChanges();
 };
 
 #endif // BITCOIN_QT_CLIENTMODEL_H

@@ -110,24 +110,24 @@ public:
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000002");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x1866f8a642fcdbeac6e5f3f89b6b89f98e6836715496d224ee51d4db95719b3e");
+        consensus.defaultAssumeValid = uint256S("0x7cbf36396073c247fe7ffb8b893c4f72cb71113b8895da77eb457779f3bacc5f");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
          */
-        pchMessageStart[0] = 0xb7;
+        pchMessageStart[0] = 0xb5;
         pchMessageStart[1] = 0xd5;
         pchMessageStart[2] = 0xfe;
-        pchMessageStart[3] = 0xd9;
+        pchMessageStart[3] = 0xd8;
         nDefaultPort = 2564;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1584944678, 21, 0x207fffff, 1, 0);
+        genesis = CreateGenesisBlock(1592873300, 4, 0x207fffff, 1, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        assert(consensus.hashGenesisBlock == uint256S("0x1866f8a642fcdbeac6e5f3f89b6b89f98e6836715496d224ee51d4db95719b3e"));
+        assert(consensus.hashGenesisBlock == uint256S("0x7cbf36396073c247fe7ffb8b893c4f72cb71113b8895da77eb457779f3bacc5f"));
         assert(genesis.hashMerkleRoot == uint256S("0x8eb1364f43885edf1322b2d32095e57abb03c32a61a80ac25c8db3de58e16b8a"));
 
         vSeeds.clear();
@@ -145,13 +145,13 @@ public:
         // TODO more seed nodes
         vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
 
-        fDefaultConsistencyChecks = true;
+        fDefaultConsistencyChecks = false;
         fRequireStandard = false;
         fMineBlocksOnDemand = true;
 
         checkpointData = {
             {
-                { 0, uint256S("0x1866f8a642fcdbeac6e5f3f89b6b89f98e6836715496d224ee51d4db95719b3e")},
+                { 0, uint256S("0x7cbf36396073c247fe7ffb8b893c4f72cb71113b8895da77eb457779f3bacc5f")},
             }
         };
 

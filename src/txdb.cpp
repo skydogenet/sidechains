@@ -309,43 +309,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
 CSidechainTreeDB::CSidechainTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
     : CDBWrapper(GetDataDir() / "blocks" / "sidechain", nCacheSize, fMemory, fWipe) { }
 
-bool CSidechainTreeDB::ReadBlockFileInfo(int nFile, CBlockFileInfo& fileinfo)
-{
-    return Read(std::make_pair(DB_BLOCK_FILES, nFile), fileinfo);
-}
-
-bool CSidechainTreeDB::WriteReindexing(bool fReindex)
-{
-    if (fReindex)
-        return Write(DB_REINDEX_FLAG, '1');
-    else
-        return Erase(DB_REINDEX_FLAG);
-}
-
-bool CSidechainTreeDB::ReadReindexing(bool& fReindex)
-{
-    fReindex = Exists(DB_REINDEX_FLAG);
-    return true;
-}
-
-bool CSidechainTreeDB::ReadLastBlockFile(int& nFile)
-{
-    return Read(DB_LAST_BLOCK, nFile);
-}
-
-bool CSidechainTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo *> > &fileInfo, int nLastFile, const std::vector<const CBlockIndex *> &blockinfo)
-{
-    CDBBatch batch(*this);
-    for (std::vector<std::pair<int, const CBlockFileInfo*> >::const_iterator it=fileInfo.begin(); it != fileInfo.end(); it++) {
-        batch.Write(std::make_pair(DB_BLOCK_FILES, it->first), *it->second);
-    }
-    batch.Write(DB_LAST_BLOCK, nLastFile);
-    for (std::vector<const CBlockIndex*>::const_iterator it=blockinfo.begin(); it != blockinfo.end(); it++) {
-        batch.Write(std::make_pair(DB_BLOCK_INDEX, (*it)->GetBlockHash()), CDiskBlockIndex(*it));
-    }
-    return WriteBatch(batch, true);
-}
-
 bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list)
 {
     CDBBatch batch(*this);
@@ -370,6 +333,9 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
 
             // Update DB_LAST_SIDECHAIN_WTPRIME
             batch.Write(DB_LAST_SIDECHAIN_WTPRIME, hashWTPrime);
+
+            LogPrintf("%s: Writing new WT^ and updating DB_LAST_SIDECHAIN_WTPRIME to: %s",
+                    __func__, hashWTPrime.ToString());
         }
         else
         if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
@@ -386,7 +352,7 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
         }
     }
 
-    return WriteBatch(batch);
+    return WriteBatch(batch, true);
 }
 
 bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
@@ -399,21 +365,51 @@ bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
         batch.Write(key, wt);
     }
 
-    return WriteBatch(batch);
+    return WriteBatch(batch, true);
 }
 
-bool CSidechainTreeDB::WriteFlag(const std::string& name, bool fValue)
+bool CSidechainTreeDB::WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime)
 {
-    return Write(std::make_pair(DB_FLAG, name), fValue ? '1' : '0');
-}
+    CDBBatch batch(*this);
 
-bool CSidechainTreeDB::ReadFlag(const std::string& name, bool &fValue)
-{
-    char ch;
-    if (!Read(std::make_pair(DB_FLAG, name), ch))
+    std::pair<char, uint256> key = std::make_pair(wtPrime.sidechainop, wtPrime.GetID());
+    batch.Write(key, wtPrime);
+
+    // Also index the WT^ by the WT^ transaction hash
+    uint256 hashWTPrime = wtPrime.wtPrime.GetHash();
+    std::pair<char, uint256> keyTx = std::make_pair(DB_SIDECHAIN_WTPRIME_OP, hashWTPrime);
+    batch.Write(keyTx, wtPrime);
+
+    // Also write wt status updates if WT^ status changes
+    std::vector<SidechainWT> vUpdate;
+    for (const uint256& wtid: wtPrime.vWT) {
+        SidechainWT wt;
+        if (!GetWT(wtid, wt)) {
+            LogPrintf("%s: Failed to read wt of WT^ from LDB!\n", __func__);
+            return false;
+        }
+        if (wtPrime.status == WTPRIME_FAILED) {
+            wt.status = WT_UNSPENT;
+            vUpdate.push_back(wt);
+        }
+        else
+        if (wtPrime.status == WTPRIME_SPENT) {
+            wt.status = WT_SPENT;
+            vUpdate.push_back(wt);
+        }
+        else
+        if (wtPrime.status == WTPRIME_CREATED) {
+            wt.status = WT_IN_WTPRIME;
+            vUpdate.push_back(wt);
+        }
+    }
+
+    if (!WriteWTUpdate(vUpdate)) {
+        LogPrintf("%s: Failed to write wt update!\n", __func__);
         return false;
-    fValue = ch == '1';
-    return true;
+    }
+
+    return WriteBatch(batch, true);
 }
 
 bool CSidechainTreeDB::GetWT(const uint256& objid, SidechainWT& wt)
@@ -482,8 +478,11 @@ std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSide
         std::pair<char, uint256> key;
         SidechainWTPrime wtPrime;
         if (pcursor->GetKey(key) && key.first == sidechainop) {
-            if (pcursor->GetSidechainValue(wtPrime))
-                vWTPrime.push_back(wtPrime);
+            if (pcursor->GetSidechainValue(wtPrime)) {
+                // Only return the WT^(s) indexed by ID
+                if (key.second == wtPrime.GetID())
+                    vWTPrime.push_back(wtPrime);
+            }
         }
 
         pcursor->Next();
@@ -508,7 +507,9 @@ std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSide
         SidechainDeposit deposit;
         if (pcursor->GetKey(key) && key.first == sidechainop) {
             if (pcursor->GetSidechainValue(deposit))
-                vDeposit.push_back(deposit);
+                // Only return the deposits(s) indexed by ID
+                if (key.second == deposit.GetID())
+                    vDeposit.push_back(deposit);
         }
 
         pcursor->Next();
@@ -567,6 +568,15 @@ bool CSidechainTreeDB::GetLastWTPrimeHash(uint256& hash)
         return false;
 
     return true;
+}
+
+bool CSidechainTreeDB::HaveWTPrime(const uint256& hashWTPrime) const
+{
+    SidechainWTPrime wtPrime;
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WTPRIME_OP, hashWTPrime), wtPrime))
+        return true;
+
+    return false;
 }
 
 namespace {

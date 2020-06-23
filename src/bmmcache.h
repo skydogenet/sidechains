@@ -27,7 +27,7 @@ public:
 
     std::vector<CBlock> GetBMMBlockCache() const;
 
-    std::vector<uint256> GetBMMWTPrimeCache() const;
+    std::vector<uint256> GetBroadcastedWTPrimeCache() const;
 
     std::vector<uint256> GetMainBlockHashCache() const;
 

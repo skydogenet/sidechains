@@ -3455,51 +3455,6 @@ UniValue bumpfee(const JSONRPCRequest& request)
     return result;
 }
 
-UniValue generate(const JSONRPCRequest& request)
-{
-    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
-
-    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
-        return NullUniValue;
-    }
-
-    if (request.fHelp || request.params.size() < 1 || request.params.size() > 2) {
-        throw std::runtime_error(
-            "generate nblocks ( maxtries )\n"
-            "\nMine up to nblocks blocks immediately (before the RPC call returns) to an address in the wallet.\n"
-            "\nArguments:\n"
-            "1. nblocks      (numeric, required) How many blocks are generated immediately.\n"
-            "2. maxtries     (numeric, optional) How many iterations to try (default = 1000000).\n"
-            "\nResult:\n"
-            "[ blockhashes ]     (array) hashes of blocks generated\n"
-            "\nExamples:\n"
-            "\nGenerate 11 blocks\n"
-            + HelpExampleCli("generate", "11")
-        );
-    }
-
-    int num_generate = request.params[0].get_int();
-    uint64_t max_tries = 1000000;
-    if (!request.params[1].isNull()) {
-        max_tries = request.params[1].get_int();
-    }
-
-    std::shared_ptr<CReserveScript> coinbase_script;
-    pwallet->GetScriptForMining(coinbase_script);
-
-    // If the keypool is exhausted, no script is returned at all.  Catch this.
-    if (!coinbase_script) {
-        throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
-    }
-
-    //throw an error if no script was provided
-    if (coinbase_script->reserveScript.empty()) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "No coinbase script available");
-    }
-
-    return generateBlocks(coinbase_script, num_generate, max_tries, true);
-}
-
 UniValue createwt(const JSONRPCRequest& request)
 {
     CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
@@ -3507,7 +3462,7 @@ UniValue createwt(const JSONRPCRequest& request)
         return NullUniValue;
     }
 
-    if (request.fHelp || request.params.size() != 2)
+    if (request.fHelp || request.params.size() != 4)
         throw std::runtime_error(
             "createwt amount \"address\"\n"
             "\nCreate a WT so that it can be included in a WT^.\n"
@@ -3515,11 +3470,13 @@ UniValue createwt(const JSONRPCRequest& request)
             "\nArguments:\n"
             "1. \"address\"            (string, required) The bitcoin address to send to.\n"
             "2. \"amount\"             (numeric or string, required) The amount in " + CURRENCY_UNIT + " to send. eg 0.1\n"
+            "3. \"fee\"                (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be subtracted for fees. eg 0.1\n"
+            "4. \"mainchainfee\"       (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be subtracted for fees on the mainchain. eg 0.1\n"
             "\nResult:\n"
             "\"txid\"                  (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1")
-            + HelpExampleRpc("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.1")
+            + HelpExampleCli("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.3, 0.1, 0.1")
+            + HelpExampleRpc("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.3, 0.1, 0.1")
         );
 
     ObserveSafeMode();
@@ -3540,11 +3497,21 @@ UniValue createwt(const JSONRPCRequest& request)
     if (nAmount <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
 
+    // Fee
+    CAmount nFee = AmountFromValue(request.params[2]);
+    if (nFee <= 0)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for fee");
+
+    // Mainchain fee
+    CAmount nMainchainFee = AmountFromValue(request.params[3]);
+    if (nMainchainFee <= 0)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for mainchain fee");
+
     EnsureWalletIsUnlocked(pwallet);
 
     std::string strFail = "";
     uint256 txid;
-    if (!pwallet->CreateWT(nAmount, request.params[0].get_str(), strFail, txid)) {
+    if (!pwallet->CreateWT(nAmount, nFee, nMainchainFee, request.params[0].get_str(), strFail, txid)) {
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
@@ -3910,9 +3877,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "removeprunedfunds",                &removeprunedfunds,             {"txid"} },
     { "wallet",             "rescanblockchain",                 &rescanblockchain,              {"start_height", "stop_height"} },
 
-    { "generating",         "generate",                         &generate,                      {"nblocks","maxtries"} },
-
-    { "sidechain",          "createwt",                         &createwt,                      {"address","namount"} },
+    { "sidechain",          "createwt",                         &createwt,                      {"address","namount","nfee", "nmainchainfee"} },
 };
 
 void RegisterWalletRPCCommands(CRPCTable &t)

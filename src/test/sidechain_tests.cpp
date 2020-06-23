@@ -48,10 +48,9 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
     gArgs.ForceSetArg("-verifybmmreadblock", "0");
 
     // Generate BMM block
-    CScript scriptPubKey;
     CBlock block;
     std::string strError = "";
-    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(scriptPubKey, block, strError));
+    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     BOOST_CHECK(ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */));
@@ -119,10 +118,9 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
     BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 
     // Generate BMM block
-    CScript scriptPubKey;
     CBlock block;
     std::string strError = "";
-    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(scriptPubKey, block, strError));
+    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
 
     // Set -verifybmmcheckblock arg to true
     gArgs.ForceSetArg("-verifybmmcheckblock", "1");
@@ -193,10 +191,9 @@ BOOST_AUTO_TEST_CASE(sidechain_deposit)
     BOOST_CHECK(chainActive.Height() == COINBASE_MATURITY);
 /*
     // Generate BMM block
-    CScript scriptPubKey;
     CBlock block;
     std::string strError = "";
-    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(scriptPubKey, block, strError));
+    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
 
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
@@ -466,6 +463,79 @@ BOOST_AUTO_TEST_CASE(sidechain_deposit_sort_25_deposits)
     BOOST_CHECK(vRandom != vD);
     BOOST_CHECK(SortDeposits(vRandom, vDepositSorted));
     BOOST_CHECK(vDepositSorted == vD);
+}
+
+BOOST_AUTO_TEST_CASE(IsWTPrimeFailCommit)
+{
+    uint256 hashWTPrime = GetRandHash();
+
+    CScript script =  GenerateWTPrimeFailCommit(hashWTPrime);
+
+    uint256 hashWTPrimeFromCommit;
+    BOOST_CHECK(script.IsWTPrimeFailCommit(hashWTPrimeFromCommit));
+
+    BOOST_CHECK(hashWTPrime == hashWTPrimeFromCommit);
+}
+
+BOOST_AUTO_TEST_CASE(IsWTPrimeSpentCommit)
+{
+    uint256 hashWTPrime = GetRandHash();
+
+    CScript script = GenerateWTPrimeSpentCommit(hashWTPrime);
+
+    uint256 hashWTPrimeFromCommit;
+    BOOST_CHECK(script.IsWTPrimeSpentCommit(hashWTPrimeFromCommit));
+
+    BOOST_CHECK(hashWTPrime == hashWTPrimeFromCommit);
+}
+
+BOOST_AUTO_TEST_CASE(WTFeeEncoding)
+{
+    CAmount amount;
+    CAmount amountRead;
+    CScript script;
+
+    // Test 1 * COIN
+    amount = COIN;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amountRead == amount);
+
+    // Test 1 * CENT
+    amount = CENT;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amountRead == amount);
+
+    // Test with a negative number
+    amount = -1000000;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amountRead == amount);
+
+    // Test incrementing from 0.01 to 21 by 1 * CENT
+    amount = 0;
+    while (amount < 21 * COIN) {
+        amount += CENT;
+        script = EncodeWTFees(amount);
+
+        BOOST_CHECK(DecodeWTFees(script, amountRead));
+        BOOST_CHECK(amountRead == amount);
+    }
+
+    // Test number greater than CScriptNum default 4 byte integer limit
+    amount = 22 * COIN;
+    amountRead = 0;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amount == amountRead);
+
+    // Test high number
+    amount = MAX_MONEY;
+    amountRead = 0;
+    script = EncodeWTFees(amount);
+    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    BOOST_CHECK(amount == amountRead);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+class uint256;
+
 // Maximum number of bytes pushable to the stack
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;
 
@@ -644,6 +646,10 @@ public:
     bool IsPayToScriptHash() const;
     bool IsPayToWitnessScriptHash() const;
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
+
+    /** Script formats for Drivechains */
+    bool IsWTPrimeFailCommit(uint256& hashWTPrime) const;
+    bool IsWTPrimeSpentCommit(uint256& hashWTPrime) const;
 
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     bool IsPushOnly(const_iterator pc) const;

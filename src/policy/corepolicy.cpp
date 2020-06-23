@@ -38,26 +38,34 @@ bool CoreIsDust(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
     return (txout.nValue < CoreGetDustThreshold(txout, dustRelayFeeIn));
 }
 
-bool CoreIsStandard(const CScript& scriptPubKey, txnouttype& whichType)
+bool CoreIsStandard(const CScript& scriptPubKey, txnouttype& whichType, std::string& reason)
 {
     // TODO should use the core version of solver, and core txnouttype(s)
     std::vector<std::vector<unsigned char> > vSolutions;
-    if (!Solver(scriptPubKey, whichType, vSolutions))
+    if (!Solver(scriptPubKey, whichType, vSolutions)) {
+        reason = "failed-to-solve";
         return false;
+    }
 
     if (whichType == TX_NONSTANDARD) {
+        reason = "tx-nonstandard";
         return false;
     } else if (whichType == TX_MULTISIG) {
         unsigned char m = vSolutions.front()[0];
         unsigned char n = vSolutions.back()[0];
         // Support up to x-of-3 multisig txns as standard
-        if (n < 1 || n > 3)
+        if (n < 1 || n > 3) {
+            reason = "multisig-nonstandard-n";
             return false;
-        if (m < 1 || m > n)
+        }
+        if (m < 1 || m > n) {
+            reason = "multisig-nonstandard-m";
             return false;
+        }
     } else if (whichType == TX_NULL_DATA &&
                (!fAcceptDatacarrier || scriptPubKey.size() > nMaxDatacarrierBytes)) {
-          return false;
+        reason = "null-data-nonstandard";
+        return false;
     }
 
     return true;
@@ -102,8 +110,10 @@ bool CoreIsStandardTx(const CTransaction& tx, bool permit_bare_multisig, const C
     unsigned int nDataOut = 0;
     txnouttype whichType;
     for (const CTxOut& txout : tx.vout) {
-        if (!CoreIsStandard(txout.scriptPubKey, whichType)) {
-            reason = "scriptpubkey";
+        std::string strScriptPubKeyReason = "";
+        if (!CoreIsStandard(txout.scriptPubKey, whichType, strScriptPubKeyReason)) {
+            reason = "scriptpubkey - ";
+            reason += strScriptPubKeyReason;
             return false;
         }
 

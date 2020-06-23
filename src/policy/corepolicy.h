@@ -44,7 +44,7 @@ static const int32_t CORE_MAX_STANDARD_TX_VERSION=2;
 
 CAmount CoreGetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFee);
 bool CoreIsDust(const CTxOut& txout, const CFeeRate& dustRelayFee);
-bool CoreIsStandard(const CScript& scriptPubKey, txnouttype& whichType);
+bool CoreIsStandard(const CScript& scriptPubKey, txnouttype& whichType, std::string& reason);
 bool CoreIsStandardTx(const CTransaction& tx, bool permit_bare_multisig, const CFeeRate& dust_relay_fee, std::string& reason);
 
 #endif /* BITCOIN_CORE_POLICY */

@@ -27,10 +27,6 @@ public:
 static const CRPCConvertParam vRPCConvertParams[] =
 {
     { "setmocktime", 0, "timestamp" },
-    { "generate", 0, "nblocks" },
-    { "generate", 1, "maxtries" },
-    { "generatetoaddress", 0, "nblocks" },
-    { "generatetoaddress", 2, "maxtries" },
     { "getnetworkhashps", 0, "nblocks" },
     { "getnetworkhashps", 1, "height" },
     { "sendtoaddress", 1, "amount" },
@@ -147,6 +143,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "rescanblockchain", 1, "stop_height"},
     // DriveChain
     { "createwt", 1, "namount"},
+    { "createwt", 2, "nfee"},
+    { "createwt", 3, "nmainchainfee"},
     { "getaveragemainchainfees", 0, "blockcount" },
     { "getaveragemainchainfees", 1, "startheight" },
     { "refreshbmm", 0, "createnew" },
