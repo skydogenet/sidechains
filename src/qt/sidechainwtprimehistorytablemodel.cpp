@@ -54,24 +54,24 @@ QVariant SidechainWTPrimeHistoryTableModel::data(const QModelIndex &index, int r
     switch (role) {
     case Qt::DisplayRole:
     {
-        // Hash
+        // Height
         if (col == 0) {
+            return QString::number(object.height);
+        }
+        // Hash
+        if (col == 1) {
             return object.hash;
         }
         // Total Withdrawn
-        if (col == 1) {
+        if (col == 2) {
 
             QString amount = BitcoinUnits::formatWithUnit(unit, object.amount, false,
                     BitcoinUnits::separatorAlways);
             return amount;
         }
         // Status
-        if (col == 2) {
-            return object.status;
-        }
-        // Height
         if (col == 3) {
-            return QString::number(object.height);
+            return object.status;
         }
     }
     }
@@ -84,13 +84,13 @@ QVariant SidechainWTPrimeHistoryTableModel::headerData(int section, Qt::Orientat
         if (orientation == Qt::Horizontal) {
             switch (section) {
             case 0:
-                return QString("Hash");
+                return QString("Sidechain block #");
             case 1:
-                return QString("Amount");
+                return QString("Hash");
             case 2:
-                return QString("Status");
+                return QString("Amount");
             case 3:
-                return QString("Height");
+                return QString("Status");
             }
         }
     }
