@@ -418,6 +418,7 @@ void SidechainPage::on_checkBoxAutoWTPrimeRefresh_changed(int state)
 
 void SidechainPage::on_wtPrime_doubleClicked(uint256 hashWTPrime)
 {
+    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
     SetCurrentWTPrime(hashWTPrime.ToString(), true);
 }
 

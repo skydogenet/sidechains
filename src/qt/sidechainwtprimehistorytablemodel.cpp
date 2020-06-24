@@ -99,95 +99,23 @@ QVariant SidechainWTPrimeHistoryTableModel::headerData(int section, Qt::Orientat
 
 void SidechainWTPrimeHistoryTableModel::UpdateModel()
 {
-    // TODO there are many ways to improve the efficiency of this
+    beginResetModel();
+    model.clear();
+    endResetModel();
 
-    // Get all of the current WT^(s) into one vector
+    // Get all of the current WT^(s)
     std::vector<SidechainWTPrime> vWTPrime;
     vWTPrime = psidechaintree->GetWTPrimes(SIDECHAIN_TEST);
 
-    // Look for updates to WT^(s) & their status already cached by the model
-    // and update our model / view.
-    //
-    // Also look for WT^(s) which have been removed, and remove them from our
-    // model / view.
-    std::vector<WTPrimeHistoryTableObject> vRemoved;
-    for (int i = 0; i < model.size(); i++) {
-        if (!model[i].canConvert<WTPrimeHistoryTableObject>())
-            return;
-
-        WTPrimeHistoryTableObject object = model[i].value<WTPrimeHistoryTableObject>();
-
-        bool fFound = false;
-
-        // Check if the WT^ should still be in the table and make sure we set
-        // it with the current status
-        for (const SidechainWTPrime& s : vWTPrime) {
-            // Check if the WT^ was removed or the status has changed.
-            if (s.wtPrime.GetHash() == uint256S(object.hash.toStdString())) {
-                fFound = true;
-
-                // Check for updates to status
-                QString status = QString::fromStdString(s.GetStatusStr());
-                if (object.status != status) {
-                    // Update the status of the object in the table
-                    object.status = status;
-
-                    QModelIndex topLeft = index(i, 0);
-                    QModelIndex topRight = index(i, columnCount() - 1);
-                    Q_EMIT QAbstractItemModel::dataChanged(topLeft, topRight, {Qt::DecorationRole});
-
-                    model[i] = QVariant::fromValue(object);
-                }
-            }
-        }
-
-        // Add to vector of WT^(s) to be removed from model / view
-        if (!fFound) {
-            vRemoved.push_back(object);
-        }
-    }
-
-    // Loop through the model and remove deleted WT^(s)
-    for (int i = 0; i < model.size(); i++) {
-        if (!model[i].canConvert<WTPrimeHistoryTableObject>())
-            return;
-
-        WTPrimeHistoryTableObject object = model[i].value<WTPrimeHistoryTableObject>();
-
-        for (const WTPrimeHistoryTableObject& wt : vRemoved) {
-            if (wt.hash == object.hash) {
-                beginRemoveRows(QModelIndex(), i, i);
-                model[i] = model.back();
-                model.pop_back();
-                endRemoveRows();
-            }
-        }
-    }
-
-    // Check for new WT^(s)
-    std::vector<SidechainWTPrime> vNew;
-    for (const SidechainWTPrime& s : vWTPrime) {
-        bool fFound = false;
-
-        for (const QVariant& qv : model) {
-            if (!qv.canConvert<WTPrimeHistoryTableObject>())
-                return;
-
-            WTPrimeHistoryTableObject object = qv.value<WTPrimeHistoryTableObject>();
-
-            if (s.wtPrime.GetHash() == uint256S(object.hash.toStdString()))
-                fFound = true;
-        }
-        if (!fFound)
-            vNew.push_back(s);
-    }
-
-    if (vNew.empty())
+    if (vWTPrime.empty())
         return;
 
-    // Add new WT^(s) if we need to
-    beginInsertRows(QModelIndex(), model.size(), model.size() + vNew.size() - 1);
-    for (const SidechainWTPrime& wt : vNew) {
+    // Sort WT^(s) by height
+    SortWTPrimeByHeight(vWTPrime);
+
+    // Add WT^(s) to model
+    beginInsertRows(QModelIndex(), model.size(), model.size() + vWTPrime.size() - 1);
+    for (const SidechainWTPrime& wt : vWTPrime) {
         WTPrimeHistoryTableObject object;
 
         // Insert new WT^ into table

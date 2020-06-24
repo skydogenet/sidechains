@@ -238,6 +238,9 @@ SidechainObj *SidechainObjCtr(const CScript &);
 // Sort a vector of SidechainWT by mainchain fee in descending order
 void SortWTByFee(std::vector<SidechainWT>& vWT);
 
+// Sort a vector of SidechainWTPrime by height in descending order
+void SortWTPrimeByHeight(std::vector<SidechainWTPrime>& vWTPrime);
+
 // Erase all SidechainWT from a vector which do not have WT_UNSPENT status
 void SelectUnspentWT(std::vector<SidechainWT>& vWT);
 

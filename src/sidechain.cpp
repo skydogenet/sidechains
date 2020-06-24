@@ -173,6 +173,19 @@ void SortWTByFee(std::vector<SidechainWT>& vWT)
     std::sort(vWT.begin(), vWT.end(), CompareWTMainchainFee());
 }
 
+struct CompareWTPrimeHeight
+{
+    bool operator()(const SidechainWTPrime& a, const SidechainWTPrime& b) const
+    {
+        return a.nHeight > b.nHeight;
+    }
+};
+
+void SortWTPrimeByHeight(std::vector<SidechainWTPrime>& vWTPrime)
+{
+    std::sort(vWTPrime.begin(), vWTPrime.end(), CompareWTPrimeHeight());
+}
+
 void SelectUnspentWT(std::vector<SidechainWT>& vWT)
 {
     vWT.erase(std::remove_if(vWT.begin(), vWT.end(),[](const SidechainWT& wt)

@@ -128,10 +128,11 @@ void SidechainWTTableModel::UpdateModel()
     vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
 
     SelectUnspentWT(vWT);
-    SortWTByFee(vWT);
 
     if (vWT.empty())
         return;
+
+    SortWTByFee(vWT);
 
     // Create a fake WT^ transaction so that we can estimate the total size of
     // the WT^. WT(s) in the table after the cumulative size is too large will
