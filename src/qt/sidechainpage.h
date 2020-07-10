@@ -17,6 +17,7 @@
 class CBlock;
 class ClientModel;
 class ConfGeneratorDialog;
+class PlatformStyle;
 class SidechainWTPrimeHistoryDialog;
 class SidechainWTTableModel;
 class WalletModel;
@@ -34,7 +35,7 @@ class SidechainPage : public QWidget
     Q_OBJECT
 
 public:
-    explicit SidechainPage(QWidget *parent = 0);
+    explicit SidechainPage(const PlatformStyle *platformStyle, QWidget *parent = 0);
     ~SidechainPage();
 
     void generateQR(std::string data);
@@ -111,6 +112,8 @@ private:
 
     WalletModel *walletModel;
     ClientModel *clientModel;
+
+    const PlatformStyle *platformStyle;
 
     ConfGeneratorDialog *confGeneratorDialog;
     SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;

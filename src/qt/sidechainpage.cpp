@@ -11,6 +11,7 @@
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
+#include <qt/platformstyle.h>
 #include <qt/sidechainwtprimehistorydialog.h>
 #include <qt/sidechainwttablemodel.h>
 #include <qt/walletmodel.h>
@@ -58,9 +59,10 @@ static const int PAGE_RESTART_INDEX = 1;
 static const int PAGE_CONNERR_INDEX = 2;
 static const int PAGE_CONFIG_INDEX = 3;
 
-SidechainPage::SidechainPage(QWidget *parent) :
+SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::SidechainPage)
+    ui(new Ui::SidechainPage),
+    platformStyle(_platformStyle),
 {
     ui->setupUi(this);
 
@@ -208,6 +210,25 @@ SidechainPage::SidechainPage(QWidget *parent) :
 
     // Start with the stopBMM button disabled
     ui->pushButtonStopBMM->setEnabled(false);
+    // Setup platform style single color icons
+
+    // Buttons
+    ui->pushButtonNewBMM->setIcon(platformStyle->SingleColorIcon(":/movies/spinner-000"));
+    ui->pushButtonWTHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+    ui->pasteButton->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
+    ui->deleteButton->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
+    ui->pushButtonNew->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
+    ui->pushButtonCopy->setIcon(platformStyle->SingleColorIcon(":/icons/spinner-000"));
+
+    // Main sidechain tab widget
+    ui->tabWidgetMain->setTabIcon(0, platformStyle->SingleColorIcon(":/icons/tx_inout"));
+    ui->tabWidgetMain->setTabIcon(1, platformStyle->SingleColorIcon(":/icons/history"));
+    ui->tabWidgetMain->setTabIcon(2, platformStyle->SingleColorIcon(":/icons/tx_mined"));
+
+    // Transfer tab widget
+    ui->tabWidgetTransfer->setTabIcon(0, platformStyle->SingleColorIcon(":/icons/left"));
+    ui->tabWidgetTransfer->setTabIcon(1, platformStyle->SingleColorIcon(":/icons/right"));
+
 }
 
 SidechainPage::~SidechainPage()

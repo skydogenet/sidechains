@@ -60,7 +60,7 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     usedSendingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::SendingTab, this);
     usedReceivingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::ReceivingTab, this);
 
-    sidechainPage = new SidechainPage(this); // TODO change to platformStyle?
+    sidechainPage = new SidechainPage(platformStyle, this);
 
     addWidget(sidechainPage);
     addWidget(overviewPage);
