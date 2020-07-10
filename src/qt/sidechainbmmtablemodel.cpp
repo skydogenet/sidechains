@@ -97,35 +97,35 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
     {
         // Status
         if (col == 0) {
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
         // Hash blind
         if (col == 1) {
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
         // Hash Block
         if (col == 2) {
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
         // ntxn
         if (col == 3) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Sidechain block height
         if (col == 4) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Mainchain block height
         if (col == 5) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Amount
         if (col == 6) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // txid
         if (col == 7) {
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
     }

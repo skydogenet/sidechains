@@ -99,19 +99,19 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
     {
         // Amount
         if (col == 0) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Mainchain fee amount
         if (col == 1) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Destination address
         if (col == 2) {
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
         // Cumulative size of WT^ up to this WT output being added
         if (col == 3) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
     }

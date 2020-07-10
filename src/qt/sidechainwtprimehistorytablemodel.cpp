@@ -78,19 +78,19 @@ QVariant SidechainWTPrimeHistoryTableModel::data(const QModelIndex &index, int r
     {
         // Height
         if (col == 0) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Hash
         if (col == 1) {
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
         // Total Withdrawn
         if (col == 2) {
-            return Qt::AlignRight;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Status
         if (col == 3) {
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
     }

@@ -1164,8 +1164,10 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
                 BitcoinUnits::separatorAlways);
 
         QTableWidgetItem* amountItem = new QTableWidgetItem(amount);
+        amountItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
         QTableWidgetItem* feeItem = new QTableWidgetItem(fee);
+        feeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
         QTableWidgetItem* destItem = new QTableWidgetItem(
                 QString::fromStdString(wt.strDestination));
