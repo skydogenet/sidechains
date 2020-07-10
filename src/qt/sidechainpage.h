@@ -107,6 +107,7 @@ private Q_SLOTS:
 
     void on_pushButtonStopBMM_clicked();
 
+    void updateDisplayUnit();
 private:
     Ui::SidechainPage *ui;
 

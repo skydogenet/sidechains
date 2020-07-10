@@ -289,6 +289,9 @@ void SidechainPage::setWalletModel(WalletModel *model)
 
         // Set WT total to 0, formatting requires wallet model -> options model
         UpdateWTTotal();
+
+        connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
+        updateDisplayUnit();
     }
 }
 
@@ -1207,4 +1210,17 @@ void SidechainPage::UpdateToLatestWTPrime(bool fRequested)
         return;
 
     SetCurrentWTPrime(hashLatest.ToString(), fRequested);
+}
+
+void SidechainPage::updateDisplayUnit()
+{
+    if (!walletModel)
+        return;
+
+    int nDisplayUnit = walletModel->getOptionsModel()->getDisplayUnit();
+
+    ui->bmmAmount->setDisplayUnit(nDisplayUnit);
+    ui->payAmount->setDisplayUnit(nDisplayUnit);
+    ui->feeAmount->setDisplayUnit(nDisplayUnit);
+    ui->mainchainFeeAmount->setDisplayUnit(nDisplayUnit);
 }
