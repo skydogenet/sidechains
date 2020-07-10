@@ -477,6 +477,8 @@ UniValue refreshbmm(const JSONRPCRequest& request)
             "hash_last_main_block  (string) Hash of mainchain tip.\n"
             "bmm_block_created     (string) Hash of new BMM block created.\n"
             "bmm_block_submitted   (string) Hash of BMM block connected to sidechain.\n"
+            "ntxn                  (number) Number of txn in new BMM request (if created).\n"
+            "txid                  (string) Mainchain BMM request TXID.\n"
             "error                 (string) Output from sidechain client.\n"
         );
 
@@ -525,13 +527,19 @@ UniValue refreshbmm(const JSONRPCRequest& request)
     std::string strError = "";
     uint256 hashCreated;
     uint256 hashConnected;
-    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected, fCreateNew, hashPrevBlock))
+    uint256 hashConnectedBlind;
+    uint256 txid;
+    int ntxn = 0;
+    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected, hashConnectedBlind, txid, ntxn, fCreateNew, hashPrevBlock))
         throw JSONRPCError(RPC_MISC_ERROR, strError);
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("hash_last_main_block", bmmCache.GetLastMainBlockHash().ToString());
     result.pushKV("bmm_block_created", hashCreated.ToString());
     result.pushKV("bmm_block_submitted", hashConnected.ToString());
+    result.pushKV("bmm_block_submitted_blind", hashConnectedBlind.ToString());
+    result.pushKV("ntxn", ntxn);
+    result.pushKV("txid", txid.ToString());
     result.pushKV("error", strError);
 
     return result;
