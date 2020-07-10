@@ -12,6 +12,7 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
+#include <qt/sidechainbmmtablemodel.h>
 #include <qt/sidechainwtprimehistorydialog.h>
 #include <qt/sidechainwttablemodel.h>
 #include <qt/walletmodel.h>
@@ -39,6 +40,8 @@
 #include <QMessageBox>
 #include <QStackedWidget>
 #include <QScrollBar>
+#include <QBrush>
+#include <QPalette>
 
 #include <sstream>
 
@@ -63,6 +66,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     QWidget(parent),
     ui(new Ui::SidechainPage),
     platformStyle(_platformStyle),
+    nBlocks(0)
 {
     ui->setupUi(this);
 
@@ -111,12 +115,16 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Initialize pending WT table model
     unspentWTModel = new SidechainWTTableModel(this);
 
+    // Initialize BMM table model;
+    bmmModel = new SidechainBMMTableModel(this);
+
     // Table style
+
 #if QT_VERSION < 0x050000
     ui->tableWidgetWTs->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
     ui->tableWidgetWTs->verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
-    ui->tableViewUnspentWT->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    ui->tableViewUnspentWT->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewUnspentWT->verticalHeader()->setResizeMode(QHeaderView::ResizeToContents);
 #else
     ui->tableWidgetWTs->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableWidgetWTs->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -127,26 +135,45 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Hide vertical header
     ui->tableWidgetWTs->verticalHeader()->setVisible(false);
     ui->tableViewUnspentWT->verticalHeader()->setVisible(false);
+    ui->tableViewBMM->verticalHeader()->setVisible(false);
     // Left align the horizontal header text
     ui->tableWidgetWTs->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
     ui->tableViewUnspentWT->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewBMM->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
     // Set horizontal scroll speed to per 3 pixels
     ui->tableWidgetWTs->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableViewUnspentWT->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableWidgetWTs->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
     ui->tableViewUnspentWT->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewBMM->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewBMM->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
     // Select entire row
     ui->tableWidgetWTs->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableViewUnspentWT->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewBMM->setSelectionBehavior(QAbstractItemView::SelectRows);
     // Select only one row
     ui->tableWidgetWTs->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->tableViewUnspentWT->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->tableViewBMM->setSelectionMode(QAbstractItemView::SingleSelection);
     // Disable word wrap
     ui->tableWidgetWTs->setWordWrap(false);
     ui->tableViewUnspentWT->setWordWrap(false);
 
     // Set unspent WT table model
     ui->tableViewUnspentWT->setModel(unspentWTModel);
+
+    // Set BMM table model
+    ui->tableViewBMM->setModel(bmmModel);
+
+    // Set BMM table column sizes
+    ui->tableViewBMM->setColumnWidth(0, COLUMN_STATUS);
+    ui->tableViewBMM->setColumnWidth(1, COLUMN_BMM_BLIND);
+    ui->tableViewBMM->setColumnWidth(2, COLUMN_BMM_BLOCK);
+    ui->tableViewBMM->setColumnWidth(3, COLUMN_TXNS);
+    ui->tableViewBMM->setColumnWidth(4, COLUMN_SIDECHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(5, COLUMN_MAINCHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(6, COLUMN_BMM_AMOUNT);
+    ui->tableViewBMM->setColumnWidth(7, COLUMN_BMM_TXID);
 
     generateAddress();
     RefreshTrain();
@@ -179,6 +206,10 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
 
     ui->bmmAmount->setValue(DEFAULT_CRITICAL_DATA_AMOUNT);
 
+    ui->payAmount->setValue(0);
+    ui->feeAmount->setValue(0);
+    ui->mainchainFeeAmount->setValue(0);
+
     // Initialize WT^ history dialog. We want users to be able to keep
     // this window open while using the rest of the software.
     wtPrimeHistoryDialog = new SidechainWTPrimeHistoryDialog();
@@ -202,14 +233,18 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // TODO consts for tab index
     // Hide the spacer tab that seperates the label we have inserted from the
     // other tabs. We have a custom style sheet for disabled tabs.
-    ui->tabWidget->setTabEnabled(3, false);
+    ui->tabWidgetMain->setTabEnabled(3, false);
     // Set the total wealth tab disabled as well
-    ui->tabWidget->setTabEnabled(4, false);
+    ui->tabWidgetMain->setTabEnabled(4, false);
 
-    ui->tabWidget->tabBar()->setTabTextColor(4, QApplication::palette().text().color());
+    ui->tabWidgetMain->tabBar()->setTabTextColor(4, QApplication::palette().text().color());
 
     // Start with the stopBMM button disabled
     ui->pushButtonStopBMM->setEnabled(false);
+    ui->pushButtonNewBMM->setEnabled(false);
+
+    ui->tableViewBMM->setSelectionMode(QAbstractItemView::NoSelection);
+
     // Setup platform style single color icons
 
     // Buttons
@@ -228,7 +263,6 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Transfer tab widget
     ui->tabWidgetTransfer->setTabIcon(0, platformStyle->SingleColorIcon(":/icons/left"));
     ui->tabWidgetTransfer->setTabIcon(1, platformStyle->SingleColorIcon(":/icons/right"));
-
 }
 
 SidechainPage::~SidechainPage()
@@ -275,6 +309,7 @@ void SidechainPage::setWalletModel(WalletModel *model)
     this->walletModel = model;
     wtPrimeHistoryDialog->setWalletModel(model);
     unspentWTModel->setWalletModel(model);
+    bmmModel->setWalletModel(model);
     if (model && model->getOptionsModel())
     {
         connect(model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)), this,
@@ -304,6 +339,8 @@ void SidechainPage::setClientModel(ClientModel *model)
     {
         connect(model, SIGNAL(numBlocksChanged(int, QDateTime, double, bool)),
                 this, SLOT(setNumBlocks(int, QDateTime, double, bool)));
+
+        nBlocks = model->getNumBlocks();
     }
 }
 
@@ -315,7 +352,7 @@ void SidechainPage::setBalance(const CAmount& balance, const CAmount& unconfirme
     ui->available->setText(BitcoinUnits::formatWithUnit(unit, balance, false, BitcoinUnits::separatorAlways));
 }
 
-void SidechainPage::setNumBlocks(const int nBlocks, const QDateTime& time,
+void SidechainPage::setNumBlocks(const int nBlocksIn, const QDateTime& time,
         const double progress, const bool fHeader)
 {
     if (ui->checkBoxAutoWTPrimeRefresh->isChecked()) {
@@ -324,6 +361,8 @@ void SidechainPage::setNumBlocks(const int nBlocks, const QDateTime& time,
     }
 
     UpdateSidechainWealth();
+
+    nBlocks = nBlocksIn;
 }
 
 void SidechainPage::on_pushButtonMainchain_clicked()
@@ -348,7 +387,6 @@ void SidechainPage::on_pushButtonNew_clicked()
 
 void SidechainPage::on_pushButtonWT_clicked()
 {
-    // TODO better error messages
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
@@ -618,7 +656,6 @@ void SidechainPage::generateAddress()
 
 void SidechainPage::on_pushButtonCreateBlock_clicked()
 {
-    // TODO make error messages better
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
@@ -693,7 +730,6 @@ void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
 
 void SidechainPage::on_pushButtonSubmitBlock_clicked()
 {
-    // TODO improve error messages
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
@@ -758,12 +794,6 @@ uint256 SidechainPage::SendBMMRequest(const uint256& hashBMM, const uint256& has
     // TODO use user input bmm amount
     SidechainClient client;
     uint256 hashTXID = client.SendBMMCriticalDataRequest(hashBMM, hashBlockMain, 0, 0);
-    if (!hashTXID.IsNull()) {
-        // Add to list widget
-        QString str = "txid: ";
-        str += QString::fromStdString(hashTXID.ToString());
-        new QListWidgetItem(str, ui->listWidgetBMMCreated);
-    }
     return hashTXID;
 }
 
@@ -773,9 +803,6 @@ bool SidechainPage::SubmitBMMBlock(const CBlock& block)
     if (!ProcessNewBlock(Params(), shared_pblock, true, NULL)) {
         return false;
     }
-
-    // Add to list widget
-    new QListWidgetItem(QString::fromStdString(block.GetBlindHash().ToString()), ui->listWidgetBMMConnected);
 
     return true;
 }
@@ -835,7 +862,10 @@ void SidechainPage::RefreshBMM()
     std::string strError = "";
     uint256 hashCreated;
     uint256 hashConnected;
-    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected)) {
+    uint256 hashConnectedBlind;
+    uint256 txid;
+    int ntxn = 0;
+    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected, hashConnectedBlind, txid, ntxn)) {
         UpdateNetworkActive(false /* fMainchainConnected */);
         StopBMM();
 
@@ -856,15 +886,37 @@ void SidechainPage::RefreshBMM()
     UpdateNetworkActive(true /* fMainchainConnected */);
 
     // Update GUI
+    if (!hashCreated.IsNull()) {
+        BMMTableObject object;
 
-    uint256 hashBlock = bmmCache.GetLastMainBlockHash();
-    ui->labelLastMainchainBlock->setText(QString::fromStdString(hashBlock.ToString()));
+        object.hashBlind = hashCreated;
 
-    if (!hashCreated.IsNull())
-        new QListWidgetItem(QString::fromStdString(hashCreated.ToString()), ui->listWidgetBMMCreated);
+        if (amount > 0)
+            object.amount = amount;
 
-    if (!hashConnected.IsNull())
-        new QListWidgetItem(QString::fromStdString(hashConnected.ToString()), ui->listWidgetBMMConnected);
+        if (!txid.IsNull())
+            object.txid = txid;
+
+        // Add attempt sidechain block height
+        object.nSidechainHeight = nBlocks + 1;
+
+        // Add mainchain block height. GetCachedBlockCount includes the
+        // genesis block so it is actually one more than the reported
+        // mainchain height. BMM requests are for the next mainchain
+        // block so the +1 is okay.
+        object.nMainchainHeight = bmmCache.GetCachedBlockCount();
+
+        object.ntxn = ntxn;
+
+        bmmModel->AddAttempt(object);
+    }
+
+    if (!hashConnected.IsNull()) {
+        BMMTableObject object;
+        object.hashBlock = hashConnected;
+        object.hashBlind = hashConnectedBlind;
+        bmmModel->UpdateForConnected(object);
+    }
 }
 
 void SidechainPage::RefreshTrain()
@@ -1155,6 +1207,7 @@ void SidechainPage::StartBMM()
     bmmTimer->start(ui->spinBoxRefreshInterval->value() * 1000);
     ui->pushButtonStartBMM->setEnabled(false);
     ui->pushButtonStopBMM->setEnabled(true);
+    ui->pushButtonNewBMM->setEnabled(true);
 }
 
 void SidechainPage::StopBMM()
@@ -1162,6 +1215,7 @@ void SidechainPage::StopBMM()
     bmmTimer->stop();
     ui->pushButtonStartBMM->setEnabled(true);
     ui->pushButtonStopBMM->setEnabled(false);
+    ui->pushButtonNewBMM->setEnabled(false);
 }
 
 void SidechainPage::ClearWTPrimeExplorer()
@@ -1200,7 +1254,7 @@ void SidechainPage::UpdateSidechainWealth()
 
     QString label = "Total sidechain wealth: ";
     label += wealth;
-    ui->tabWidget->setTabText(4, label);
+    ui->tabWidgetMain->setTabText(4, label);
 }
 
 void SidechainPage::UpdateToLatestWTPrime(bool fRequested)
@@ -1223,4 +1277,12 @@ void SidechainPage::updateDisplayUnit()
     ui->payAmount->setDisplayUnit(nDisplayUnit);
     ui->feeAmount->setDisplayUnit(nDisplayUnit);
     ui->mainchainFeeAmount->setDisplayUnit(nDisplayUnit);
+}
+
+void SidechainPage::on_pushButtonNewBMM_clicked()
+{
+    if (bmmTimer->isActive()) {
+        bmmCache.ClearBMMBlocks();
+        RefreshBMM();
+    }
 }

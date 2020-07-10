@@ -18,6 +18,7 @@ class CBlock;
 class ClientModel;
 class ConfGeneratorDialog;
 class PlatformStyle;
+class SidechainBMMTableModel;
 class SidechainWTPrimeHistoryDialog;
 class SidechainWTTableModel;
 class WalletModel;
@@ -108,6 +109,9 @@ private Q_SLOTS:
     void on_pushButtonStopBMM_clicked();
 
     void updateDisplayUnit();
+
+    void on_pushButtonNewBMM_clicked();
+
 private:
     Ui::SidechainPage *ui;
 
@@ -117,6 +121,7 @@ private:
     const PlatformStyle *platformStyle;
 
     ConfGeneratorDialog *confGeneratorDialog;
+    SidechainBMMTableModel *bmmModel;
     SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;
     SidechainWTTableModel *unspentWTModel;
 
@@ -128,6 +133,8 @@ private:
     bool fSleepTrainWarning;
 
     QMessageBox *trainErrorMessageBox;
+
+    int nBlocks;
 
     bool validateWTAmount();
 

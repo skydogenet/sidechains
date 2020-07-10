@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>728</width>
-    <height>534</height>
+    <width>692</width>
+    <height>474</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -28,7 +28,7 @@
      <widget class="QWidget" name="pageSidechain">
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="QTabWidget" name="tabWidget">
+        <widget class="QTabWidget" name="tabWidgetMain">
          <property name="enabled">
           <bool>true</bool>
          </property>
@@ -100,7 +100,7 @@ QTabBar::tab:disabled {
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
-                   <width>20</width>
+                   <width>10</width>
                    <height>20</height>
                   </size>
                  </property>
@@ -152,7 +152,7 @@ QTabBar::tab:disabled {
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
-                   <width>20</width>
+                   <width>10</width>
                    <height>20</height>
                   </size>
                  </property>
@@ -350,7 +350,7 @@ QTabBar::tab:disabled {
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
-                      <width>240</width>
+                      <width>222</width>
                       <height>20</height>
                      </size>
                     </property>
@@ -759,7 +759,7 @@ QTabBar::tab:disabled {
                 <widget class="QTableView" name="tableViewUnspentWT">
                  <property name="font">
                   <font>
-                   <family>Noto Sans</family>
+                   <family>Noto Mono</family>
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
@@ -777,7 +777,7 @@ QTabBar::tab:disabled {
                   <bool>false</bool>
                  </property>
                  <attribute name="horizontalHeaderStretchLastSection">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </attribute>
                 </widget>
                </item>
@@ -789,21 +789,32 @@ QTabBar::tab:disabled {
               </attribute>
               <layout class="QVBoxLayout" name="verticalLayout_5">
                <item>
-                <widget class="QLabel" name="label_29">
-                 <property name="text">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Search for a WT-Bundle&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QFrame" name="frame_5">
                  <property name="frameShape">
-                  <enum>QFrame::StyledPanel</enum>
+                  <enum>QFrame::NoFrame</enum>
                  </property>
                  <property name="frameShadow">
                   <enum>QFrame::Raised</enum>
                  </property>
+                 <property name="lineWidth">
+                  <number>0</number>
+                 </property>
                  <layout class="QGridLayout" name="gridLayout_16">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="spacing">
+                   <number>2</number>
+                  </property>
                   <item row="1" column="0">
                    <widget class="QLineEdit" name="lineEditWTPrimeHash">
                     <property name="maxLength">
@@ -854,6 +865,12 @@ QTabBar::tab:disabled {
                  <layout class="QHBoxLayout" name="horizontalLayout_4">
                   <item>
                    <widget class="QFrame" name="frame_8">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="frameShape">
                      <enum>QFrame::NoFrame</enum>
                     </property>
@@ -861,6 +878,21 @@ QTabBar::tab:disabled {
                      <enum>QFrame::Raised</enum>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_3">
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="horizontalSpacing">
+                      <number>10</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>2</number>
+                     </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_33">
                        <property name="text">
@@ -919,24 +951,17 @@ QTabBar::tab:disabled {
                        </property>
                       </widget>
                      </item>
-                     <item row="3" column="0" colspan="3">
-                      <spacer name="verticalSpacer_5">
-                       <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>20</width>
-                         <height>40</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
                     </layout>
                    </widget>
                   </item>
                   <item>
                    <widget class="QFrame" name="frame_4">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="frameShape">
                      <enum>QFrame::NoFrame</enum>
                     </property>
@@ -944,6 +969,31 @@ QTabBar::tab:disabled {
                      <enum>QFrame::Raised</enum>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_5">
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="horizontalSpacing">
+                      <number>10</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>2</number>
+                     </property>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_30">
+                       <property name="text">
+                        <string>Total mainchain fees:</string>
+                       </property>
+                      </widget>
+                     </item>
                      <item row="1" column="1">
                       <widget class="QLabel" name="labelTotalFees">
                        <property name="text">
@@ -964,32 +1014,12 @@ QTabBar::tab:disabled {
                        </property>
                       </spacer>
                      </item>
-                     <item row="1" column="0">
-                      <widget class="QLabel" name="label_30">
-                       <property name="text">
-                        <string>Total mainchain fees:</string>
-                       </property>
-                      </widget>
-                     </item>
                      <item row="0" column="1">
                       <widget class="QLabel" name="labelTotalAmount">
                        <property name="text">
                         <string>0</string>
                        </property>
                       </widget>
-                     </item>
-                     <item row="3" column="0" colspan="3">
-                      <spacer name="verticalSpacer_7">
-                       <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>20</width>
-                         <height>40</height>
-                        </size>
-                       </property>
-                      </spacer>
                      </item>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_2">
@@ -1043,6 +1073,11 @@ QTabBar::tab:disabled {
                </item>
                <item>
                 <widget class="QTableWidget" name="tableWidgetWTs">
+                 <property name="font">
+                  <font>
+                   <family>Noto Mono</family>
+                  </font>
+                 </property>
                  <property name="sizeAdjustPolicy">
                   <enum>QAbstractScrollArea::AdjustIgnored</enum>
                  </property>
@@ -1106,7 +1141,7 @@ QTabBar::tab:disabled {
           </attribute>
           <layout class="QGridLayout" name="gridLayout_13">
            <item row="0" column="0">
-            <widget class="QTabWidget" name="tabWidget_2">
+            <widget class="QTabWidget" name="tabWidgetSub">
              <property name="currentIndex">
               <number>0</number>
              </property>
@@ -1115,147 +1150,127 @@ QTabBar::tab:disabled {
                <string>Automated</string>
               </attribute>
               <layout class="QGridLayout" name="gridLayout_14">
-               <item row="14" column="0" colspan="2">
-                <spacer name="verticalSpacer_3">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeType">
-                  <enum>QSizePolicy::Maximum</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item row="13" column="0" colspan="2">
-                <widget class="QFrame" name="frame_13">
-                 <property name="frameShape">
-                  <enum>QFrame::StyledPanel</enum>
-                 </property>
-                 <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
-                 </property>
-                 <layout class="QGridLayout" name="gridLayout_11">
-                  <item row="1" column="1">
-                   <widget class="QListWidget" name="listWidgetBMMConnected">
-                    <property name="font">
-                     <font>
-                      <family>Noto Mono</family>
-                     </font>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QListWidget" name="listWidgetBMMCreated">
-                    <property name="font">
-                     <font>
-                      <family>Noto Mono</family>
-                     </font>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_18">
-                    <property name="text">
-                     <string>Your attempts (BMM blind hash):</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QLabel" name="label_19">
-                    <property name="text">
-                     <string>Blocks found (SC block hash):</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-               </item>
-               <item row="9" column="0" colspan="2">
-                <widget class="QFrame" name="frame_14">
-                 <property name="frameShape">
-                  <enum>QFrame::StyledPanel</enum>
-                 </property>
-                 <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
-                 </property>
-                 <layout class="QHBoxLayout" name="horizontalLayout_5">
-                  <item>
-                   <widget class="QLabel" name="label_15">
-                    <property name="text">
-                     <string>Last Mainchain Block:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QLabel" name="labelLastMainchainBlock">
-                    <property name="text">
-                     <string>N/A</string>
-                    </property>
-                    <property name="textInteractionFlags">
-                     <set>Qt::TextSelectableByMouse</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <spacer name="horizontalSpacer_12">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>40</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
-                 </layout>
-                </widget>
-               </item>
                <item row="2" column="0" colspan="2">
-                <widget class="QFrame" name="frame_10">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>0</height>
-                  </size>
-                 </property>
+                <widget class="QFrame" name="frame_9">
                  <property name="frameShape">
                   <enum>QFrame::NoFrame</enum>
                  </property>
                  <property name="frameShadow">
-                  <enum>QFrame::Plain</enum>
+                  <enum>QFrame::Raised</enum>
                  </property>
                  <property name="lineWidth">
                   <number>0</number>
                  </property>
-                 <layout class="QGridLayout" name="gridLayout_17">
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="label_14">
+                 <layout class="QHBoxLayout" name="horizontalLayout_6">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QPushButton" name="pushButtonStartBMM">
                     <property name="text">
-                     <string>Refresh Interval</string>
+                     <string>Start BMM</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="0">
+                  <item>
+                   <widget class="QPushButton" name="pushButtonStopBMM">
+                    <property name="text">
+                     <string>Stop BMM</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButtonNewBMM">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="toolTip">
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create a new BMM attempt. This will generate a new sidechcain block - collecting any new transactions from the mempool since the last request, create a new BMM request and then continue attempting to connect it to the sidechain.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    </property>
+                    <property name="whatsThis">
+                     <string/>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="icon">
+                     <iconset resource="../bitcoin.qrc">
+                      <normaloff>:/movies/spinner-000</normaloff>:/movies/spinner-000</iconset>
+                    </property>
+                    <property name="flat">
+                     <bool>false</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="Line" name="line_2">
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="label_13">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Bid Amount:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="BitcoinAmountField" name="bmmAmount">
                     <property name="sizePolicy">
-                     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="2">
+                  <item>
+                   <widget class="Line" name="line_4">
+                    <property name="toolTipDuration">
+                     <number>15</number>
+                    </property>
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="label_14">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Refresh:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="QSpinBox" name="spinBoxRefreshInterval">
                     <property name="sizePolicy">
-                     <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
@@ -1274,30 +1289,17 @@ QTabBar::tab:disabled {
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_13">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="text">
-                     <string>Critical Transaction Amount</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1" rowspan="2">
+                  <item>
                    <spacer name="horizontalSpacer_3">
                     <property name="orientation">
                      <enum>Qt::Horizontal</enum>
                     </property>
                     <property name="sizeType">
-                     <enum>QSizePolicy::Maximum</enum>
+                     <enum>QSizePolicy::Expanding</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
-                      <width>40</width>
+                      <width>0</width>
                       <height>20</height>
                      </size>
                     </property>
@@ -1306,59 +1308,50 @@ QTabBar::tab:disabled {
                  </layout>
                 </widget>
                </item>
-               <item row="3" column="0" colspan="2">
-                <widget class="QFrame" name="frame_9">
-                 <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
+               <item row="8" column="0">
+                <widget class="QLabel" name="label_9">
+                 <property name="text">
+                  <string>Your Attempts:</string>
                  </property>
-                 <property name="frameShadow">
-                  <enum>QFrame::Raised</enum>
+                </widget>
+               </item>
+               <item row="9" column="0" colspan="2">
+                <widget class="QTableView" name="tableViewBMM">
+                 <property name="font">
+                  <font>
+                   <family>Noto Mono</family>
+                  </font>
                  </property>
-                 <property name="lineWidth">
-                  <number>0</number>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustIgnored</enum>
                  </property>
-                 <layout class="QHBoxLayout" name="horizontalLayout_6">
-                  <property name="leftMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>0</number>
-                  </property>
-                  <item>
-                   <widget class="QPushButton" name="pushButtonStartBMM">
-                    <property name="text">
-                     <string>Start BMM</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QPushButton" name="pushButtonStopBMM">
-                    <property name="text">
-                     <string>Stop BMM</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <spacer name="horizontalSpacer_16">
-                    <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>40</width>
-                      <height>20</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
-                  <item>
-                   <widget class="QPushButton" name="pushButtonConfigureBMM">
-                    <property name="text">
-                     <string>Redo Mainchain Connection</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
+                 <property name="editTriggers">
+                  <set>QAbstractItemView::NoEditTriggers</set>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::NoSelection</enum>
+                 </property>
+                 <property name="selectionBehavior">
+                  <enum>QAbstractItemView::SelectRows</enum>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>false</bool>
+                 </property>
+                 <property name="cornerButtonEnabled">
+                  <bool>false</bool>
+                 </property>
+                 <attribute name="horizontalHeaderDefaultSectionSize">
+                  <number>100</number>
+                 </attribute>
+                 <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+                  <bool>false</bool>
+                 </attribute>
+                 <attribute name="horizontalHeaderStretchLastSection">
+                  <bool>false</bool>
+                 </attribute>
+                 <attribute name="verticalHeaderStretchLastSection">
+                  <bool>false</bool>
+                 </attribute>
                 </widget>
                </item>
               </layout>
