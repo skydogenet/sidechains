@@ -10,6 +10,7 @@
 #include <QWidget>
 
 class AmountSpinBox;
+class QLabel;
 
 QT_BEGIN_NAMESPACE
 class QValueComboBox;
@@ -64,8 +65,9 @@ protected:
     bool eventFilter(QObject *object, QEvent *event);
 
 private:
-    AmountSpinBox *amount;
+    AmountSpinBox *amountSpinBox;
     QValueComboBox *unit;
+    QLabel *labelUnit;
 
 private Q_SLOTS:
     void unitChanged(int idx);

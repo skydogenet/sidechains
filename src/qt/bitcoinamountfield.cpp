@@ -13,6 +13,8 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QLabel>
+#include <QSizePolicy>
 
 /** QSpinBox that uses fixed-point numbers internally and uses our own
  * formatting/parsing functions.
@@ -30,6 +32,9 @@ public:
         setAlignment(Qt::AlignRight);
 
         connect(lineEdit(), SIGNAL(textEdited(QString)), this, SIGNAL(valueChanged()));
+
+        // TODO uncomment this if we decide to remove arrow buttons
+        // this->setButtonSymbols(QAbstractSpinBox::NoButtons);
     }
 
     QValidator::State validate(QString &text, int &pos) const
@@ -177,15 +182,26 @@ Q_SIGNALS:
 
 BitcoinAmountField::BitcoinAmountField(QWidget *parent) :
     QWidget(parent),
-    amount(0)
+    amountSpinBox(0)
 {
-    amount = new AmountSpinBox(this);
-    amount->setLocale(QLocale::c());
-    amount->installEventFilter(this);
-    amount->setMaximumWidth(170);
+    amountSpinBox = new AmountSpinBox(this);
+
+    QHBoxLayout *amountLayout = new QHBoxLayout(this);
+
+    amountSpinBox->setLayout(amountLayout);
+
+    labelUnit = new QLabel(this);
+    labelUnit->setEnabled(false); // To use the disabled text color
+
+    amountLayout->addWidget(labelUnit);
+    amountLayout->addStretch(1);
+
+    amountSpinBox->setLocale(QLocale::c());
+    amountSpinBox->installEventFilter(this);
+    amountSpinBox->setMaximumWidth(170);
 
     QHBoxLayout *layout = new QHBoxLayout(this);
-    layout->addWidget(amount);
+    layout->addWidget(amountSpinBox);
     unit = new QValueComboBox(this);
     unit->setModel(new BitcoinUnits(this));
     layout->addWidget(unit);
@@ -195,26 +211,28 @@ BitcoinAmountField::BitcoinAmountField(QWidget *parent) :
     setLayout(layout);
 
     setFocusPolicy(Qt::TabFocus);
-    setFocusProxy(amount);
+    setFocusProxy(amountSpinBox);
 
     // If one if the widgets changes, the combined content changes as well
-    connect(amount, SIGNAL(valueChanged()), this, SIGNAL(valueChanged()));
+    connect(amountSpinBox, SIGNAL(valueChanged()), this, SIGNAL(valueChanged()));
     connect(unit, SIGNAL(currentIndexChanged(int)), this, SLOT(unitChanged(int)));
 
     // Set default based on configuration
     unitChanged(unit->currentIndex());
+
+    unit->setVisible(false);
+    unit->setEnabled(false);
 }
 
 void BitcoinAmountField::clear()
 {
-    amount->clear();
+    amountSpinBox->clear();
     unit->setCurrentIndex(0);
 }
 
 void BitcoinAmountField::setEnabled(bool fEnabled)
 {
-    amount->setEnabled(fEnabled);
-    unit->setEnabled(fEnabled);
+    amountSpinBox->setEnabled(fEnabled);
 }
 
 bool BitcoinAmountField::validate()
@@ -228,9 +246,9 @@ bool BitcoinAmountField::validate()
 void BitcoinAmountField::setValid(bool valid)
 {
     if (valid)
-        amount->setStyleSheet("");
+        amountSpinBox->setStyleSheet("");
     else
-        amount->setStyleSheet(STYLE_INVALID);
+        amountSpinBox->setStyleSheet(STYLE_INVALID);
 }
 
 bool BitcoinAmountField::eventFilter(QObject *object, QEvent *event)
@@ -245,24 +263,24 @@ bool BitcoinAmountField::eventFilter(QObject *object, QEvent *event)
 
 QWidget *BitcoinAmountField::setupTabChain(QWidget *prev)
 {
-    QWidget::setTabOrder(prev, amount);
-    QWidget::setTabOrder(amount, unit);
+    QWidget::setTabOrder(prev, amountSpinBox);
+    QWidget::setTabOrder(amountSpinBox, unit);
     return unit;
 }
 
 CAmount BitcoinAmountField::value(bool *valid_out) const
 {
-    return amount->value(valid_out);
+    return amountSpinBox->value(valid_out);
 }
 
 void BitcoinAmountField::setValue(const CAmount& value)
 {
-    amount->setValue(value);
+    amountSpinBox->setValue(value);
 }
 
 void BitcoinAmountField::setReadOnly(bool fReadOnly)
 {
-    amount->setReadOnly(fReadOnly);
+    amountSpinBox->setReadOnly(fReadOnly);
 }
 
 void BitcoinAmountField::unitChanged(int idx)
@@ -273,7 +291,9 @@ void BitcoinAmountField::unitChanged(int idx)
     // Determine new unit ID
     int newUnit = unit->itemData(idx, BitcoinUnits::UnitRole).toInt();
 
-    amount->setDisplayUnit(newUnit);
+    amountSpinBox->setDisplayUnit(newUnit);
+
+    labelUnit->setText(BitcoinUnits::shortName(newUnit));
 }
 
 void BitcoinAmountField::setDisplayUnit(int newUnit)
@@ -283,5 +303,5 @@ void BitcoinAmountField::setDisplayUnit(int newUnit)
 
 void BitcoinAmountField::setSingleStep(const CAmount& step)
 {
-    amount->setSingleStep(step);
+    amountSpinBox->setSingleStep(step);
 }
