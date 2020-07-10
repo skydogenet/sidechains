@@ -47,12 +47,24 @@ QString BitcoinUnits::longName(int unit)
     }
 }
 
-QString BitcoinUnits::shortName(int unit)
+QString BitcoinUnits::shortName(int unit, bool fMainchain)
 {
     switch(unit)
     {
-    case uBTC: return QString::fromUtf8("bits");
-    default:   return longName(unit);
+    case BTC:
+    {
+        return fMainchain ? QString("BTC") : longName(unit);
+    }
+    case mBTC:
+    {
+        return fMainchain ? QString("mBTC") : longName(unit);
+    }
+    case uBTC:
+    {
+        // uBTC is the same on mainchain & sidechain
+        return QString::fromUtf8("bits");
+    }
+    default: return QString("???");
     }
 }
 
@@ -139,6 +151,11 @@ QString BitcoinUnits::format(int unit, const CAmount& nIn, bool fPlus, Separator
 QString BitcoinUnits::formatWithUnit(int unit, const CAmount& amount, bool plussign, SeparatorStyle separators)
 {
     return format(unit, amount, plussign, separators) + QString(" ") + shortName(unit);
+}
+
+QString BitcoinUnits::formatWithMainchainUnit(int unit, const CAmount& amount, bool plussign, SeparatorStyle separators)
+{
+    return format(unit, amount, plussign, separators) + QString(" ") + shortName(unit, true /* fMainchain */);
 }
 
 QString BitcoinUnits::formatHtmlWithUnit(int unit, const CAmount& amount, bool plussign, SeparatorStyle separators)

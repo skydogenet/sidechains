@@ -83,7 +83,7 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
         }
         // Amount
         if (col == 6) {
-            QString amount = BitcoinUnits::formatWithUnit(unit, object.amount, false,
+            QString amount = BitcoinUnits::formatWithMainchainUnit(unit, object.amount, false,
                     BitcoinUnits::separatorAlways);
             return amount;
         }

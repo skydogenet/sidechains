@@ -79,7 +79,7 @@ public:
     //! Long name
     static QString longName(int unit);
     //! Short name
-    static QString shortName(int unit);
+    static QString shortName(int unit, bool fMainchain = false);
     //! Longer description
     static QString description(int unit);
     //! Number of Satoshis (1e-8) per unit
@@ -90,6 +90,10 @@ public:
     static QString format(int unit, const CAmount& amount, bool plussign=false, SeparatorStyle separators=separatorStandard);
     //! Format as string (with unit)
     static QString formatWithUnit(int unit, const CAmount& amount, bool plussign=false, SeparatorStyle separators=separatorStandard);
+    //! If units on the sidechain are made incompatible with the mainchain
+    //! this code will need to be updated.
+    //! Format as a string (with unit - as it would be on the mainchain)
+    static QString formatWithMainchainUnit(int unit, const CAmount& amount, bool plussign=false, SeparatorStyle separators=separatorStandard);
     //! Format as HTML string (with unit)
     static QString formatHtmlWithUnit(int unit, const CAmount& amount, bool plussign=false, SeparatorStyle separators=separatorStandard);
     //! Parse string to coin amount

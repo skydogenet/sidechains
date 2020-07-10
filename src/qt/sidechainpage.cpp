@@ -1160,7 +1160,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
         QString amount = BitcoinUnits::formatWithUnit(unit, wt.amount - wt.mainchainFee, false,
                 BitcoinUnits::separatorAlways);
 
-        QString fee = BitcoinUnits::formatWithUnit(unit, wt.mainchainFee, false,
+        QString fee = BitcoinUnits::formatWithMainchainUnit(unit, wt.mainchainFee, false,
                 BitcoinUnits::separatorAlways);
 
         QTableWidgetItem* amountItem = new QTableWidgetItem(amount);
@@ -1184,7 +1184,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     ui->labelTotalAmount->setText(total);
 
     // Set total fee amount
-    QString fees = BitcoinUnits::formatWithUnit(unit, amountMainchainFees, false,
+    QString fees = BitcoinUnits::formatWithMainchainUnit(unit, amountMainchainFees, false,
             BitcoinUnits::separatorAlways);
 
     ui->labelTotalFees->setText(fees);

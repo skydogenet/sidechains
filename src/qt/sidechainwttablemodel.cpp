@@ -66,7 +66,7 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
         }
         // Mainchain fee amount
         if (col == 1) {
-            QString fee = BitcoinUnits::formatWithUnit(unit, object.amountMainchainFee, false,
+            QString fee = BitcoinUnits::formatWithMainchainUnit(unit, object.amountMainchainFee, false,
                     BitcoinUnits::separatorAlways);
             return fee;
         }
