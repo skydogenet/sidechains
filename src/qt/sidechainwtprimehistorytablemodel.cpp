@@ -74,6 +74,25 @@ QVariant SidechainWTPrimeHistoryTableModel::data(const QModelIndex &index, int r
             return object.status;
         }
     }
+    case Qt::TextAlignmentRole:
+    {
+        // Height
+        if (col == 0) {
+            return Qt::AlignRight;
+        }
+        // Hash
+        if (col == 1) {
+            return Qt::AlignLeft;
+        }
+        // Total Withdrawn
+        if (col == 2) {
+            return Qt::AlignRight;
+        }
+        // Status
+        if (col == 3) {
+            return Qt::AlignLeft;
+        }
+    }
     }
     return QVariant();
 }
