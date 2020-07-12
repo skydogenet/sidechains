@@ -530,7 +530,7 @@ void DumpMainBlockCache();
 void LoadMainBlockCache();
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false, bool fCheckUnique = false);
+bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false, bool fCheckUnique = false);
 
 /**
  * If there are any WT^(s) (note the limit per block is 1) verify it, and
@@ -538,7 +538,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
  * wt(s) spent by the WT^ if it has been validated - so that ConnectBlock can
  * update their status
  */
-bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate = false);
+bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate = false);
 
 /** Sort deposits by CTIP spend order */
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);

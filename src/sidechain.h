@@ -32,6 +32,10 @@ static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 140;
 
 static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
 
+// Temporary testnet value
+static const int WTPRIME_FAIL_WAIT_PERIOD = 20;
+// Real value final release: static const int WTPRIME_FAIL_WAIT_PERIOD = 144;
+
 struct Sidechain {
     uint8_t nSidechain;
     CScript depositScript;
@@ -134,6 +138,10 @@ struct SidechainWTPrime: public SidechainObj {
     CMutableTransaction wtPrime;
     std::vector<uint256> vWT; // The id in ldb of WT(s) that this WT^ is using
     int nHeight;
+    // If the WT^ fails we keep track of the sidechain height that it was marked
+    // failed at so that we can wait WTPRIME_FAIL_WAIT_PERIOD before trying the
+    // next WT^.
+    int nFailHeight;
     char status;
 
     SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; status = WTPRIME_CREATED; nHeight = 0;}
@@ -149,12 +157,14 @@ struct SidechainWTPrime: public SidechainObj {
         READWRITE(vWT);
         READWRITE(status);
         READWRITE(nHeight);
+        READWRITE(nFailHeight);
     }
 
     uint256 GetID() const {
         SidechainWTPrime wt(*this);
         wt.status = WTPRIME_CREATED;
         wt.nHeight = 0;
+        wt.nFailHeight = 0;
         return wt.GetHash();
     }
 

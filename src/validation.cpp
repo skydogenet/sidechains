@@ -1698,6 +1698,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
                 }
 
                 wtPrime.status = WTPRIME_CREATED;
+                wtPrime.nFailHeight = 0;
 
                 if (!psidechaintree->WriteWTPrimeUpdate(wtPrime)) {
                     error("DisconnectBlock(): Failed to write WT^ undo update!");
@@ -2177,14 +2178,24 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 // already loaded it.
                 if (hashWTPrime == wtPrimeLatest.wtPrime.GetHash()) {
                     wtPrimeLatest.status = fFailCommit ? WTPRIME_FAILED : WTPRIME_SPENT;
+
+                    // Keep track of the height a WT^ was marked failed
+                    if (fFailCommit)
+                        wtPrimeLatest.nFailHeight = pindex->nHeight;
+
                     if (!psidechaintree->WriteWTPrimeUpdate(wtPrimeLatest))
                         return state.Error(strprintf("%s: Failed to write WT^ update!\n", __func__));
+
                 } else {
                     SidechainWTPrime wtPrime;
                     if (!psidechaintree->GetWTPrime(hashWTPrime, wtPrime))
                         return state.Error(strprintf("%s: Failed to read WT^ for update!\n", __func__));
 
                     wtPrime.status = fFailCommit ? WTPRIME_FAILED : WTPRIME_SPENT;
+
+                    // Keep track of the height a WT^ was marked failed
+                    if (fFailCommit)
+                        wtPrimeLatest.nFailHeight = pindex->nHeight;
 
                     if (!psidechaintree->WriteWTPrimeUpdate(wtPrime))
                         return state.Error(strprintf("%s: Failed to write WT^ update!\n", __func__));
@@ -2281,7 +2292,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             uint256 hashWTPrimeID;
 
             // This will also return a list of wt(s) from the WT^
-            if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, !fSkipBMMChecks /* fReplicate */))
+            if (!VerifyWTPrimes(strFail, pindex->nHeight, block.vtx, vWT, hashWTPrime, hashWTPrimeID, !fSkipBMMChecks /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
@@ -3859,7 +3870,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         std::vector<SidechainWT> vWT;
         uint256 hashWTPrime;
         uint256 hashWTPrimeID;
-        if (!VerifyWTPrimes(strFail, block.vtx, vWT, hashWTPrime, hashWTPrimeID, true /* fReplicate */)) {
+        if (!VerifyWTPrimes(strFail, pindex->nHeight, block.vtx, vWT, hashWTPrime, hashWTPrimeID, true /* fReplicate */)) {
             state.Error(strprintf("%s: invalid-wtprime error: %s", __func__, strFail));
             return error("%s: invalid WT^! Error: %s", __func__, strFail);
         }
@@ -5310,31 +5321,41 @@ void DumpMainBlockCache()
 }
 
 /** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck, bool fCheckUnique)
+bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck, bool fCheckUnique)
 {
     unsigned int nMinWT = gArgs.GetArg("-minwt", DEFAULT_MIN_WT_CREATE_WTPRIME);
-    bool fReplace = gArgs.GetBoolArg("-replacewtprime", false);
+
+    // Load the latest WT^
+    bool fHaveWTPrimes = false;
+    uint256 hashLatestWTPrime;
+    SidechainWTPrime wtPrimeLatest;
+    psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
+    if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrimeLatest)) {
+        fHaveWTPrimes = true;
+    }
+
+    // If the last WT^ failed - wait WT_FAIL_WAIT_PERIOD blocks before creating
+    // a new one.
+    if (fHaveWTPrimes && wtPrimeLatest.status == WTPRIME_FAILED) {
+        if (nHeight - wtPrimeLatest.nFailHeight < WTPRIME_FAIL_WAIT_PERIOD) {
+            LogPrintf("%s: Not enough blocks since last failed WT^!\n", __func__);
+            return false;
+        }
+    }
 
     if (!fReplicationCheck) {
-        // Get the mainchain's chain height
-        SidechainClient client;
-
-        // Check if the current WT^ is still pending
-        uint256 hashLatestWTPrime;
-        SidechainWTPrime wtPrimeLatest;
-        psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
-        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrimeLatest)) {
+        if (fHaveWTPrimes) {
             if (wtPrimeLatest.status == WTPRIME_CREATED) {
                 LogPrintf("%s: Current WT^ for this sidechain still pending!\n", __func__);
                 return false;
             }
-        }
-
-        // Check for existing WT^ in mainchain SCDB for this sidechain
-        std::vector<uint256> vHashWTPrime;
-        if (!fReplace && client.ListWTPrimeStatus(vHashWTPrime)) {
-            LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
-            return false;
+            // Check for existing WT^ in mainchain SCDB for this sidechain
+            SidechainClient client;
+            std::vector<uint256> vHashWTPrime;
+            if (client.ListWTPrimeStatus(vHashWTPrime)) {
+                LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
+                return false;
+            }
         }
     }
 
@@ -5441,7 +5462,7 @@ bool CreateWTPrimeTx(CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx,
     return true;
 }
 
-bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate) {
+bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate) {
     // Keep track of how many WT^(s) are in the block, only 1 is allowed
     int nWTPrime = 0;
 
@@ -5543,7 +5564,7 @@ bool VerifyWTPrimes(std::string& strFail, const std::vector<CTransactionRef>& vt
                 // Try to create the same WT^
                 CTransactionRef wtPrimeTx;
                 CTransactionRef wtPrimeDataTx;
-                if (!CreateWTPrimeTx(wtPrimeTx, wtPrimeDataTx, true /* fReplicationCheck */ )) {
+                if (!CreateWTPrimeTx(nHeight, wtPrimeTx, wtPrimeDataTx, true /* fReplicationCheck */ )) {
                     strFail = "Invalid WT^ - failed to create replicant WT^!\n";
                     return false;
                 }
