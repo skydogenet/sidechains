@@ -18,28 +18,32 @@ QT_END_NAMESPACE
 
 struct BMMTableObject
 {
+    // Info to be displayed on table
     int ntxn = 0;
-    uint256 hashBlind;
-    uint256 hashBlock;
     CAmount amount;
+    CAmount amountTotalFees;
     uint256 txid;
     int nSidechainHeight = 0;
     int nMainchainHeight = 0;
 
+    // Status
     bool fConnected = false;
     bool fFailed = false;
+
+    // Not currently displayed on table
+    uint256 hashBlind;
+    uint256 hashBlock;
 };
 
 enum ColumnWidth
 {
     COLUMN_STATUS = 80,
-    COLUMN_BMM_BLIND = 100,
-    COLUMN_BMM_BLOCK = 120,
     COLUMN_TXNS = 45,
-    COLUMN_SIDECHAIN_HEIGHT = 80,
-    COLUMN_MAINCHAIN_HEIGHT = 80,
+    COLUMN_FEES = 130,
     COLUMN_BMM_AMOUNT = 130,
     COLUMN_BMM_TXID = 100,
+    COLUMN_SIDECHAIN_HEIGHT = 80,
+    COLUMN_MAINCHAIN_HEIGHT = 80,
 };
 
 class SidechainBMMTableModel : public QAbstractTableModel

@@ -167,13 +167,12 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
 
     // Set BMM table column sizes
     ui->tableViewBMM->setColumnWidth(0, COLUMN_STATUS);
-    ui->tableViewBMM->setColumnWidth(1, COLUMN_BMM_BLIND);
-    ui->tableViewBMM->setColumnWidth(2, COLUMN_BMM_BLOCK);
-    ui->tableViewBMM->setColumnWidth(3, COLUMN_TXNS);
-    ui->tableViewBMM->setColumnWidth(4, COLUMN_SIDECHAIN_HEIGHT);
-    ui->tableViewBMM->setColumnWidth(5, COLUMN_MAINCHAIN_HEIGHT);
-    ui->tableViewBMM->setColumnWidth(6, COLUMN_BMM_AMOUNT);
-    ui->tableViewBMM->setColumnWidth(7, COLUMN_BMM_TXID);
+    ui->tableViewBMM->setColumnWidth(1, COLUMN_TXNS);
+    ui->tableViewBMM->setColumnWidth(2, COLUMN_FEES);
+    ui->tableViewBMM->setColumnWidth(3, COLUMN_BMM_AMOUNT);
+    ui->tableViewBMM->setColumnWidth(4, COLUMN_BMM_TXID);
+    ui->tableViewBMM->setColumnWidth(5, COLUMN_SIDECHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(6, COLUMN_MAINCHAIN_HEIGHT);
 
     generateAddress();
     RefreshTrain();
@@ -864,8 +863,9 @@ void SidechainPage::RefreshBMM()
     uint256 hashConnected;
     uint256 hashConnectedBlind;
     uint256 txid;
+    CAmount nFees = 0;
     int ntxn = 0;
-    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected, hashConnectedBlind, txid, ntxn)) {
+    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected, hashConnectedBlind, txid, ntxn, nFees)) {
         UpdateNetworkActive(false /* fMainchainConnected */);
         StopBMM();
 
@@ -907,6 +907,9 @@ void SidechainPage::RefreshBMM()
         object.nMainchainHeight = bmmCache.GetCachedBlockCount();
 
         object.ntxn = ntxn;
+
+        // Add total txn fees of the new block.
+        object.amountTotalFees = nFees;
 
         bmmModel->AddAttempt(object);
     }

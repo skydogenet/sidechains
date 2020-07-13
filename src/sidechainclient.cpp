@@ -343,7 +343,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     return true;
 }
 
-bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreated, uint256& hashConnected, uint256& hashConnectedBlind, uint256& txid, int& nTxn, bool fCreateNew, const uint256& hashPrevBlock)
+bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreated, uint256& hashConnected, uint256& hashConnectedBlind, uint256& txid, int& nTxn, CAmount& nFees, bool fCreateNew, const uint256& hashPrevBlock)
 {
     //
     // A cache of recent mainchain block hashes and the mainchain tip is created
@@ -384,6 +384,11 @@ bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, u
         if (CreateBMMBlock(block, strError, hashPrevBlock)) {
             // TODO check return value
             nTxn = block.vtx.size();
+            // The sidechain template has 0 block subsidy, so the output value
+            // of the coinbase transaction is made up entirely by fees.
+            // If a sidechain developer decides to add a block subsidy this
+            // code will break.
+            nFees = block.vtx.front()->GetValueOut();
             hashCreated = block.GetBlindHash();
             txid = SendBMMCriticalDataRequest(hashCreated, vHashMainBlock.back(), 0, amount);
             bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
@@ -436,6 +441,11 @@ bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, u
         if (fCreateNew && CreateBMMBlock(block, strError, hashPrevBlock)) {
             // Create BMM critical data request
             nTxn = block.vtx.size();
+            // The sidechain template has 0 block subsidy, so the output value
+            // of the coinbase transaction is made up entirely by fees.
+            // If a sidechain developer decides to add a block subsidy this
+            // code will break.
+            nFees = block.vtx.front()->GetValueOut();
             hashCreated = block.GetBlindHash();
             txid = SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlock.back(), 0, amount);
             bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
