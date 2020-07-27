@@ -650,6 +650,7 @@ public:
     /** Script formats for Drivechains */
     bool IsWTPrimeFailCommit(uint256& hashWTPrime) const;
     bool IsWTPrimeSpentCommit(uint256& hashWTPrime) const;
+    bool IsWTRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSig) const;
 
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     bool IsPushOnly(const_iterator pc) const;

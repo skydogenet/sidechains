@@ -168,6 +168,7 @@ extern std::map<uint256, CBlockIndex*>& mapBlockMainHashIndex;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockWeight;
 extern const std::string strMessageMagic;
+extern const std::string strRefundMessageMagic;
 extern CWaitableCriticalSection csBestBlock;
 extern CConditionVariable cvBlockChange;
 extern std::atomic_bool fImporting;
@@ -444,6 +445,12 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
 /** Produce WT^ status commitment for a block */
 CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime);
 CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime);
+
+/** Produce WT refund request */
+CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig);
+
+/** Verify the status of WT to refund & check refund signature */
+bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig);
 
 /** RAII wrapper for VerifyDB: Verify consistency of the block and coin databases */
 class CVerifyDB {

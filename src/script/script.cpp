@@ -283,6 +283,32 @@ bool CScript::IsWTPrimeSpentCommit(uint256& hashWTPrime) const
     return true;
 }
 
+bool CScript::IsWTRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSig) const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size != 102) // sha256 hash (32 bytes) + opcodes + sig (65 bytes)
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xFC ||
+            (*this)[2] != 0xD2 ||
+            (*this)[3] != 0xE5 ||
+            (*this)[4] != 0x46)
+        return false;
+
+    wtID = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    vchSig = std::vector<unsigned char>(this->begin() + 37, this->end());
+
+    if (wtID.IsNull())
+        return false;
+    if (vchSig.empty())
+        return false;
+
+    return true;
+}
+
 bool CScript::IsPushOnly(const_iterator pc) const
 {
     while (pc < end())

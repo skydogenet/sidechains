@@ -244,6 +244,7 @@ CTxMemPool mempool(&feeEstimator);
 CScript COINBASE_FLAGS;
 
 const std::string strMessageMagic = "Bitcoin Signed Message:\n";
+const std::string strRefundMessageMagic = "REFUND DhjM9iNapSA 3e243e21\n";
 
 std::mutex mainBlockCacheMutex;
 std::mutex mainBlockCacheReorgMutex;
@@ -3539,6 +3540,69 @@ CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime)
     memcpy(&scriptPubKey[5], &hashWTPrime, 32);
 
     return scriptPubKey;
+}
+
+CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig)
+{
+    /*
+     * Generate a script commit indicating that the WT^ failed on the mainchain
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(102);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xFC;
+    scriptPubKey[2] = 0xD2;
+    scriptPubKey[3] = 0xE5;
+    scriptPubKey[4] = 0x46;
+
+    // Add WT ID (the ID it has in ldb)
+    memcpy(&scriptPubKey[5], wtID.begin(), 32);
+
+    // Add vchSig
+    memcpy(&scriptPubKey[37], vchSig.data(), 65);
+
+    return scriptPubKey;
+}
+
+bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig)
+{
+    if (wtID.IsNull()) {
+        return false;
+    }
+    if (vchSig.size() != 65) {
+        return false;
+    }
+
+    // Regenerate standard refund message & get hash
+    CHashWriter ss(SER_GETHASH, 0);
+    ss << strMessageMagic;
+    ss << strRefundMessageMagic;
+    ss << wtID.ToString();
+
+    // Recover the public key that signed the refund request
+    CPubKey pubkey;
+    if (!pubkey.RecoverCompact(ss.GetHash(), vchSig)) {
+        return false;
+    }
+
+    // Lookup & verify status of WT
+    SidechainWT wt;
+    if (!psidechaintree->GetWT(wtID, wt)) {
+        return false;
+    }
+    // Check status of WT
+    if (wt.status != WT_IN_WTPRIME) {
+        return false;
+    }
+    // Verify refund address matches the one recreated from signature
+    if (DecodeDestination(wt.strRefundDestination) != CTxDestination(pubkey.GetID())) {
+        return false;
+    }
+
+    return true;
 }
 
 /** Context-dependent validity checks.

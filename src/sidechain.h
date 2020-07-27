@@ -99,6 +99,7 @@ struct SidechainObj {
 struct SidechainWT: public SidechainObj {
     uint8_t nSidechain;
     std::string strDestination;
+    std::string strRefundDestination;
     CAmount amount;
     CAmount mainchainFee;
     char status;
@@ -114,6 +115,7 @@ struct SidechainWT: public SidechainObj {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
         READWRITE(strDestination);
+        READWRITE(strRefundDestination);
         READWRITE(amount);
         READWRITE(mainchainFee);
         READWRITE(status);
