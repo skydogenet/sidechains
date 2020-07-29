@@ -568,7 +568,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script)
     wt.strRefundDestination = strRefundAddress;
     wt.amount = 0;
     wt.mainchainFee = 0;
-    wt.status = WT_IN_WTPRIME;
+    wt.status = WT_UNSPENT;
     wt.hashBlindWTX = uint256();
 
     psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
@@ -596,7 +596,8 @@ BOOST_AUTO_TEST_CASE(wt_refund_script)
     BOOST_CHECK(vchSigFromScript == vchSig);
 
     // Verify refund script
-    BOOST_CHECK(VerifyWTRefundRequest(idFromScript, vchSigFromScript));
+    SidechainWT wtOut;
+    BOOST_CHECK(VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
 
     // Verify again ourselves
     CPubKey pubkey;
@@ -639,7 +640,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
     wt.strRefundDestination = strOtherAdress;
     wt.amount = 0;
     wt.mainchainFee = 0;
-    wt.status = WT_IN_WTPRIME;
+    wt.status = WT_UNSPENT;
     wt.hashBlindWTX = uint256();
 
     psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
@@ -667,7 +668,8 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
     BOOST_CHECK(vchSigFromScript == vchSig);
 
     // Refund script should be invalid
-    BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript));
+    SidechainWT wtOut;
+    BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
 }
 
 BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
@@ -699,7 +701,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
     wt.strRefundDestination = strRefundAddress;
     wt.amount = 0;
     wt.mainchainFee = 0;
-    wt.status = WT_IN_WTPRIME;
+    wt.status = WT_UNSPENT;
     wt.hashBlindWTX = uint256();
 
     psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
@@ -728,7 +730,8 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
     BOOST_CHECK(vchSigFromScript == vchSig);
 
     // Refund script should be invalid
-    BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript));
+    SidechainWT wtOut;
+    BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

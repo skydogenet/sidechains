@@ -179,7 +179,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     int nPackagesSelected = 0;
     int nDescendantsUpdated = 0;
-    addPackageTxs(nPackagesSelected, nDescendantsUpdated);
+    std::vector<CTxMemPool::txiter> vWTRefund;
+    addPackageTxs(nPackagesSelected, nDescendantsUpdated, vWTRefund);
 
     int64_t nTime1 = GetTimeMicros();
 
@@ -217,13 +218,75 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         }
     }
 
-    // Create WT^
-    CTransactionRef wtPrimeTx;
-    CTransactionRef wtPrimeDataTx;
-    if (CreateWTPrimeTx(nHeight, wtPrimeTx, wtPrimeDataTx, false /* fReplicationCheck */,
-                true /* fCheckUnique */)) {
-        for (const CTxOut& out : wtPrimeDataTx->vout)
-            coinbaseTx.vout.push_back(out);
+    // Create refund payout output(s)
+    //
+    // Don't add too many refunds
+    //
+    uint64_t nRefundAdded = 0;
+    for (const CTxMemPool::txiter& it : vWTRefund) {
+        CTransactionRef tx = it->GetSharedTx();
+        if (tx == nullptr) continue;
+
+        // Find the refund script
+        uint256 wtID;
+        wtID.SetNull();
+        std::vector<unsigned char> vchSig;
+        for (const CTxOut& o : tx->vout) {
+            if (!o.scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+                continue;
+            break;
+        }
+        if (wtID.IsNull())
+            continue;
+
+        // Verify refund request & get WT data
+        SidechainWT wt;
+        if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
+            LogPrintf("%s: Miner failed to verify WT refund request! WT ID: %s\n", __func__, wtID.ToString());
+            continue;
+        }
+
+        // Try to add the refund payout output - if we cannot then remove it
+        // and stop trying to process more refunds
+
+        // Figure out how much weight the refund payout will add
+        coinbaseTx.vout.push_back(CTxOut(wt.amount, GetScriptForDestination(DecodeDestination(wt.strRefundDestination))));
+        uint64_t nCoinbaseTxSize = GetVirtualTransactionSize(*tx);
+
+        // Can we add the refund payout output?
+        if (nRefundAdded + nCoinbaseTxSize + nBlockWeight > MAX_BLOCK_WEIGHT) {
+            coinbaseTx.vout.pop_back();
+            break;
+        }
+        nRefundAdded += nCoinbaseTxSize;
+
+        // Try to add the refund request tx. If we cannot then remove the payout
+        // output and stop processing more refunds.
+
+        // Get the size of the refund request txn
+        uint64_t nTxSize = GetVirtualTransactionSize(*tx);
+
+        if (nRefundAdded + nTxSize + nBlockWeight > MAX_BLOCK_WEIGHT) {
+            // Remove the refund output & break
+            coinbaseTx.vout.pop_back();
+            break;
+        }
+
+        // Add refund request txn to block
+        AddToBlock(it);
+    }
+
+    // TODO
+    // For testing - do not create new WT^ if any WT refunds were processed.
+    if (!vWTRefund.size()) {
+        // Create WT^
+        CTransactionRef wtPrimeTx;
+        CTransactionRef wtPrimeDataTx;
+        if (CreateWTPrimeTx(nHeight, wtPrimeTx, wtPrimeDataTx, false /* fReplicationCheck */,
+                    true /* fCheckUnique */)) {
+            for (const CTxOut& out : wtPrimeDataTx->vout)
+                coinbaseTx.vout.push_back(out);
+        }
     }
 
     // Create deposit payout output(s)
@@ -406,7 +469,7 @@ void BlockAssembler::SortForBlock(const CTxMemPool::setEntries& package, CTxMemP
 // Each time through the loop, we compare the best transaction in
 // mapModifiedTxs with the next transaction in the mempool to decide what
 // transaction package to work on next.
-void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated)
+void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, std::vector<CTxMemPool::txiter>& vWTRefund)
 {
     // mapModifiedTx will store sorted packages after they are modified
     // because some of their txs are already in the block
@@ -524,7 +587,15 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         SortForBlock(ancestors, iter, sortedEntries);
 
         for (size_t i=0; i<sortedEntries.size(); ++i) {
+            // If we find WT refund txns, add them to a vector to be manually
+            // added to the block later.
+            if (sortedEntries[i]->IsWTRefund()) {
+                vWTRefund.push_back(sortedEntries[i]);
+                continue;
+            }
+
             AddToBlock(sortedEntries[i]);
+
             // Erase from the modified set, if present
             mapModifiedTx.erase(sortedEntries[i]);
         }

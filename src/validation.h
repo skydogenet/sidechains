@@ -450,7 +450,7 @@ CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime);
 CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig);
 
 /** Verify the status of WT to refund & check refund signature */
-bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig);
+bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, SidechainWT& wt);
 
 /** RAII wrapper for VerifyDB: Verify consistency of the block and coin databases */
 class CVerifyDB {

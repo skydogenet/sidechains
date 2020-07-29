@@ -142,14 +142,13 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "rescanblockchain", 0, "start_height"},
     { "rescanblockchain", 1, "stop_height"},
     // DriveChain
-    { "createwt", 1, "namount"},
-    { "createwt", 2, "nfee"},
-    { "createwt", 3, "nmainchainfee"},
+    { "createwt", 2, "namount"},
+    { "createwt", 3, "nfee"},
+    { "createwt", 4, "nmainchainfee"},
     { "getaveragemainchainfees", 0, "blockcount" },
     { "getaveragemainchainfees", 1, "startheight" },
     { "refreshbmm", 0, "createnew" },
     { "getmainchainblockhash", 0, "height" },
-
 };
 
 class CRPCConvertTable

@@ -22,6 +22,7 @@
 #include <rpc/util.h>
 #include <script/sign.h>
 #include <timedata.h>
+#include <txdb.h>
 #include <util.h>
 #include <utilmoneystr.h>
 #include <wallet/coincontrol.h>
@@ -3462,21 +3463,22 @@ UniValue createwt(const JSONRPCRequest& request)
         return NullUniValue;
     }
 
-    if (request.fHelp || request.params.size() != 4)
+    if (request.fHelp || request.params.size() != 5)
         throw std::runtime_error(
             "createwt amount \"address\"\n"
             "\nCreate a WT so that it can be included in a WT^.\n"
             + HelpRequiringPassphrase(pwallet) +
             "\nArguments:\n"
             "1. \"address\"            (string, required) The bitcoin address to send to.\n"
-            "2. \"amount\"             (numeric or string, required) The amount in " + CURRENCY_UNIT + " to send. eg 0.1\n"
-            "3. \"fee\"                (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be subtracted for fees. eg 0.1\n"
-            "4. \"mainchainfee\"       (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be subtracted for fees on the mainchain. eg 0.1\n"
+            "2. \"refundaddress\"      (string, required) Destination for refunds.\n"
+            "3. \"amount\"             (numeric or string, required) The amount in " + CURRENCY_UNIT + " to send. eg 0.1\n"
+            "4. \"fee\"                (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be subtracted for fees. eg 0.1\n"
+            "5. \"mainchainfee\"       (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be subtracted for fees on the mainchain. eg 0.1\n"
             "\nResult:\n"
             "\"txid\"                  (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.3, 0.1, 0.1")
-            + HelpExampleRpc("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.3, 0.1, 0.1")
+            + HelpExampleCli("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.3, 0.1, 0.1")
+            + HelpExampleRpc("createwt", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.3, 0.1, 0.1")
         );
 
     ObserveSafeMode();
@@ -3492,18 +3494,23 @@ UniValue createwt(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid address");
     }
 
+    CTxDestination refundDest = DecodeDestination(request.params[1].get_str(), false /*fMainchainAddress */);
+    if (!IsValidDestination(refundDest)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid refund address");
+    }
+
     // Amount
-    CAmount nAmount = AmountFromValue(request.params[1]);
+    CAmount nAmount = AmountFromValue(request.params[2]);
     if (nAmount <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
 
     // Fee
-    CAmount nFee = AmountFromValue(request.params[2]);
+    CAmount nFee = AmountFromValue(request.params[3]);
     if (nFee <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for fee");
 
     // Mainchain fee
-    CAmount nMainchainFee = AmountFromValue(request.params[3]);
+    CAmount nMainchainFee = AmountFromValue(request.params[4]);
     if (nMainchainFee <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for mainchain fee");
 
@@ -3511,7 +3518,95 @@ UniValue createwt(const JSONRPCRequest& request)
 
     std::string strFail = "";
     uint256 txid;
-    if (!pwallet->CreateWT(nAmount, nFee, nMainchainFee, request.params[0].get_str(), strFail, txid)) {
+    if (!pwallet->CreateWT(nAmount, nFee, nMainchainFee, request.params[0].get_str(), request.params[1].get_str(), strFail, txid)) {
+        throw JSONRPCError(RPC_MISC_ERROR, strFail);
+    }
+
+    UniValue response(UniValue::VOBJ);
+    response.pushKV("txid", txid.ToString());
+    return response;
+}
+
+UniValue createwtrefundrequest(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size() != 1)
+        throw std::runtime_error(
+            "createwtrefundrequest \"wtid\"\n"
+            "\nCreate a WT refund request.\n"
+            + HelpRequiringPassphrase(pwallet) +
+            "\nArguments:\n"
+            "1. \"wtid\"        (string, required) The WT ID from leveldb.\n"
+            "\nResult:\n"
+            "\"txid\"           (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("createwtrefundrequest", "\"bd63ef0e581c53ec261fea45436c171033a313d6c3a4bcac435da0b8a353249a\"")
+            + HelpExampleRpc("createwtrefundrequest", "\"bd63ef0e581c53ec261fea45436c171033a313d6c3a4bcac435da0b8a353249a\"")
+        );
+
+    ObserveSafeMode();
+
+    uint256 wtID = uint256S(request.params[0].get_str());
+    if (wtID.IsNull()) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid WT ID!");
+    }
+
+    // Get WT
+    SidechainWT wt;
+    if (!psidechaintree->GetWT(wtID, wt)) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Specified WT not found!");
+    }
+
+    // Get refund address
+    CTxDestination dest = DecodeDestination(wt.strRefundDestination);
+    if (!IsValidDestination(dest)) {
+        throw JSONRPCError(RPC_MISC_ERROR, "WT has invalid refund address!");
+    }
+
+    // Double checking that the destination is for a KeyID
+    const CKeyID* id = boost::get<CKeyID>(&dest);
+    if (!id) {
+        throw JSONRPCError(RPC_MISC_ERROR, "WT has non P2PKH destination!");
+    }
+
+    // Make sure the results are valid at least up to the most recent block
+    // the user could have gotten from another RPC command prior to now
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    EnsureWalletIsUnlocked(pwallet);
+
+    // Get private key for refund destination from wallet
+    CKey privKey;
+    if (!pwallet->GetKey(*id, privKey)) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Private key for refund address not found in wallet!");
+    }
+
+    // Now create the standard format refund message and signature
+
+    // Standard format of refund request message
+    CHashWriter ss(SER_GETHASH, 0);
+    ss << strMessageMagic;
+    ss << strRefundMessageMagic;
+    ss << wtID.ToString();
+
+    // Note that GetHash invalidates the stream
+    uint256 hashMessage = ss.GetHash();
+
+    // We are really only signing the hash of the message
+    std::vector<unsigned char> vchSig;
+    if (!privKey.SignCompact(hashMessage, vchSig)) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to sign!");
+    }
+
+    std::string strFail = "";
+    uint256 txid;
+    if (!pwallet->CreateWTRefundRequest(wtID, vchSig, strFail, txid)) {
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
@@ -3877,7 +3972,8 @@ static const CRPCCommand commands[] =
     { "wallet",             "removeprunedfunds",                &removeprunedfunds,             {"txid"} },
     { "wallet",             "rescanblockchain",                 &rescanblockchain,              {"start_height", "stop_height"} },
 
-    { "sidechain",          "createwt",                         &createwt,                      {"address","namount","nfee", "nmainchainfee"} },
+    { "sidechain",          "createwt",                         &createwt,                      {"address","refundaddress","namount","nfee", "nmainchainfee"} },
+    { "sidechain",          "createwtrefundrequest",            &createwtrefundrequest,         {"wtid"} },
 };
 
 void RegisterWalletRPCCommands(CRPCTable &t)

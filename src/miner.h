@@ -178,11 +178,14 @@ private:
     /** Add a tx to the block */
     void AddToBlock(CTxMemPool::txiter iter);
 
+    // Note: Also returns a vector of WT refund request txns. These txns must
+    // be manually added to the block by the miner.
+    //
     // Methods for how to add transactions to a block.
     /** Add transactions based on feerate including unconfirmed ancestors
       * Increments nPackagesSelected / nDescendantsUpdated with corresponding
       * statistics from the package selection (for logging statistics). */
-    void addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated);
+    void addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, std::vector<CTxMemPool::txiter>& vWTRefundTx);
 
     // helper functions for addPackageTxs()
     /** Remove confirmed (inBlock) entries from given set */
