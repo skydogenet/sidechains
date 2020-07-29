@@ -250,7 +250,9 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->pushButtonNewBMM->setIcon(platformStyle->SingleColorIcon(":/movies/spinner-000"));
     ui->pushButtonWTHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->pasteButton->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
+    ui->pasteButton_2->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
     ui->deleteButton->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
+    ui->deleteButton_2->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
     ui->pushButtonNew->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
     ui->pushButtonCopy->setIcon(platformStyle->SingleColorIcon(":/icons/spinner-000"));
 
@@ -437,7 +439,18 @@ void SidechainPage::on_pushButtonWT_clicked()
     CTxDestination dest = DecodeDestination(strDest, true);
     if (!IsValidDestination(dest)) {
         // Invalid address message box
-        messageBox.setWindowTitle("Invalid destination!");
+        messageBox.setWindowTitle("Invalid withdrawal destination!");
+        messageBox.setText("Check the address you have entered and try again.");
+        messageBox.exec();
+        return;
+    }
+
+    // Check refund destination
+    std::string strRefundDest = ui->payToRefund->text().toStdString();
+    CTxDestination refundDest = DecodeDestination(strRefundDest, false);
+    if (!IsValidDestination(refundDest)) {
+        // Invalid address message box
+        messageBox.setWindowTitle("Invalid refund destination!");
         messageBox.setText("Check the address you have entered and try again.");
         messageBox.exec();
         return;
@@ -448,7 +461,7 @@ void SidechainPage::on_pushButtonWT_clicked()
     CAmount feeAmount = ui->feeAmount->value();
     CAmount mainchainFeeAmount = ui->mainchainFeeAmount->value();
     uint256 txid;
-    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strError, txid)) {
+    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strRefundDest, strError, txid)) {
         // Create burn transaction error message box
         messageBox.setWindowTitle("Creating withdraw transaction failed!");
         QString createError = "Error creating transaction: ";
