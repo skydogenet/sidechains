@@ -461,7 +461,8 @@ void SidechainPage::on_pushButtonWT_clicked()
     CAmount feeAmount = ui->feeAmount->value();
     CAmount mainchainFeeAmount = ui->mainchainFeeAmount->value();
     uint256 txid;
-    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strRefundDest, strError, txid)) {
+    uint256 wtid;
+    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strRefundDest, strError, txid, wtid)) {
         // Create burn transaction error message box
         messageBox.setWindowTitle("Creating withdraw transaction failed!");
         QString createError = "Error creating transaction: ";
@@ -471,6 +472,14 @@ void SidechainPage::on_pushButtonWT_clicked()
         messageBox.exec();
         return;
     }
+
+    // Write user transfers to db
+    SidechainTransfer transfer;
+    transfer.nType = TRANSFER_WITHDRAWAL;
+    transfer.strDestination = strDest;
+    transfer.amount = burnAmount;
+    transfer.id = wtid;
+    psidechaintree->WriteUserTransfer(transfer);
 
     // Successful withdraw message box
     messageBox.setWindowTitle("Withdraw transaction created!");

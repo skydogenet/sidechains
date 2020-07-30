@@ -3518,9 +3518,18 @@ UniValue createwt(const JSONRPCRequest& request)
 
     std::string strFail = "";
     uint256 txid;
-    if (!pwallet->CreateWT(nAmount, nFee, nMainchainFee, request.params[0].get_str(), request.params[1].get_str(), strFail, txid)) {
+    uint256 wtid;
+    if (!pwallet->CreateWT(nAmount, nFee, nMainchainFee, request.params[0].get_str(), request.params[1].get_str(), strFail, txid, wtid)) {
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
+
+    // Write user transfers to db
+    SidechainTransfer transfer;
+    transfer.nType = TRANSFER_WITHDRAWAL;
+    transfer.strDestination = request.params[0].get_str();
+    transfer.amount = nAmount;
+    transfer.id = wtid;
+    psidechaintree->WriteUserTransfer(transfer);
 
     UniValue response(UniValue::VOBJ);
     response.pushKV("txid", txid.ToString());

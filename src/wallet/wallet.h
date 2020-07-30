@@ -1170,7 +1170,7 @@ public:
     CTxDestination AddAndGetDestinationForScript(const CScript& script, OutputType);
 
     /* Create a sidechain wt (withdrawal to parent chain) */
-    bool CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, const std::string& strRefundDestination, std::string& strFail, uint256& txid);
+    bool CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, const std::string& strRefundDestination, std::string& strFail, uint256& txid, uint256& wtid);
 
     bool CreateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vch, std::string& strFail, uint256& txid);
 };

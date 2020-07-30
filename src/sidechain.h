@@ -49,6 +49,10 @@ enum Sidechains {
     SIDECHAIN_TEST = 0,
 };
 
+static const char TRANSFER_DEPOSIT = 'd';
+static const char TRANSFER_WITHDRAWAL = 'w';
+static const char TRANSFER_REFUND = 'r';
+
 //! WT status / zone (unspent, included in a WT^, paid out)
 static const char WT_UNSPENT = 'u';
 static const char WT_IN_WTPRIME = 'p';
@@ -78,6 +82,7 @@ static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 static const char DB_SIDECHAIN_DEPOSIT_OP = 'D';
 static const char DB_SIDECHAIN_WT_OP = 'W';
 static const char DB_SIDECHAIN_WTPRIME_OP = 'P';
+static const char DB_SIDECHAIN_TRANSFER_OP = 'T';
 
 /**
  * Base object for sidechain related database entries
@@ -91,6 +96,46 @@ struct SidechainObj {
     uint256 GetHash(void) const;
     CScript GetScript(void) const;
     virtual std::string ToString(void) const;
+};
+
+/**
+ * A user's sidechain tranfer (deposits, withdrawals, refunds)
+ */
+struct SidechainTransfer: public SidechainObj {
+    std::string strDestination;
+    CAmount amount;
+    int nType;
+    uint256 id;
+
+    SidechainTransfer(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_TRANSFER_OP; }
+    virtual ~SidechainTransfer(void) { }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(sidechainop);
+        READWRITE(strDestination);
+        READWRITE(amount);
+        READWRITE(nType);
+        READWRITE(id);
+    }
+
+    std::string GetTypeStr() const
+    {
+        if (nType == TRANSFER_WITHDRAWAL) {
+            return "Withdrawal";
+        }
+        else
+        if (nType == TRANSFER_DEPOSIT) {
+            return "Deposit";
+        }
+        else
+        if (nType == TRANSFER_REFUND) {
+            return "Refund";
+        }
+        return "type";
+    }
 };
 
 /**

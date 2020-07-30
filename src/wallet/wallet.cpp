@@ -4279,7 +4279,7 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
     }
 }
 
-bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, const std::string& strRefundDestination, std::string& strFail, uint256& txid)
+bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, const std::string& strRefundDestination, std::string& strFail, uint256& txid, uint256& wtid)
 {
     if (!(nAmount > 0)) {
         strFail = "Invalid amount - must be greater than 0.";
@@ -4362,6 +4362,8 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
     wt.amount = nAmount + nMainchainFee;
     wt.hashBlindWTX = CTransaction(mtx).GetHash();
     wt.mainchainFee = nMainchainFee;
+
+    wtid = wt.GetID();
 
     mtx.vout.push_back(CTxOut(CAmount(0), wt.GetScript()));
 

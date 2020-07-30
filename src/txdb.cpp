@@ -412,6 +412,16 @@ bool CSidechainTreeDB::WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime)
     return WriteBatch(batch, true);
 }
 
+bool CSidechainTreeDB::WriteUserTransfer(const SidechainTransfer& transfer)
+{
+    CDBBatch batch(*this);
+
+    std::pair<char, uint256> key = std::make_pair(transfer.sidechainop, transfer.GetHash());
+    batch.Write(key, transfer);
+
+    return WriteBatch(batch, true);
+}
+
 bool CSidechainTreeDB::GetWT(const uint256& objid, SidechainWT& wt)
 {
     if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WT_OP, objid), wt))
@@ -515,6 +525,31 @@ std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSide
         pcursor->Next();
     }
     return vDeposit;
+}
+
+std::vector<SidechainTransfer> CSidechainTreeDB::GetUserTransfers()
+{
+    const char sidechainop = DB_SIDECHAIN_TRANSFER_OP;
+    std::ostringstream ss;
+    ::Serialize(ss, std::make_pair(sidechainop, uint256()));
+
+    std::vector<SidechainTransfer> vTransfer;
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(ss.str());
+    while (pcursor->Valid()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        SidechainTransfer transfer;
+        if (pcursor->GetKey(key) && key.first == sidechainop) {
+            if (pcursor->GetSidechainValue(transfer))
+                vTransfer.push_back(transfer);
+        }
+
+        pcursor->Next();
+    }
+    return vTransfer;
 }
 
 bool CSidechainTreeDB::HaveDeposits()

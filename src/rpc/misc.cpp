@@ -679,6 +679,37 @@ UniValue updatemainblockcache(const JSONRPCRequest& request)
     return result;
 }
 
+UniValue listmytransfers(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "listmytransfers\n"
+            "\nArguments: None\n"
+            "\nList your sidechain transfers (withdrawals, deposits, refunds).\n"
+            "\nResult:\n"
+            "type           (string)\n"
+            "amount         (numeric)\n"
+            "destination    (string)\n"
+            "id             (string)\n"
+        );
+
+    std::vector<SidechainTransfer> vTransfer;
+    vTransfer = psidechaintree->GetUserTransfers();
+
+    UniValue result(UniValue::VARR);
+    for (const SidechainTransfer& t : vTransfer) {
+        UniValue obj(UniValue::VOBJ);
+        obj.pushKV("type", t.GetTypeStr());
+        obj.pushKV("amount", t.amount);
+        obj.pushKV("destination", t.strDestination);
+        obj.pushKV("id", t.id.ToString());
+
+        result.push_back(obj);
+    }
+
+    return result;
+}
+
 UniValue rebroadcastwtprimehex(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
@@ -728,6 +759,7 @@ static const CRPCCommand commands[] =
     { "sidechain",          "getmainchainblockhash",    &getmainchainblockhash,    {"height"}},
     { "sidechain",          "verifymainblockcache",     &verifymainblockcache,     {}},
     { "sidechain",          "updatemainblockcache",     &updatemainblockcache,     {}},
+    { "sidechain",          "listmytransfers",          &listmytransfers,          {}},
     { "sidechain",          "rebroadcastwtprimehex",    &rebroadcastwtprimehex,    {}},
 
 };
