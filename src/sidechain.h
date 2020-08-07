@@ -99,46 +99,6 @@ struct SidechainObj {
 };
 
 /**
- * A user's sidechain tranfer (deposits, withdrawals, refunds)
- */
-struct SidechainTransfer: public SidechainObj {
-    std::string strDestination;
-    CAmount amount;
-    int nType;
-    uint256 id;
-
-    SidechainTransfer(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_TRANSFER_OP; }
-    virtual ~SidechainTransfer(void) { }
-
-    ADD_SERIALIZE_METHODS
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(sidechainop);
-        READWRITE(strDestination);
-        READWRITE(amount);
-        READWRITE(nType);
-        READWRITE(id);
-    }
-
-    std::string GetTypeStr() const
-    {
-        if (nType == TRANSFER_WITHDRAWAL) {
-            return "Withdrawal";
-        }
-        else
-        if (nType == TRANSFER_DEPOSIT) {
-            return "Deposit";
-        }
-        else
-        if (nType == TRANSFER_REFUND) {
-            return "Refund";
-        }
-        return "type";
-    }
-};
-
-/**
  * Sidechain individual withdrawal (WT) database object
  */
 struct SidechainWT: public SidechainObj {

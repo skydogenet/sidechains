@@ -473,13 +473,8 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
-    // Write user transfers to db
-    SidechainTransfer transfer;
-    transfer.nType = TRANSFER_WITHDRAWAL;
-    transfer.strDestination = strDest;
-    transfer.amount = burnAmount;
-    transfer.id = wtid;
-    psidechaintree->WriteUserTransfer(transfer);
+    // Cache users WT ID
+    bmmCache.CacheWTID(wtid);
 
     // Successful withdraw message box
     messageBox.setWindowTitle("Withdraw transaction created!");

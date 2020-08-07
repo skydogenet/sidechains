@@ -215,6 +215,9 @@ void Shutdown()
     // Write the BMM cache to disk
     DumpBMMCache();
 
+    // Write the users WT ID cache to disk
+    DumpWTIDCache();
+
     // Write the mainchain block hash cache to disk
     DumpMainBlockCache();
 
@@ -1405,6 +1408,9 @@ bool AppInitMain()
 
     // Load the BMM cache from disk
     LoadBMMCache();
+
+    // Load the users WT ID cache
+    LoadWTIDCache();
 
     fReindex = gArgs.GetBoolArg("-reindex", false);
     bool fReindexChainState = gArgs.GetBoolArg("-reindex-chainstate", false);

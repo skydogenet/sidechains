@@ -536,6 +536,12 @@ void DumpMainBlockCache();
 /** Load the cache of mainchain block hashes from disk */
 void LoadMainBlockCache();
 
+/** Dump the cache of users WT IDs */
+void DumpWTIDCache();
+
+/** Read the cache of users WT IDs */
+void LoadWTIDCache();
+
 /** Create joined WT^ to be sent to the mainchain */
 bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false, bool fCheckUnique = false);
 

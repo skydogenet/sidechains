@@ -232,3 +232,13 @@ void BMMCache::ResetMainBlockCache()
     vMainBlockHash.clear();
     mapMainBlock.clear();
 }
+
+void BMMCache::CacheWTID(const uint256& wtid)
+{
+    vWTIDCache.push_back(wtid);
+}
+
+std::vector<uint256> BMMCache::GetCachedWTID()
+{
+    return vWTIDCache;
+}

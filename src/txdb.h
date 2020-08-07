@@ -139,7 +139,6 @@ public:
     bool WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list);
     bool WriteWTUpdate(const std::vector<SidechainWT>& vWT);
     bool WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime);
-    bool WriteUserTransfer(const SidechainTransfer& transer);
 
     bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
     bool GetWTPrime(const uint256 & /* WT^ ID */, SidechainWTPrime &wtPrime);
@@ -154,7 +153,6 @@ public:
     std::vector<SidechainWT> GetWTs(const uint8_t & /* nSidechain */);
     std::vector<SidechainWTPrime> GetWTPrimes(const uint8_t & /* nSidechain */);
     std::vector<SidechainDeposit> GetDeposits(const uint8_t & /* nSidechain */);
-    std::vector<SidechainTransfer> GetUserTransfers();
 };
 
 #endif // BITCOIN_TXDB_H

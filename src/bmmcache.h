@@ -65,6 +65,10 @@ public:
 
     void ResetMainBlockCache();
 
+    void CacheWTID(const uint256& wtid);
+
+    std::vector<uint256> GetCachedWTID();
+
 private:
     // BMM blocks (without proof) that we have created with the intention of
     // adding to the side blockchain once proof is aquired from the main chain.
@@ -94,6 +98,9 @@ private:
 
     // Set of main block hashes that we've already checked for our BMM requests
     std::set<uint256> setMainBlockChecked;
+
+    // WT IDs for WT(s) created by the user
+    std::vector<uint256> vWTIDCache;
 };
 
 #endif // BITCOIN_BMMCACHE_H

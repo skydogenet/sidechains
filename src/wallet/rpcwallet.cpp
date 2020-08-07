@@ -5,6 +5,7 @@
 
 #include <amount.h>
 #include <base58.h>
+#include <bmmcache.h>
 #include <chain.h>
 #include <consensus/validation.h>
 #include <core_io.h>
@@ -3523,13 +3524,8 @@ UniValue createwt(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
-    // Write user transfers to db
-    SidechainTransfer transfer;
-    transfer.nType = TRANSFER_WITHDRAWAL;
-    transfer.strDestination = request.params[0].get_str();
-    transfer.amount = nAmount;
-    transfer.id = wtid;
-    psidechaintree->WriteUserTransfer(transfer);
+    // Cache user's WT ID
+    bmmCache.CacheWTID(wtid);
 
     UniValue response(UniValue::VOBJ);
     response.pushKV("txid", txid.ToString());
