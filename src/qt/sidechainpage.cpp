@@ -862,6 +862,8 @@ void SidechainPage::RefreshBMM()
     std::vector<uint256> vOrphan;
     if (!UpdateMainBlockHashCache(fReorg, vOrphan))
     {
+        StopBMM();
+        UpdateNetworkActive(false /* fMainchainConnected */);
         messageBox.setWindowTitle("Automated BMM failed - couldn't update mainchain block cache!");
         std::string str;
         str = "The sidechain has failed to update the mainchain block cache!\n\n";
