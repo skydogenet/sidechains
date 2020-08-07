@@ -628,6 +628,28 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         }
     }
 
+    // If this is a WT refund request, check if it is valid
+    std::multimap<CScript, CAmount> mapRefundOutputs;
+    std::vector<SidechainWT> vRefundedWT;
+    for (const CTxOut& o : tx.vout) {
+        const CScript& scriptPubKey = o.scriptPubKey;
+        uint256 wtID;
+        std::vector<unsigned char> vchSig;
+        if (!scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+            continue;
+
+        if (wtID.IsNull()) {
+            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                        REJECT_INVALID, "verify-wt-refund-no-script");
+        }
+
+        SidechainWT wt;
+        if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
+            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                        REJECT_INVALID, "verify-wt-refund-invalid");
+        }
+    }
+
     // Check for conflicts with in-memory transactions
     std::set<uint256> setConflicts;
     for (const CTxIn &txin : tx.vin)
