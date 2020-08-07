@@ -696,8 +696,9 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
     // Mainnet RPC = 8332
     // Testnet RPC = 18332
     // Regtest RPC = 18443
-
-    int port = gArgs.GetArg("-mainchainrpcport", 8332);
+    //
+    bool fMainchainRegtest = gArgs.GetBoolArg("-mainchainregtest", false);
+    int port = fMainchainRegtest ? 18443 : 83322;
 
     try {
         // Setup BOOST ASIO for a synchronus call to the mainchain
