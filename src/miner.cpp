@@ -526,6 +526,12 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
             }
         }
 
+        // If we find a WT refund txn, track it to be manually added later
+        if (iter->IsWTRefund()) {
+            vWTRefund.push_back(iter);
+            continue;
+        }
+
         // We skip mapTx entries that are inBlock, and mapModifiedTx shouldn't
         // contain anything that is inBlock.
         assert(!inBlock.count(iter));
@@ -588,13 +594,6 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         SortForBlock(ancestors, iter, sortedEntries);
 
         for (size_t i=0; i<sortedEntries.size(); ++i) {
-            // If we find WT refund txns, add them to a vector to be manually
-            // added to the block later.
-            if (sortedEntries[i]->IsWTRefund()) {
-                vWTRefund.push_back(sortedEntries[i]);
-                continue;
-            }
-
             AddToBlock(sortedEntries[i]);
 
             // Erase from the modified set, if present
