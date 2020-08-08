@@ -112,6 +112,8 @@ private Q_SLOTS:
 
     void on_pushButtonNewBMM_clicked();
 
+    void on_radioButtonOnlyMyWTs_toggled(bool fChecked);
+
 private:
     Ui::SidechainPage *ui;
 
@@ -167,6 +169,9 @@ private:
     void StartBMM();
 
     void StopBMM();
+
+Q_SIGNALS:
+    void OnlyMyWTsToggled(bool fChecked);
 };
 
 #endif // SIDECHAINPAGE_H

@@ -26,6 +26,7 @@ struct WTTableObject
     QString destination;
     unsigned int nCumulativeWeight;
     uint256 id;
+    bool fMine;
 };
 
 class SidechainWTTableModel : public QAbstractTableModel
@@ -44,6 +45,7 @@ public:
 
 public Q_SLOTS:
     void UpdateModel();
+    void SetOnlyMyWTs(bool fChecked);
 
 private:
     QList<QVariant> model;
@@ -51,6 +53,8 @@ private:
 
     WalletModel *walletModel;
     ClientModel *clientModel;
+
+    bool fOnlyMyWTs;
 };
 
 #endif // BITCOIN_SIDECHAINWTTABLEMODEL_H

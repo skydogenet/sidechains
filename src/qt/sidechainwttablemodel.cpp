@@ -14,8 +14,9 @@
 #include <qt/optionsmodel.h>
 #include <qt/walletmodel.h>
 
-#include <policy/wtprime.h>
+#include <bmmcache.h>
 #include <consensus/validation.h>
+#include <policy/wtprime.h>
 #include <sidechain.h>
 #include <txdb.h>
 #include <validation.h>
@@ -25,6 +26,9 @@ Q_DECLARE_METATYPE(WTTableObject)
 SidechainWTTableModel::SidechainWTTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
+    fOnlyMyWTs = false;
+
+    connect(parent, SIGNAL(OnlyMyWTsToggled(bool)), this, SLOT(SetOnlyMyWTs(bool)));
 }
 
 int SidechainWTTableModel::rowCount(const QModelIndex & /*parent*/) const
@@ -164,24 +168,42 @@ void SidechainWTTableModel::UpdateModel()
     wjtx.vin[0].scriptSig = CScript() << OP_0;
 
     // Add WT(s) to model & to the fake WT^ transaction to estimate size
-    beginInsertRows(QModelIndex(), model.size(), model.size() + vWT.size() - 1);
+    //
+    // Loop through WTs and calculate TX size, copy WTs that should be displayed
+    // (based on fOnlyMyWTs) into vector.
+    std::vector<WTTableObject> vWTDisplay;
     for (const SidechainWT& wt : vWT) {
         // Add wt output to fake WT^ and calculate size estimate as well as
         // estimate which WTs will be included in the next WT^
         CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
         wjtx.vout.push_back(CTxOut(wt.amount, GetScriptForDestination(dest)));
 
-        WTTableObject object;
+        // Check if the WT is mine
+        bool fMine = bmmCache.IsMyWT(wt.GetID());
+        if (!fMine && fOnlyMyWTs)
+            continue;
 
-        // Insert new WT into table
+        WTTableObject object;
         object.id = wt.GetID();
         object.amount = wt.amount;
         object.amountMainchainFee = wt.mainchainFee;
         object.destination = QString::fromStdString(wt.strDestination);
         object.nCumulativeWeight = GetTransactionWeight(wjtx);
-        model.append(QVariant::fromValue(object));
+        object.fMine = fMine;
+
+        vWTDisplay.push_back(object);
     }
+
+    beginInsertRows(QModelIndex(), model.size(), model.size() + vWTDisplay.size() - 1);
+    for (const WTTableObject& wt : vWTDisplay)
+        model.append(QVariant::fromValue(wt));
     endInsertRows();
+}
+
+void SidechainWTTableModel::SetOnlyMyWTs(bool fChecked)
+{
+    fOnlyMyWTs = fChecked;
+    UpdateModel();
 }
 
 void SidechainWTTableModel::setWalletModel(WalletModel *model)

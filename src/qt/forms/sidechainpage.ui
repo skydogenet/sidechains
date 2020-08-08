@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>692</width>
-    <height>527</height>
+    <width>717</width>
+    <height>474</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,8 +19,8 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
-   <item>
+  <layout class="QGridLayout" name="gridLayout_11">
+   <item row="0" column="0">
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
       <number>0</number>
@@ -769,20 +769,8 @@ QTabBar::tab:disabled {
               <attribute name="title">
                <string>Candidate WTs</string>
               </attribute>
-              <layout class="QVBoxLayout" name="verticalLayout_4">
-               <item>
-                <widget class="QLabel" name="label_34">
-                 <property name="font">
-                  <font>
-                   <italic>true</italic>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Candidate WTs -- sorted by mainchain fee. (Each WT consumes 136 mainchain wBytes.)</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
+              <layout class="QGridLayout" name="gridLayout_7">
+               <item row="2" column="0" colspan="3">
                 <widget class="QTableView" name="tableViewUnspentWT">
                  <property name="font">
                   <font>
@@ -807,6 +795,41 @@ QTabBar::tab:disabled {
                   <bool>false</bool>
                  </attribute>
                 </widget>
+               </item>
+               <item row="0" column="2">
+                <widget class="QRadioButton" name="radioButtonOnlyMyWTs">
+                 <property name="text">
+                  <string>Mine Only</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_34">
+                 <property name="font">
+                  <font>
+                   <italic>true</italic>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Candidate WTs -- sorted by mainchain fee. (Each WT consumes 136 mainchain wBytes.)</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <spacer name="horizontalSpacer_12">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Maximum</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </widget>

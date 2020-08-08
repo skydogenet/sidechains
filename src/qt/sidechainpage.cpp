@@ -1321,3 +1321,8 @@ void SidechainPage::on_pushButtonNewBMM_clicked()
         RefreshBMM();
     }
 }
+
+void SidechainPage::on_radioButtonOnlyMyWTs_toggled(bool fChecked)
+{
+    Q_EMIT(OnlyMyWTsToggled(fChecked));
+}
