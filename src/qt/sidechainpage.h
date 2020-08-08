@@ -142,7 +142,7 @@ private:
 
     bool validateMainchainFeeAmount();
 
-    void generateAddress();
+    std::string GenerateAddress(const std::string& strLabel = "");
 
     bool CreateBMMBlock(CBlock& block, QString error = "");
 

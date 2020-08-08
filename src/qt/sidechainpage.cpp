@@ -80,7 +80,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     bmmTimer = new QTimer(this);
     connect(bmmTimer, SIGNAL(timeout()), this, SLOT(RefreshBMM()));
 
-    // Iniitialize and start the train timer - refresh number of blocks left on
+    // Initialize and start the train timer - refresh number of blocks left on
     // mainchain until another WT^ can be proposed)
     trainTimer = new QTimer(this);
     connect(trainTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
@@ -174,7 +174,9 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->tableViewBMM->setColumnWidth(5, COLUMN_SIDECHAIN_HEIGHT);
     ui->tableViewBMM->setColumnWidth(6, COLUMN_MAINCHAIN_HEIGHT);
 
-    generateAddress();
+    std::string strAddress = GenerateAddress("Sidechain Deposit");
+    ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
+
     RefreshTrain();
 
     connect(ui->checkBoxAutoWTPrimeRefresh, SIGNAL(stateChanged(int)), this,
@@ -230,7 +232,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // also an unused (hidden) spacer tab to move the wealth label over a bit.
 
     // TODO consts for tab index
-    // Hide the spacer tab that seperates the label we have inserted from the
+    // Hide the spacer tab that separates the label we have inserted from the
     // other tabs. We have a custom style sheet for disabled tabs.
     ui->tabWidgetMain->setTabEnabled(3, false);
     // Set the total wealth tab disabled as well
@@ -250,9 +252,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->pushButtonNewBMM->setIcon(platformStyle->SingleColorIcon(":/movies/spinner-000"));
     ui->pushButtonWTHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->pasteButton->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
-    ui->pasteButton_2->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
     ui->deleteButton->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
-    ui->deleteButton_2->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
     ui->pushButtonNew->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
     ui->pushButtonCopy->setIcon(platformStyle->SingleColorIcon(":/icons/spinner-000"));
 
@@ -383,7 +383,8 @@ void SidechainPage::on_pushButtonCopy_clicked()
 
 void SidechainPage::on_pushButtonNew_clicked()
 {
-    generateAddress();
+    ui->lineEditDepositAddress->setText(
+            QString::fromStdString(GenerateAddress("Sidechain Deposit")));
 }
 
 void SidechainPage::on_pushButtonWT_clicked()
@@ -445,13 +446,13 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
-    // Check refund destination
-    std::string strRefundDest = ui->payToRefund->text().toStdString();
+    // Generate refund destination
+    std::string strRefundDest = GenerateAddress("WT Refund");
     CTxDestination refundDest = DecodeDestination(strRefundDest, false);
     if (!IsValidDestination(refundDest)) {
         // Invalid address message box
         messageBox.setWindowTitle("Invalid refund destination!");
-        messageBox.setText("Check the address you have entered and try again.");
+        messageBox.setText("Check the refund address you have entered and try again.");
         messageBox.exec();
         return;
     }
@@ -539,7 +540,16 @@ void SidechainPage::on_pushButtonWTHelp_clicked()
         "mainchain txn fee is too low, it may not be included in the "
         "withdrawal-constructor. The constructor automatically sorts all "
         "withdrawals by their mainchain fee/byte rate — you can view other "
-        "withdrawal-candidates on the Withdrawal Explorer page.";
+        "withdrawal-candidates on the Withdrawal Explorer page.\n\n"
+
+        " * You can cancel the withdrawal via the withdrawal explorer."
+        " This costs a second sidechain txn fee.\n\n"
+        " * Once included in a Bundle, withdrawals cannot be canceled."
+        " Bundles succeed or fail as a group.\n\n"
+        " * If a bundle fails, its withdrawals reenter the pool of Candidate"
+        " WTs. A grace period of 144 SC blocks (~24 hours) allows frustrated"
+        " users to bail out of the withdrawal process (and reclaim their SC"
+        " coins).\n";
 
     QMessageBox messageBox;
     messageBox.setIcon(QMessageBox::Information);
@@ -640,16 +650,17 @@ bool SidechainPage::validateMainchainFeeAmount()
     return true;
 }
 
-void SidechainPage::generateAddress()
+std::string SidechainPage::GenerateAddress(const std::string& strLabel)
 {
     if (vpwallets.empty())
-        return;
+        return "";
 
     LOCK2(cs_main, vpwallets[0]->cs_wallet);
 
     vpwallets[0]->TopUpKeyPool();
 
     CPubKey newKey;
+    std::string strAddress = "";
     if (vpwallets[0]->GetKeyFromPool(newKey)) {
         // We want a "legacy" type address
         OutputType type = OUTPUT_TYPE_LEGACY;
@@ -659,15 +670,14 @@ void SidechainPage::generateAddress()
         vpwallets[0]->LearnRelatedScripts(newKey, type);
 
         // Generate QR code
-        std::string strAddress = EncodeDestination(dest);
+        strAddress = EncodeDestination(dest);
         generateQR(strAddress);
 
-        ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
-
         // Add to address book
-        vpwallets[0]->SetAddressBook(dest, "Sidechain Deposit", "receive");
+        vpwallets[0]->SetAddressBook(dest, strLabel, "receive");
     }
-    // TODO display error if we didn't get a key
+
+    return strAddress;
 }
 
 void SidechainPage::on_pushButtonCreateBlock_clicked()
