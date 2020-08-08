@@ -67,7 +67,9 @@ public:
 
     void CacheWTID(const uint256& wtid);
 
-    std::vector<uint256> GetCachedWTID();
+    std::set<uint256> GetCachedWTID();
+
+    bool IsMyWT(const uint256& wtid);
 
 private:
     // BMM blocks (without proof) that we have created with the intention of
@@ -100,7 +102,7 @@ private:
     std::set<uint256> setMainBlockChecked;
 
     // WT IDs for WT(s) created by the user
-    std::vector<uint256> vWTIDCache;
+    std::set<uint256> setWTIDCache;
 };
 
 #endif // BITCOIN_BMMCACHE_H

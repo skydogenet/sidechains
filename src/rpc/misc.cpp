@@ -690,10 +690,10 @@ UniValue listmywithdrawals(const JSONRPCRequest& request)
             "id             (string)\n"
         );
 
-    std::vector<uint256> vWTID = bmmCache.GetCachedWTID();
+    std::set<uint256> setWTID = bmmCache.GetCachedWTID();
 
     UniValue result(UniValue::VARR);
-    for (const uint256& u : vWTID) {
+    for (const uint256& u : setWTID) {
         UniValue obj(UniValue::VOBJ);
         obj.pushKV("id", u.ToString());
         result.push_back(obj);

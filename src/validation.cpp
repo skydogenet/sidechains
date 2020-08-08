@@ -5523,11 +5523,11 @@ void DumpMainBlockCache()
 
 void DumpWTIDCache()
 {
-    std::vector<uint256> vWTID = bmmCache.GetCachedWTID();
-    if (vWTID.empty())
+    std::set<uint256> setWTID = bmmCache.GetCachedWTID();
+    if (setWTID.empty())
         return;
 
-    int count = vWTID.size();
+    int count = setWTID.size();
 
     fs::path path = GetDataDir() / "wtid.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
@@ -5540,7 +5540,7 @@ void DumpWTIDCache()
         fileout << CLIENT_VERSION; // version that wrote the file
         fileout << count; // Number of WT IDs in file
 
-        for (const uint256& u : vWTID) {
+        for (const uint256& u : setWTID) {
             fileout << u;
         }
     }

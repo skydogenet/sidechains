@@ -235,10 +235,15 @@ void BMMCache::ResetMainBlockCache()
 
 void BMMCache::CacheWTID(const uint256& wtid)
 {
-    vWTIDCache.push_back(wtid);
+    setWTIDCache.insert(wtid);
 }
 
-std::vector<uint256> BMMCache::GetCachedWTID()
+std::set<uint256> BMMCache::GetCachedWTID()
 {
-    return vWTIDCache;
+    return setWTIDCache;
+}
+
+bool BMMCache::IsMyWT(const uint256& wtid)
+{
+    return setWTIDCache.count(wtid);
 }
