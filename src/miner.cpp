@@ -118,7 +118,7 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool fSkipBMMChecks, const uint256& hashPrevBlock)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool fSkipBMMChecks, const uint256& hashPrevBlock, CAmount* nFeesOut)
 {
     if (!fSkipBMMChecks && !CheckMainchainConnection()) {
         LogPrintf("%s: Error: Cannot generate without mainchain connection!\n", __func__);
@@ -195,6 +195,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
 
     coinbaseTx.vout[0].nValue = nFees;
+
+    if (nFeesOut)
+        *nFeesOut = nFees;
 
     // Create WT^ status updates
     // Lookup the current WT^
@@ -900,7 +903,7 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
     return true;
 }
 
-bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx, const uint256& hashPrevBlock, const CScript& scriptPubKey)
+bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, CAmount* nFeesOut, const std::vector<CMutableTransaction>& vtx, const uint256& hashPrevBlock, const CScript& scriptPubKey)
 {
     // Either generate a new scriptPubKey or use the one that has optionally
     // been passed in
@@ -919,10 +922,10 @@ bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, cons
             strError = "Failed to get script for mining!\n";
             return false;
         }
-        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, true, hashPrevBlock);
+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, true, hashPrevBlock, nFeesOut);
 
     } else {
-        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true, hashPrevBlock);
+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true, hashPrevBlock, nFeesOut);
     }
 
     if (!pblocktemplate.get()) {

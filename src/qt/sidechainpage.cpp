@@ -799,7 +799,8 @@ bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
 {
     SidechainClient client;
     std::string strError = "";
-    bool fCreated = client.CreateBMMBlock(block, strError);
+    CAmount nFees;
+    bool fCreated = client.CreateBMMBlock(block, strError, nFees);
 
     error = QString::fromStdString(strError);
     return fCreated;

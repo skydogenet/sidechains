@@ -165,12 +165,12 @@ public:
      * If an optional vector of transactions is passed in, all but the coinbase
      * will be replaced with those transactions.
      */
-    bool GenerateBMMBlock(CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx = std::vector<CMutableTransaction>(), const uint256& hashPrevBlock = uint256(), const CScript& scriptPubKey = CScript());
+    bool GenerateBMMBlock(CBlock& block, std::string& strError, CAmount* nFeesOut = nullptr, const std::vector<CMutableTransaction>& vtx = std::vector<CMutableTransaction>(), const uint256& hashPrevBlock = uint256(), const CScript& scriptPubKey = CScript());
 
 private:
     // Note: Moved to private, should always use GenerateBMMBlock().
     /** Construct a new block template with coinbase to scriptPubKeyIn */
-    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true, bool fSkipBMMChecks = false, const uint256& hashPrevBlock = uint256());
+    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true, bool fSkipBMMChecks = false, const uint256& hashPrevBlock = uint256(), CAmount* nFeesOut = nullptr);
 
     // utility functions
     /** Clear the block's state and prepare for assembling a new block */

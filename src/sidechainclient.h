@@ -63,7 +63,7 @@ public:
      */
     bool RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreated, uint256& hashConnected, uint256& hashConnectedBlind, uint256& txid, int& nTxn, CAmount& nFees, bool fCreateNew = true, const uint256& hashPrevBlock = uint256());
 
-    bool CreateBMMBlock(CBlock& block, std::string& strError, const uint256& hashPrevBlock = uint256());
+    bool CreateBMMBlock(CBlock& block, std::string& strError, CAmount& nFees, const uint256& hashPrevBlock = uint256());
 
     bool SubmitBMMBlock(const CBlock& block);
 

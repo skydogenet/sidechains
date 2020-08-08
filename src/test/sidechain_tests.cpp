@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
     // Generate BMM block
     CBlock block;
     std::string strError = "";
-    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
+    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, nullptr, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     BOOST_CHECK(ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */));
@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
     // Generate BMM block
     CBlock block;
     std::string strError = "";
-    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
+    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, nullptr, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
 
     // Set -verifybmmcheckblock arg to true
     gArgs.ForceSetArg("-verifybmmcheckblock", "1");
