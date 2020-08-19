@@ -35,6 +35,14 @@ class SidechainWTTableModel : public QAbstractTableModel
 
 public:
     explicit SidechainWTTableModel(QObject *parent = 0);
+
+    enum RoleIndex {
+        /** WT ID */
+        WTIDRole = Qt::UserRole,
+        /** Is WT Mine? */
+        IsMineRole,
+    };
+
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;

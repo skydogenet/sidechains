@@ -52,6 +52,11 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
     int row = index.row();
     int col = index.column();
 
+    // Double check that the data pointed at by the index still exists, it is
+    // possible for a WT to be removed from the model when a block is connected.
+    if (row >= model.size())
+        return QVariant();
+
     if (!model.at(row).canConvert<WTTableObject>())
         return QVariant();
 
@@ -118,6 +123,10 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
+    case WTIDRole:
+        return QString::fromStdString(object.id.ToString());
+    case IsMineRole:
+        return object.fMine;
     }
     return QVariant();
 }

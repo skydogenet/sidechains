@@ -37,6 +37,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QMenu>
 #include <QMessageBox>
 #include <QStackedWidget>
 #include <QScrollBar>
@@ -117,6 +118,25 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
 
     // Initialize BMM table model;
     bmmModel = new SidechainBMMTableModel(this);
+
+
+    // Pending WT table context menu
+
+    ui->tableViewUnspentWT->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    wtContextMenu = new QMenu(this);
+    wtContextMenu->setObjectName("wtContextMenu");
+
+    copyWTIDAction = new QAction(tr("Copy Withdrawal ID"), this);
+    wtRefundAction = new QAction(tr("Cancel Withdrawal"), this);
+
+    wtContextMenu->addAction(copyWTIDAction);
+    wtContextMenu->addAction(wtRefundAction);
+
+    connect(ui->tableViewUnspentWT, SIGNAL(customContextMenuRequested(QPoint)), this,
+            SLOT(WTContextMenu(QPoint)));
+    connect(copyWTIDAction, SIGNAL(triggered()), this, SLOT(CopyWTID()));
+    connect(wtRefundAction, SIGNAL(triggered()), this, SLOT(RequestRefund()));
 
     // Table style
 
@@ -1322,7 +1342,167 @@ void SidechainPage::on_pushButtonNewBMM_clicked()
     }
 }
 
-void SidechainPage::on_radioButtonOnlyMyWTs_toggled(bool fChecked)
+void SidechainPage::on_checkBoxOnlyMyWTs_toggled(bool fChecked)
 {
     Q_EMIT(OnlyMyWTsToggled(fChecked));
+}
+
+void SidechainPage::WTContextMenu(const QPoint& point)
+{
+    QModelIndex index = ui->tableViewUnspentWT->indexAt(point);
+    QModelIndexList selection = ui->tableViewUnspentWT->selectionModel()->selectedRows(0);
+    if (selection.empty())
+        return;
+
+    if (index.isValid()) {
+        bool fMine = selection.at(0).data(SidechainWTTableModel::IsMineRole).toBool();
+        wtRefundAction->setEnabled(fMine);
+        wtContextMenu->popup(ui->tableViewUnspentWT->viewport()->mapToGlobal(point));
+    }
+}
+
+void SidechainPage::CopyWTID()
+{
+    GUIUtil::copyEntryData(ui->tableViewUnspentWT, 0, SidechainWTTableModel::WTIDRole);
+}
+
+void SidechainPage::RequestRefund()
+{
+    if (!ui->tableViewUnspentWT->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewUnspentWT->selectionModel()->selectedRows(0);
+    if (selection.empty())
+        return;
+
+    // Get the WT ID from the model
+    uint256 wtID;
+    wtID.SetHex(selection.at(0).data(SidechainWTTableModel::WTIDRole).toString().toStdString());
+
+    QMessageBox messageBox;
+    messageBox.setDefaultButton(QMessageBox::Ok);
+
+    // Check for active wallet
+
+    if (vpwallets.empty()) {
+        // No active wallet message box
+        messageBox.setWindowTitle("No active wallet found!");
+        messageBox.setText("You must have an active wallet to request a WT refund.");
+        messageBox.exec();
+        return;
+    }
+    if (vpwallets[0]->IsLocked()) {
+        // Locked wallet message box
+        messageBox.setWindowTitle("Wallet locked!");
+        messageBox.setText("Wallet must be unlocked.");
+        messageBox.exec();
+        return;
+    }
+
+    // Get WT
+    SidechainWT wt;
+    if (!psidechaintree->GetWT(wtID, wt)) {
+        messageBox.setWindowTitle("Failed to look up WT!");
+        messageBox.setText("Specified withdrawal not found in database.");
+        messageBox.exec();
+        return;
+    }
+
+    // Check WT status
+    if (wt.status != WT_UNSPENT) {
+        messageBox.setWindowTitle("Invalid WT status!");
+        messageBox.setText("WT must be unspent to refund.");
+        messageBox.exec();
+        return;
+    }
+
+    // Get refund address
+    CTxDestination dest = DecodeDestination(wt.strRefundDestination);
+    if (!IsValidDestination(dest)) {
+        messageBox.setWindowTitle("Failed to decode refund destination!");
+        messageBox.setText("Failed to decode refund destination address.");
+        messageBox.exec();
+        return;
+    }
+
+    // Double check that address is for KeyID
+    const CKeyID* id = boost::get<CKeyID>(&dest);
+    if (!id) {
+        messageBox.setWindowTitle("Invalid refund destination!");
+        messageBox.setText("The refund destination must be a \"legacy\" address.");
+        messageBox.exec();
+        return;
+    }
+
+    int unit = walletModel->getOptionsModel()->getDisplayUnit();
+
+    // Confirm that the user wants to create refund request
+    QMessageBox confirmMessage;
+    confirmMessage.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+    confirmMessage.setDefaultButton(QMessageBox::Cancel);
+    confirmMessage.setIcon(QMessageBox::Information);
+    confirmMessage.setWindowTitle("Confirm WT Refund Request");
+    QString refundMessage = "This will create a refund request for your withdrawal.\n\n";
+    refundMessage += BitcoinUnits::formatWithUnit(unit, wt.amount, false, BitcoinUnits::separatorAlways);
+    refundMessage += " will be refunded to your refund address:\n\n";
+    refundMessage += QString::fromStdString(wt.strRefundDestination);
+    refundMessage += "\n\n";
+    refundMessage += "This will cost an additional transaction fee.\n\n";
+    refundMessage += "Are you sure?";
+    confirmMessage.setText(refundMessage);
+
+    int nRes = confirmMessage.exec();
+    if (nRes == QMessageBox::Cancel)
+        return;
+
+    // Get private key for refund address from the wallet
+    CKey privKey;
+    {
+        LOCK2(cs_main, vpwallets[0]->cs_wallet);
+
+        if (!vpwallets[0]->GetKey(*id, privKey)) {
+            messageBox.setWindowTitle("Failed to get private key for refund destination!");
+            messageBox.setText("Cannot request refund for withdrawal created by another wallet.");
+            messageBox.exec();
+            return;
+        }
+    }
+
+    // Get refund message hash
+    uint256 hashMessage = GetWTRefundMessageHash(wtID);
+
+    // Sign refund message hash
+    std::vector<unsigned char> vchSig;
+    if (!privKey.SignCompact(hashMessage, vchSig)) {
+        messageBox.setWindowTitle("Failed to sign refund message!");
+        messageBox.setText("Failed to sign refund request.");
+        messageBox.exec();
+        return;
+    }
+
+    std::string strFail = "";
+    uint256 txid;
+    if (!vpwallets[0]->CreateWTRefundRequest(wtID, vchSig, strFail, txid)) {
+        // Create refund transaction error message box
+        messageBox.setWindowTitle("Creating refund request failed!");
+        QString error = "Error creating transaction: ";
+        error += QString::fromStdString(strFail);
+        error += "\n";
+        messageBox.setText(error);
+        messageBox.exec();
+        return;
+    }
+
+    // TODO cache refund request?
+    // Cache users WT ID
+    //bmmCache.CacheWTID(wtid);
+
+    // Successful refund request message box
+    messageBox.setWindowTitle("Refund request created!");
+    QString result = "txid: " + QString::fromStdString(txid.ToString());
+    result += "\n";
+    result += "Amount to be refunded: ";
+    result += BitcoinUnits::formatWithUnit(unit, wt.amount, false, BitcoinUnits::separatorAlways);
+    messageBox.setText(result);
+    messageBox.exec();
 }

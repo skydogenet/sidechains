@@ -24,6 +24,7 @@ class SidechainWTTableModel;
 class WalletModel;
 
 QT_BEGIN_NAMESPACE
+class QMenu;
 class QMessageBox;
 QT_END_NAMESPACE
 
@@ -112,7 +113,13 @@ private Q_SLOTS:
 
     void on_pushButtonNewBMM_clicked();
 
-    void on_radioButtonOnlyMyWTs_toggled(bool fChecked);
+    void on_checkBoxOnlyMyWTs_toggled(bool fChecked);
+
+    void WTContextMenu(const QPoint& point);
+
+    void CopyWTID();
+
+    void RequestRefund();
 
 private:
     Ui::SidechainPage *ui;
@@ -126,6 +133,10 @@ private:
     SidechainBMMTableModel *bmmModel;
     SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;
     SidechainWTTableModel *unspentWTModel;
+
+    QAction *wtRefundAction;
+    QAction *copyWTIDAction;
+    QMenu *wtContextMenu;
 
     QTimer *bmmTimer;
     QTimer *trainTimer;
