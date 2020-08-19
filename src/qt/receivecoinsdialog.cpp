@@ -50,6 +50,9 @@ ReceiveCoinsDialog::ReceiveCoinsDialog(const PlatformStyle *_platformStyle, QWid
         ui->receiveButton->setIcon(_platformStyle->SingleColorIcon(":/icons/receiving_addresses"));
         ui->showRequestButton->setIcon(_platformStyle->SingleColorIcon(":/icons/edit"));
         ui->removeRequestButton->setIcon(_platformStyle->SingleColorIcon(":/icons/remove"));
+
+        ui->pushButtonNew->setIcon(_platformStyle->SingleColorIcon(":/movies/spinner-000"));
+        ui->pushButtonCopy->setIcon(_platformStyle->SingleColorIcon(":/icons/editcopy"));
     }
 
     // context menu actions

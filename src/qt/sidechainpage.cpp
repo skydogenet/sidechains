@@ -273,8 +273,8 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->pushButtonWTHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->pasteButton->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
     ui->deleteButton->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
-    ui->pushButtonNew->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
-    ui->pushButtonCopy->setIcon(platformStyle->SingleColorIcon(":/icons/spinner-000"));
+    ui->pushButtonCopy->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
+    ui->pushButtonNew->setIcon(platformStyle->SingleColorIcon(":/movies/spinner-000"));
 
     // Main sidechain tab widget
     ui->tabWidgetMain->setTabIcon(0, platformStyle->SingleColorIcon(":/icons/tx_inout"));
