@@ -156,7 +156,7 @@ void SidechainBMMTableModel::AddAttempt(const BMMTableObject& object)
 {
     // Add BMM attempt to model
     beginInsertRows(QModelIndex(), model.size(), model.size());
-        model.append(object);
+        model.prepend(object);
     endInsertRows();
 
 
@@ -168,21 +168,21 @@ void SidechainBMMTableModel::AddAttempt(const BMMTableObject& object)
         return;
 
     int nLimit = 0;
-    QList<BMMTableObject>::reverse_iterator rit = model.rbegin();
-    rit++;
-    for (; rit != model.rend(); rit++) {
+    QList<BMMTableObject>::iterator it = model.begin();
+    it++; // Skip the first (newest) entry
+    for (; it != model.end(); it++) {
         if (nLimit > 6)
             break;
-        if (rit->fConnected)
+        if (it->fConnected)
             continue;
 
         nLimit++;
 
         // Update the failed bool to true & signal to update background colors
-        rit->fFailed = true;
+        it->fFailed = true;
 
-        QModelIndex topLeft = index(rit - model.rbegin(), 0);
-        QModelIndex topRight = index(rit - model.rbegin(), columnCount() - 1);
+        QModelIndex topLeft = index(it - model.begin(), 0);
+        QModelIndex topRight = index(it - model.begin(), columnCount() - 1);
         Q_EMIT QAbstractItemModel::dataChanged(topLeft, topRight, {Qt::BackgroundRole});
     }
 }
