@@ -581,4 +581,6 @@ CScript EncodeWTFees(const CAmount& amount);
 
 bool DecodeWTFees(const CScript& script, CAmount& amount);
 
+uint256 GetWTRefundMessageHash(const uint256& wtid);
+
 #endif // BITCOIN_VALIDATION_H

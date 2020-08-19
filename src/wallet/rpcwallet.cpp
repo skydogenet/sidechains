@@ -3566,6 +3566,11 @@ UniValue createwtrefundrequest(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, "Specified WT not found!");
     }
 
+    // Check WT status
+    if (wt.status != WT_UNSPENT) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Withdrawal is already spent or in a bundle!");
+    }
+
     // Get refund address
     CTxDestination dest = DecodeDestination(wt.strRefundDestination);
     if (!IsValidDestination(dest)) {
@@ -3592,18 +3597,10 @@ UniValue createwtrefundrequest(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, "Private key for refund address not found in wallet!");
     }
 
-    // Now create the standard format refund message and signature
+    // Get refund message hash
+    uint256 hashMessage = GetWTRefundMessageHash(wtID);
 
-    // Standard format of refund request message
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strMessageMagic;
-    ss << strRefundMessageMagic;
-    ss << wtID.ToString();
-
-    // Note that GetHash invalidates the stream
-    uint256 hashMessage = ss.GetHash();
-
-    // We are really only signing the hash of the message
+    // Sign refund message hash
     std::vector<unsigned char> vchSig;
     if (!privKey.SignCompact(hashMessage, vchSig)) {
         throw JSONRPCError(RPC_MISC_ERROR, "Failed to sign!");

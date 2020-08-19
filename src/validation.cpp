@@ -6234,6 +6234,17 @@ bool DecodeWTFees(const CScript& script, CAmount& amount)
     return true;
 }
 
+uint256 GetWTRefundMessageHash(const uint256& wtid)
+{
+    // Standard format of refund request message
+    CHashWriter ss(SER_GETHASH, 0);
+    ss << strMessageMagic;
+    ss << strRefundMessageMagic;
+    ss << wtid.ToString();
+
+    return ss.GetHash();
+}
+
 //! Guess how far we are in the verification process at the given block index
 //! require cs_main if pindex has not been validated yet (because nChainTx might be unset)
 double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex *pindex) {

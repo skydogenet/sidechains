@@ -573,13 +573,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script)
 
     psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
 
-    // Standard format of refund request message
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strMessageMagic;
-    ss << strRefundMessageMagic;
-    ss << wt.GetID().ToString();
-
-    uint256 hashMessage = ss.GetHash();
+    uint256 hashMessage = GetWTRefundMessageHash(wt.GetID());
 
     // We are really only signing the hash of the message
     std::vector<unsigned char> vchSig;
@@ -645,13 +639,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
 
     psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
 
-    // Standard format of refund request message
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strMessageMagic;
-    ss << strRefundMessageMagic;
-    ss << wt.GetID().ToString();
-
-    uint256 hashMessage = ss.GetHash();
+    uint256 hashMessage = GetWTRefundMessageHash(wt.GetID());
 
     // We are really only signing the hash of the message
     std::vector<unsigned char> vchSig;
@@ -706,14 +694,8 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
 
     psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
 
-    // Standard format of refund request message
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strMessageMagic;
-    ss << strRefundMessageMagic;
     // Put an invalid WT ID in the message
-    ss << GetRandHash().ToString();
-
-    uint256 hashMessage = ss.GetHash();
+    uint256 hashMessage = GetWTRefundMessageHash(GetRandHash());
 
     // We are really only signing the hash of the message
     std::vector<unsigned char> vchSig;
