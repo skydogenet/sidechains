@@ -105,6 +105,7 @@ QT_FORMS_UI = \
   qt/forms/openuridialog.ui \
   qt/forms/optionsdialog.ui \
   qt/forms/overviewpage.ui \
+  qt/forms/paymentrequestdialog.ui \
   qt/forms/receivecoinsdialog.ui \
   qt/forms/receiverequestdialog.ui \
   qt/forms/debugwindow.ui \
@@ -142,6 +143,7 @@ QT_MOC_CPP = \
   qt/moc_overviewpage.cpp \
   qt/moc_peertablemodel.cpp \
   qt/moc_paymentserver.cpp \
+  qt/moc_paymentrequestdialog.cpp \
   qt/moc_qvalidatedlineedit.cpp \
   qt/moc_qvaluecombobox.cpp \
   qt/moc_receivecoinsdialog.cpp \
@@ -217,6 +219,7 @@ BITCOIN_QT_H = \
   qt/optionsmodel.h \
   qt/overviewpage.h \
   qt/paymentrequestplus.h \
+  qt/paymentrequestdialog.h \
   qt/paymentserver.h \
   qt/peertablemodel.h \
   qt/platformstyle.h \
@@ -346,6 +349,7 @@ BITCOIN_QT_WALLET_CPP = \
   qt/openuridialog.cpp \
   qt/overviewpage.cpp \
   qt/paymentrequestplus.cpp \
+  qt/paymentrequestdialog.cpp \
   qt/paymentserver.cpp \
   qt/receivecoinsdialog.cpp \
   qt/receiverequestdialog.cpp \
