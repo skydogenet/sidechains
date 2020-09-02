@@ -3018,7 +3018,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     if (gArgs.GetBoolArg("-walletrejectlongchains", DEFAULT_WALLET_REJECT_LONG_CHAINS)) {
         // Lastly, ensure this tx will pass the mempool's chain limits
         LockPoints lp;
-        CTxMemPoolEntry entry(wtxNew.tx, 0, 0, 0, false, false, 0, lp);
+        CTxMemPoolEntry entry(wtxNew.tx, 0, 0, 0, false, false, uint256(), 0, lp);
         CTxMemPool::setEntries setAncestors;
         size_t nLimitAncestors = gArgs.GetArg("-limitancestorcount", DEFAULT_ANCESTOR_LIMIT);
         size_t nLimitAncestorSize = gArgs.GetArg("-limitancestorsize", DEFAULT_ANCESTOR_SIZE_LIMIT)*1000;
@@ -4441,6 +4441,11 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
 
 bool CWallet::CreateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, std::string& strFail, uint256& txid)
 {
+    if (mempool.WTRefundExists(wtID)) {
+        strFail = "A refund request is already in the mempool for this withdrawal!";
+        return false;
+    }
+
     CScript script = GenerateWTRefundRequest(wtID, vchSig);
 
     CWalletTx wtx;

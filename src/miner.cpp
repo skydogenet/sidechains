@@ -487,6 +487,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
     const int64_t MAX_CONSECUTIVE_FAILURES = 1000;
     int64_t nConsecutiveFailed = 0;
 
+    std::set<uint256> setWTRefund;
     while (mi != mempool.mapTx.get<ancestor_score>().end() || !mapModifiedTx.empty())
     {
         // Skip WT refunds if we don't want to include them
@@ -514,6 +515,13 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
             }
             if (wtID.IsNull())
                 continue;
+
+            // Double check that we haven't already added another refund request
+            // txn for this same WT ID (that would be invalid).
+            if (setWTRefund.count(wtID)) {
+                LogPrintf("%s: Invalid (duplicate WT ID) WT refund in mempool!\n", __func__);
+                continue;
+            }
 
             SidechainWT wt;
             if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
@@ -622,15 +630,15 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         SortForBlock(ancestors, iter, sortedEntries);
 
         for (size_t i=0; i<sortedEntries.size(); ++i) {
+            // Keep track of WT refunds that are added
+            if (sortedEntries[i]->IsWTRefund()) {
+                vWTRefund.push_back(sortedEntries[i]);
+            }
+
             AddToBlock(sortedEntries[i]);
 
             // Erase from the modified set, if present
             mapModifiedTx.erase(sortedEntries[i]);
-
-            // Keep track of WT refunds that are added
-            if (iter->IsWTRefund()) {
-                vWTRefund.push_back(sortedEntries[i]);
-            }
         }
 
         ++nPackagesSelected;

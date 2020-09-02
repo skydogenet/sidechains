@@ -628,9 +628,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         }
     }
 
-    // If this is a WT refund request, check if it is valid
-    std::multimap<CScript, CAmount> mapRefundOutputs;
-    std::vector<SidechainWT> vRefundedWT;
+    // If this transaction is a WT refund request, verify it.
     for (const CTxOut& o : tx.vout) {
         const CScript& scriptPubKey = o.scriptPubKey;
         uint256 wtID;
@@ -641,6 +639,12 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         if (wtID.IsNull()) {
             return state.DoS(100, error("%s: Invalid WT refund!", __func__),
                         REJECT_INVALID, "verify-wt-refund-no-script");
+        }
+
+        // Check if a refund for this WT is already in our memory pool
+        if (pool.WTRefundExists(wtID)) {
+            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                        REJECT_INVALID, "refund-already-in-mempool");
         }
 
         SidechainWT wt;
@@ -768,15 +772,15 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
 
         // Keep track of transactions that have a WT refund request script
         bool fWTRefund = false;
+        uint256 wtID;
         for (const CTxOut& o : tx.vout) {
-            uint256 wtID;
             std::vector<unsigned char> vchSig;
             if (o.scriptPubKey.IsWTRefundRequest(wtID, vchSig))
                 fWTRefund = true;
         }
 
         CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, chainActive.Height(),
-                              fSpendsCoinbase, fWTRefund, nSigOpsCost, lp);
+                              fSpendsCoinbase, fWTRefund, wtID, nSigOpsCost, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of
@@ -2074,8 +2078,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
     CAmount nDepositPayout = 0;
     CAmount nRefundPayout = 0;
-    std::multimap<CScript, CAmount> mapRefundOutputs;
+    std::multimap<std::pair<CScript, CAmount>, uint256> mapRefundOutputs;
     std::vector<SidechainWT> vRefundedWT;
+    std::set<uint256> setRefundWTID;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -2101,10 +2106,16 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                             REJECT_INVALID, "verify-wt-refund-invalid");
             }
 
+            if (setRefundWTID.count(wtID)) {
+                return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                            REJECT_INVALID, "verify-wt-refund-duplicate");
+            }
+            setRefundWTID.insert(wtID);
+
             // Keep track of refund request outputs so that we can verify they
             // each have a matching coinbase payout output later.
             CScript scriptDest = GetScriptForDestination(DecodeDestination(wt.strRefundDestination));
-            mapRefundOutputs.insert(std::pair<CScript, CAmount>( scriptDest, wt.amount ));
+            mapRefundOutputs.insert(std::pair<std::pair<CScript, CAmount>, uint256>( std::make_pair(scriptDest, wt.amount), wtID));
 
             // Update wt object status and keep track of it so that we can apply
             // the update later if all verification checks work out.
@@ -2210,18 +2221,20 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     for (auto it = mapRefundOutputs.begin(); it != mapRefundOutputs.end();)
     {
         // Get range of outputs with this CTxDestination
-        std::pair<std::multimap<CScript, CAmount>::iterator, std::multimap<CScript, CAmount>::iterator> range;
+        std::pair<std::multimap<std::pair<CScript, CAmount>, uint256>::iterator, std::multimap<std::pair<CScript, CAmount>, uint256>::iterator> range;
         range = mapRefundOutputs.equal_range(it->first);
 
-        // Find outputs
+        // Count outputs that match items in the range
         int nOut = std::distance(range.first, range.second);
         int nFound = 0;
         for (const CTxOut& o : block.vtx[0]->vout) {
-            if (o.scriptPubKey == it->first && o.nValue == it->second) {
+            if (o.scriptPubKey == it->first.first && o.nValue == it->first.second) {
                 nFound++;
 
                 // If we aren't looking for multiple outputs, stop now
-                if (nOut == 1) break;
+                if (nOut == 1) {
+                    break;
+                }
             }
         }
 
