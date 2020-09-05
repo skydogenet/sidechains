@@ -1,14 +1,14 @@
-// Copyright (c) 2017 The Bitcoin Core developers
+// Copyright (c) 2017-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "sidechain.h"
+#include <sidechain.h>
 
-#include "clientversion.h"
-#include "core_io.h"
-#include "hash.h"
-#include "streams.h"
-#include "utilmoneystr.h"
+#include <clientversion.h>
+#include <core_io.h>
+#include <hash.h>
+#include <streams.h>
+#include <utilmoneystr.h>
 
 #include <algorithm>
 #include <sstream>

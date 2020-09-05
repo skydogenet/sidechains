@@ -606,7 +606,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
 
         SidechainObj *obj = SidechainObjCtr(scriptPubKey);
         if (!obj)
-            continue;
+            return state.Invalid(false, REJECT_INVALID, "invalid-sidechain-obj-script");
 
         if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
             SidechainWT *wt = dynamic_cast<SidechainWT*>(obj);
@@ -2162,8 +2162,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     continue;
 
                 SidechainObj *obj = SidechainObjCtr(scriptPubKey);
-                if (!obj)
-                    continue;
+                if (!obj) {
+                    return state.DoS(90, error("%s: invalid sidechain obj script", __func__), REJECT_INVALID, "invalid-sidechain-obj-script");
+                }
 
                 if (obj->sidechainop != DB_SIDECHAIN_DEPOSIT_OP)
                     continue;
@@ -2361,7 +2362,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
                 SidechainObj *obj = SidechainObjCtr(scriptPubKey);
                 if (!obj)
-                    continue;
+                    return state.Error("Invalid sidechain obj script");
 
                 // TODO
                 // Refactor. We are also loading SidechainWT *wt later when
@@ -5756,8 +5757,10 @@ bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransa
                 continue;
 
             SidechainObj *obj = SidechainObjCtr(scriptPubKey);
-            if (!obj)
-                continue;
+            if (!obj)  {
+                strFail = "Invalid sidechain obj!\n";
+                return false;
+            }
 
             if (obj->sidechainop != DB_SIDECHAIN_WTPRIME_OP)
                 continue;

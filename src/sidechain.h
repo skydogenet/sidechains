@@ -1,17 +1,17 @@
-// Copyright (c) 2017 The Bitcoin Core developers
+// Copyright (c) 2017-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_PRIMITIVES_SIDECHAIN_H
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
-#include "amount.h"
-#include "merkleblock.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "script/script.h"
-#include "serialize.h"
-#include "uint256.h"
+#include <amount.h>
+#include <merkleblock.h>
+#include <primitives/transaction.h>
+#include <pubkey.h>
+#include <script/script.h>
+#include <serialize.h>
+#include <uint256.h>
 
 #include <limits.h>
 #include <string>
@@ -82,7 +82,6 @@ static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 static const char DB_SIDECHAIN_DEPOSIT_OP = 'D';
 static const char DB_SIDECHAIN_WT_OP = 'W';
 static const char DB_SIDECHAIN_WTPRIME_OP = 'P';
-static const char DB_SIDECHAIN_TRANSFER_OP = 'T';
 
 /**
  * Base object for sidechain related database entries
