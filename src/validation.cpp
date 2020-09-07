@@ -600,11 +600,11 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
     // If this is a wt check that it is valid
     for (const CTxOut& txout : tx.vout) {
         const CScript& scriptPubKey = txout.scriptPubKey;
-        const size_t script_sz = scriptPubKey.size();
-        if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+        std::vector<unsigned char> vch;
+        if (!scriptPubKey.IsSidechainObj(vch))
             continue;
 
-        SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+        SidechainObj *obj = ParseSidechainObj(vch);
         if (!obj)
             return state.Invalid(false, REJECT_INVALID, "invalid-sidechain-obj-script");
 
@@ -1663,7 +1663,6 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         // Also check for WT^(s) and restore the status of wt(s) it used
         for (size_t o = 0; o < tx.vout.size(); o++) {
             const CScript& scriptPubKey = tx.vout[o].scriptPubKey;
-            const size_t script_sz = scriptPubKey.size();
             if (!scriptPubKey.IsUnspendable()) {
                 COutPoint out(hash, o);
                 Coin coin;
@@ -1675,8 +1674,9 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
 
             // If this output is a WT^ database entry, reset the status of wt(s)
             // included in the WT^
-            if (script_sz > 2 && scriptPubKey[script_sz - 1] == OP_SIDECHAIN) {
-                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+            std::vector<unsigned char> vch;
+            if (scriptPubKey.IsSidechainObj(vch)) {
+                SidechainObj *obj = ParseSidechainObj(vch);
                 if (!obj) {
                     error("DisconnectBlock(): failure reading sidechain obj");
                     return DISCONNECT_FAILED;
@@ -2157,11 +2157,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         if (tx.IsCoinBase()) {
             for (const CTxOut& out : tx.vout) {
                 const CScript& scriptPubKey = out.scriptPubKey;
-                const size_t script_sz = scriptPubKey.size();
-                if (script_sz < 2 || scriptPubKey[script_sz - 1] != OP_SIDECHAIN)
+
+                std::vector<unsigned char> vch;
+                if (!scriptPubKey.IsSidechainObj(vch))
                     continue;
 
-                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+                SidechainObj *obj = ParseSidechainObj(vch);
                 if (!obj) {
                     return state.DoS(90, error("%s: invalid sidechain obj script", __func__), REJECT_INVALID, "invalid-sidechain-obj-script");
                 }
@@ -2356,11 +2357,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         for (const CTransactionRef& tx : block.vtx) {
             for (const CTxOut& txout : tx->vout) {
                 const CScript& scriptPubKey = txout.scriptPubKey;
-                const size_t script_sz = scriptPubKey.size();
-                if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+
+                std::vector<unsigned char> vch;
+                if (!scriptPubKey.IsSidechainObj(vch))
                     continue;
 
-                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+                SidechainObj *obj = ParseSidechainObj(vch);
                 if (!obj)
                     return state.Error("Invalid sidechain obj script");
 
@@ -3661,7 +3663,7 @@ CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime)
     scriptPubKey[4] = 0x89;
 
     // Add WT^ hash
-    memcpy(&scriptPubKey[5], &hashWTPrime, 32);
+    memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
 
     return scriptPubKey;
 }
@@ -3683,7 +3685,7 @@ CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime)
     scriptPubKey[4] = 0xDE;
 
     // Add WT^ hash
-    memcpy(&scriptPubKey[5], &hashWTPrime, 32);
+    memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
 
     return scriptPubKey;
 }
@@ -5752,11 +5754,12 @@ bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransa
     for (const CTransactionRef& tx : vtx) {
         for (const CTxOut& txout : tx->vout) {
             const CScript& scriptPubKey = txout.scriptPubKey;
-            const size_t script_sz = scriptPubKey.size();
-            if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+
+            std::vector<unsigned char> vch;
+            if (!scriptPubKey.IsSidechainObj(vch))
                 continue;
 
-            SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+            SidechainObj *obj = ParseSidechainObj(vch);
             if (!obj)  {
                 strFail = "Invalid sidechain obj!\n";
                 return false;

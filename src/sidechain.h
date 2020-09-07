@@ -243,9 +243,9 @@ struct SidechainBMMProof
 };
 
 /**
- * Create sidechain object
+ * Parse sidechain object from a sidechain object script
  */
-SidechainObj *SidechainObjCtr(const CScript &);
+SidechainObj* ParseSidechainObj(const std::vector<unsigned char>& vch);
 
 // Functions for both WT^ creation and the GUI to use in order to make sure that
 // what the GUI displays (on the pending WT table) is the same as what the WT^

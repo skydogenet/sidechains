@@ -140,8 +140,6 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP9                   : return "OP_NOP9";
     case OP_NOP10                  : return "OP_NOP10";
 
-    case OP_SIDECHAIN              : return "OP_SIDECHAIN";
-
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
     // Note:
@@ -305,6 +303,26 @@ bool CScript::IsWTRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSi
         return false;
     if (vchSig.empty())
         return false;
+
+    return true;
+}
+
+bool CScript::IsSidechainObj(std::vector<unsigned char>& vch) const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size < 5)
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xAC ||
+            (*this)[2] != 0xDC ||
+            (*this)[3] != 0xF6 ||
+            (*this)[4] != 0x6F)
+        return false;
+
+    vch = std::vector<unsigned char>(this->begin() + 5, this->end());
 
     return true;
 }
