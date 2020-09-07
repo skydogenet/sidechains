@@ -34,6 +34,27 @@ static BlockAssembler AssemblerForTest(const CChainParams& params) {
 
 BOOST_FIXTURE_TEST_SUITE(sidechain_tests, TestChain100Setup)
 
+BOOST_AUTO_TEST_CASE(sidechain_obj)
+{
+    // Test sidechain object (for leveldb) scripts
+
+    SidechainWT wt;
+    wt.nSidechain = 0;
+    wt.strDestination = "";
+    wt.strRefundDestination = "";
+    wt.amount = 0;
+    wt.mainchainFee = 0;
+    wt.status = WT_UNSPENT;
+    wt.hashBlindWTX = uint256();
+
+    CScript script = wt.GetScript();
+
+    std::vector<unsigned char> vch;
+    BOOST_CHECK(script.IsSidechainObj(vch));
+
+    SidechainObj* parsed = ParseSidechainObj(vch);
+    BOOST_CHECK(parsed);
+}
 
 BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
 {
