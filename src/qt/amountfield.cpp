@@ -96,6 +96,8 @@ void AmountField::setValue(const CAmount& value)
 {
     QString str = BitcoinUnits::format(unit, value, false, BitcoinUnits::separatorAlways);
     ui->lineEditAmount->setText(str);
+
+    Q_EMIT valueChanged();
 }
 
 void AmountField::setReadOnly(bool fReadOnly)
