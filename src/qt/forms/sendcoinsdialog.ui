@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>850</width>
-    <height>526</height>
+    <height>542</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -588,7 +588,7 @@
         <x>0</x>
         <y>0</y>
         <width>830</width>
-        <height>104</height>
+        <height>68</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1">
@@ -761,14 +761,14 @@
           </item>
           <item>
            <widget class="QLabel" name="fallbackFeeWarningLabel">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
             <property name="toolTip">
              <string>Using the fallbackfee can result in sending a transaction that will take several hours or days (or never) to confirm. Consider choosing your fee manually or wait until you have validated the complete chain.</string>
-            </property>
-            <property name="font">
-            <font>
-                <weight>75</weight>
-                <bold>true</bold>
-            </font>
             </property>
             <property name="text">
              <string>Warning: Fee estimation is currently not possible.</string>
@@ -856,7 +856,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="BitcoinAmountField" name="customFee"/>
+                  <widget class="AmountField" name="customFee"/>
                  </item>
                  <item>
                   <spacer name="horizontalSpacer_6">
@@ -923,7 +923,7 @@
                <item>
                 <widget class="QRadioButton" name="radioSmartFee">
                  <property name="text">
-                  <string>Recommended:</string>
+                  <string>Reco&amp;mmended:</string>
                  </property>
                  <property name="checked">
                   <bool>true</bool>
@@ -1107,11 +1107,11 @@
            </item>
            <item>
             <widget class="QCheckBox" name="optInRBF">
-             <property name="text">
-              <string>Enable Replace-By-Fee</string>
-             </property>
              <property name="toolTip">
               <string>With Replace-By-Fee (BIP-125) you can increase a transaction's fee after it is sent. Without this, a higher fee may be recommended to compensate for increased transaction delay risk.</string>
+             </property>
+             <property name="text">
+              <string>Enable Replace-By-Fee</string>
              </property>
             </widget>
            </item>
@@ -1267,10 +1267,9 @@
    <header>qt/qvalidatedlineedit.h</header>
   </customwidget>
   <customwidget>
-   <class>BitcoinAmountField</class>
+   <class>AmountField</class>
    <extends>QLineEdit</extends>
-   <header>qt/bitcoinamountfield.h</header>
-   <container>1</container>
+   <header location="global">qt/amountfield.h</header>
   </customwidget>
  </customwidgets>
  <resources>
