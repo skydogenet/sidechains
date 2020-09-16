@@ -47,8 +47,36 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Qt::DisplayRole:
     {
-        // Status
+        // Mainchain txid
         if (col == 0) {
+            return QString::fromStdString(object.txid.ToString());
+        }
+        // Mainchain block height
+        if (col == 1) {
+            return QString::number(object.nMainchainHeight);
+        }
+        // Sidechain block height
+        if (col == 2) {
+            return QString::number(object.nSidechainHeight);
+        }
+        // ntxn
+        if (col == 3) {
+            return QString::number(object.ntxn);
+        }
+        // Total fees
+        if (col == 4) {
+            QString amount = BitcoinUnits::formatWithMainchainUnit(unit, object.amountTotalFees, false,
+                    BitcoinUnits::separatorAlways);
+            return amount;
+        }
+        // BMM Amount (mainchain bribe)
+        if (col == 5) {
+            QString amount = BitcoinUnits::formatWithMainchainUnit(unit, object.amount, false,
+                    BitcoinUnits::separatorAlways);
+            return amount;
+        }
+        // Status
+        if (col == 6) {
             if (object.fFailed)
                 return QString("Failed");
             else
@@ -57,65 +85,38 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
             else
                 return QString("Created");
         }
-        // ntxn
-        if (col == 1) {
-            return QString::number(object.ntxn);
-        }
-        // Total fees
-        if (col == 2) {
-            QString amount = BitcoinUnits::formatWithMainchainUnit(unit, object.amountTotalFees, false,
-                    BitcoinUnits::separatorAlways);
-            return amount;
-        }
-        // BMM Amount (mainchain bribe)
-        if (col == 3) {
-            QString amount = BitcoinUnits::formatWithMainchainUnit(unit, object.amount, false,
-                    BitcoinUnits::separatorAlways);
-            return amount;
-        }
-        // Mainchain txid
-        if (col == 4) {
-            return QString::fromStdString(object.txid.ToString());
-        }
-        // Sidechain block height
-        if (col == 5) {
-            return QString::number(object.nSidechainHeight);
-        }
-        // Mainchain block height
-        if (col == 6) {
-            return QString::number(object.nMainchainHeight);
-        }
+
         break;
     }
     case Qt::TextAlignmentRole:
     {
-        // Status
+        // Mainchain txid
         if (col == 0) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // ntxn
+        // Mainchain block height
         if (col == 1) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Total fees
+        // Sidechain block height
         if (col == 2) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // BMM amount
+        // ntxn
         if (col == 3) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Mainchain txid
+        // Total fees
         if (col == 4) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Sidechain block height
+        // BMM amount
         if (col == 5) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Mainchain block height
+        // Status
         if (col == 6) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
     }
@@ -128,19 +129,19 @@ QVariant SidechainBMMTableModel::headerData(int section, Qt::Orientation orienta
         if (orientation == Qt::Horizontal) {
             switch (section) {
             case 0:
-                return QString("Status");
-            case 1:
-                return QString("Txns");
-            case 2:
-                return QString("Fees");
-            case 3:
-                return QString("Bid Amount");
-            case 4:
                 return QString("MC txid");
-            case 5:
-                return QString("SC Block");
-            case 6:
+            case 1:
                 return QString("MC Block");
+            case 2:
+                return QString("SC Block");
+            case 3:
+                return QString("Txns");
+            case 4:
+                return QString("Fees");
+            case 5:
+                return QString("Bid Amount");
+            case 6:
+                return QString("Status");
             }
         }
     }

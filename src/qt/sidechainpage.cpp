@@ -186,13 +186,13 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->tableViewBMM->setModel(bmmModel);
 
     // Set BMM table column sizes
-    ui->tableViewBMM->setColumnWidth(0, COLUMN_STATUS);
-    ui->tableViewBMM->setColumnWidth(1, COLUMN_TXNS);
-    ui->tableViewBMM->setColumnWidth(2, COLUMN_FEES);
-    ui->tableViewBMM->setColumnWidth(3, COLUMN_BMM_AMOUNT);
-    ui->tableViewBMM->setColumnWidth(4, COLUMN_BMM_TXID);
-    ui->tableViewBMM->setColumnWidth(5, COLUMN_SIDECHAIN_HEIGHT);
-    ui->tableViewBMM->setColumnWidth(6, COLUMN_MAINCHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(0, COLUMN_BMM_TXID);
+    ui->tableViewBMM->setColumnWidth(1, COLUMN_MAINCHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(2, COLUMN_SIDECHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(3, COLUMN_TXNS);
+    ui->tableViewBMM->setColumnWidth(4, COLUMN_FEES);
+    ui->tableViewBMM->setColumnWidth(5, COLUMN_BMM_AMOUNT);
+    ui->tableViewBMM->setColumnWidth(6, COLUMN_STATUS);
 
     std::string strAddress = GenerateAddress("Sidechain Deposit");
     ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
