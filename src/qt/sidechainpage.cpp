@@ -10,6 +10,7 @@
 #include <qt/confgeneratordialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
+#include <qt/manualbmmdialog.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/sidechainbmmtablemodel.h>
@@ -119,7 +120,6 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Initialize BMM table model;
     bmmModel = new SidechainBMMTableModel(this);
 
-
     // Pending WT table context menu
 
     ui->tableViewUnspentWT->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -225,7 +225,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
         ui->stackedWidget->setCurrentIndex(PAGE_DEFAULT_INDEX);
     }
 
-    ui->bmmAmount->setValue(DEFAULT_CRITICAL_DATA_AMOUNT);
+    ui->bmmBidAmount->setValue(DEFAULT_CRITICAL_DATA_AMOUNT);
 
     ui->payAmount->setValue(0);
     ui->feeAmount->setValue(0);
@@ -247,13 +247,13 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     connect(ui->mainchainFeeAmount, SIGNAL(valueChanged()),
             this, SLOT(UpdateWTTotal()));
 
-    // Style wealth tab. This isn't a usable tab (right now) and is actually
+    // Setup wealth tab. This isn't a usable tab (right now) and is actually
     // just a trick to show a label next to the tabs on the tab widget. There's
     // also an unused (hidden) spacer tab to move the wealth label over a bit.
-
     // TODO consts for tab index
     // Hide the spacer tab that separates the label we have inserted from the
     // other tabs. We have a custom style sheet for disabled tabs.
+    ui->tabWidgetMain->setStyleSheet("QTabBar::tab:disabled {background: transparent;}");
     ui->tabWidgetMain->setTabEnabled(3, false);
     // Set the total wealth tab disabled as well
     ui->tabWidgetMain->setTabEnabled(4, false);
@@ -700,167 +700,13 @@ std::string SidechainPage::GenerateAddress(const std::string& strLabel)
     return strAddress;
 }
 
-void SidechainPage::on_pushButtonCreateBlock_clicked()
-{
-    QMessageBox messageBox;
-    messageBox.setDefaultButton(QMessageBox::Ok);
-
-    CBlock block;
-    QString error = "";
-    if (!CreateBMMBlock(block, error)) {
-        messageBox.setWindowTitle("Error creating BMM block!");
-        messageBox.setText(error);
-        messageBox.exec();
-        return;
-    }
-
-    std::stringstream ss;
-    ss << "BMM blinded block hash (h*):\n" << block.GetBlindHash().ToString();
-    ss << std::endl;
-    ss << std::endl;
-    ss << "BMM Block:\n" << block.ToString() << std::endl;
-
-    ui->textBrowser->setText(QString::fromStdString(ss.str()));
-    ui->lineEditManualBMMHash->setText(QString::fromStdString(block.GetBlindHash().ToString()));
-}
-
-void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
-{
-    QMessageBox messageBox;
-    messageBox.setDefaultButton(QMessageBox::Ok);
-    messageBox.setWindowTitle("Error sending BMM request to mainchain!");
-
-    if (ui->lineEditManualBMMHash->text().isEmpty()) {
-        messageBox.setText("You must click \"Generate BMM Block\" first!");
-        messageBox.exec();
-        return;
-    }
-
-    uint256 hashBMM = uint256S(ui->lineEditManualBMMHash->text().toStdString());
-    if (hashBMM.IsNull()) {
-        messageBox.setText("Invalid BMM block hash (h*)!");
-        messageBox.exec();
-        return;
-    }
-
-    if (ui->lineEditManualMainchainBlockHash->text().isEmpty()) {
-        messageBox.setText("You must enter the current mainchain chain tip block hash!");
-        messageBox.exec();
-        return;
-    }
-
-    uint256 hashMainBlock = uint256S(ui->lineEditManualMainchainBlockHash->text().toStdString());
-    if (hashMainBlock.IsNull()) {
-        messageBox.setText("Invalid previous mainchain block hash!");
-        messageBox.exec();
-        return;
-    }
-
-    uint256 hashTXID = SendBMMRequest(hashBMM, hashMainBlock);
-
-    if (hashTXID.IsNull()) {
-        messageBox.setText("Failed to create BMM request on mainchain!");
-        messageBox.exec();
-        return;
-    }
-
-    // Show result
-    messageBox.setWindowTitle("BMM request created on mainchain!");
-    QString result = "txid: ";
-    result += QString::fromStdString(hashTXID.ToString());
-    messageBox.setText(result);
-    messageBox.exec();
-    return;
-
-}
-
-void SidechainPage::on_pushButtonSubmitBlock_clicked()
-{
-    QMessageBox messageBox;
-    messageBox.setDefaultButton(QMessageBox::Ok);
-
-    uint256 hashBlock = uint256S(ui->lineEditBMMHash->text().toStdString());
-    CBlock block;
-
-    if (!bmmCache.GetBMMBlock(hashBlock, block)) {
-        // Block not stored message box
-        messageBox.setWindowTitle("Block not found!");
-        messageBox.setText("You do not have this BMM block cached.");
-        messageBox.exec();
-        return;
-    }
-
-    // Get user input h* and coinbase hex
-    std::string strProof = ui->lineEditProof->text().toStdString();
-    CMutableTransaction mtx;
-    if (!DecodeHexTx(mtx, ui->lineEditCoinbaseHex->text().toStdString())) {
-        // Invalid transaction hex input message box
-        messageBox.setWindowTitle("Invalid transaction hex!");
-        messageBox.setText("The transaction hex is invalid.");
-        messageBox.exec();
-        return;
-    }
-
-    CTransaction criticalTx(mtx);
-    block.criticalProof = strProof;
-    block.criticalTx = criticalTx;
-
-    if (SubmitBMMBlock(block)) {
-        // Block submitted message box
-        messageBox.setWindowTitle("Block Submitted!");
-        QString result = "BMM Block hash:\n";
-        result += QString::fromStdString(block.GetHash().ToString());
-        result += "\n\n";
-        result += "BMM (Blinded) hash: \n";
-        result += QString::fromStdString(block.GetBlindHash().ToString());
-        result += "\n";
-        messageBox.setText(result);
-        messageBox.exec();
-        return;
-    } else {
-        // Failed to submit block submitted message box
-        messageBox.setWindowTitle("Failed to submit block!");
-        messageBox.setText("The submitted block is invalid.");
-        messageBox.exec();
-    }
-}
-
-bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
-{
-    SidechainClient client;
-    std::string strError = "";
-    CAmount nFees;
-    bool fCreated = client.CreateBMMBlock(block, strError, nFees);
-
-    error = QString::fromStdString(strError);
-    return fCreated;
-}
-
-uint256 SidechainPage::SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain)
-{
-    // TODO use user input bmm amount
-    SidechainClient client;
-    uint256 hashTXID = client.SendBMMCriticalDataRequest(hashBMM, hashBlockMain, 0, 0);
-    return hashTXID;
-}
-
-bool SidechainPage::SubmitBMMBlock(const CBlock& block)
-{
-    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    if (!ProcessNewBlock(Params(), shared_pblock, true, NULL)) {
-        return false;
-    }
-
-    return true;
-}
-
 void SidechainPage::RefreshBMM()
 {
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
     // Get & check the BMM amount
-    CAmount amount = ui->bmmAmount->value();
+    CAmount amount = ui->bmmBidAmount->value();
     if (amount <= 0) {
         StopBMM();
 
@@ -1005,7 +851,7 @@ void SidechainPage::RefreshTrain()
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
 {
     // Check if the StartBMM button has been pushed
-    if (ui->pushButtonStartBMM->isEnabled()) {
+    if (!ui->pushButtonStartBMM->isEnabled()) {
         // Restart BMM with the new refresh interval
         StopBMM();
         StartBMM();
@@ -1328,7 +1174,7 @@ void SidechainPage::updateDisplayUnit()
 
     int nDisplayUnit = walletModel->getOptionsModel()->getDisplayUnit();
 
-    ui->bmmAmount->setDisplayUnit(nDisplayUnit);
+    ui->bmmBidAmount->setDisplayUnit(nDisplayUnit);
     ui->payAmount->setDisplayUnit(nDisplayUnit);
     ui->feeAmount->setDisplayUnit(nDisplayUnit);
     ui->mainchainFeeAmount->setDisplayUnit(nDisplayUnit);
@@ -1505,4 +1351,10 @@ void SidechainPage::RequestRefund()
     result += BitcoinUnits::formatWithUnit(unit, wt.amount, false, BitcoinUnits::separatorAlways);
     messageBox.setText(result);
     messageBox.exec();
+}
+
+void SidechainPage::on_pushButtonManualBMM_clicked()
+{
+    ManualBMMDialog dialog;
+    dialog.exec();
 }

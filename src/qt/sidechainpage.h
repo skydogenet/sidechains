@@ -73,12 +73,6 @@ private Q_SLOTS:
 
     void on_deleteButton_clicked();
 
-    void on_pushButtonCreateBlock_clicked();
-
-    void on_pushButtonSendCriticalRequest_clicked();
-
-    void on_pushButtonSubmitBlock_clicked();
-
     void on_spinBoxRefreshInterval_valueChanged(int n);
 
     void RefreshBMM();
@@ -121,6 +115,8 @@ private Q_SLOTS:
 
     void RequestRefund();
 
+    void on_pushButtonManualBMM_clicked();
+
 private:
     Ui::SidechainPage *ui;
 
@@ -156,12 +152,6 @@ private:
     bool validateMainchainFeeAmount();
 
     std::string GenerateAddress(const std::string& strLabel = "");
-
-    bool CreateBMMBlock(CBlock& block, QString error = "");
-
-    uint256 SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain);
-
-    bool SubmitBMMBlock(const CBlock& block);
 
     // Handle networking being enabled / disabled
     void UpdateNetworkActive(bool fMainchainConnected);
