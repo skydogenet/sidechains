@@ -1138,20 +1138,16 @@ void SidechainPage::ClearWTPrimeExplorer()
 
 void SidechainPage::UpdateSidechainWealth()
 {
+    CAmount amountCTIP = CAmount(0);
+
     SidechainDeposit deposit;
-    if (!psidechaintree->GetLastDeposit(deposit)) {
-        // TODO Error
-        return;
-    }
-    if (deposit.n >= deposit.dtx.vout.size()) {
-        // TODO Error
-        return;
+    if (psidechaintree->GetLastDeposit(deposit)) {
+        if (deposit.n < deposit.dtx.vout.size())
+            amountCTIP = deposit.dtx.vout[deposit.n].nValue;
     }
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
-
-    CAmount amountCtip = deposit.dtx.vout[deposit.n].nValue;
-    QString wealth = BitcoinUnits::formatWithUnit(unit, amountCtip, false,
+    QString wealth = BitcoinUnits::formatWithUnit(unit, amountCTIP, false,
             BitcoinUnits::separatorAlways);
 
     QString label = "Total sidechain wealth: ";
