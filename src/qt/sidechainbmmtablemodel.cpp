@@ -65,7 +65,7 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
         }
         // Total fees
         if (col == 4) {
-            QString amount = BitcoinUnits::formatWithMainchainUnit(unit, object.amountTotalFees, false,
+            QString amount = BitcoinUnits::formatWithUnit(unit, object.amountTotalFees, false,
                     BitcoinUnits::separatorAlways);
             return amount;
         }
