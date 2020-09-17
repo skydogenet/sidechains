@@ -26,7 +26,7 @@ int SidechainBMMTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int SidechainBMMTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 7;
+    return 8;
 }
 
 QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
@@ -75,17 +75,23 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
                     BitcoinUnits::separatorAlways);
             return amount;
         }
-        // Status
+        // Profit
         if (col == 6) {
+            CAmount profit = object.amountTotalFees - object.amount;
+            QString amount = BitcoinUnits::formatWithUnit(unit, profit, false,
+                    BitcoinUnits::separatorAlways);
+            return amount;
+        }
+        // Status
+        if (col == 7) {
             if (object.fFailed)
                 return QString("Failed");
             else
             if (object.fConnected)
-                return QString("Connected");
+                return QString("Success");
             else
-                return QString("Created");
+                return QString("Trying...");
         }
-
         break;
     }
     case Qt::TextAlignmentRole:
@@ -114,8 +120,12 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
         if (col == 5) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Status
+        // Profit
         if (col == 6) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Status
+        if (col == 7) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
@@ -141,6 +151,8 @@ QVariant SidechainBMMTableModel::headerData(int section, Qt::Orientation orienta
             case 5:
                 return QString("Bid Amount");
             case 6:
+                return QString("Profit");
+            case 7:
                 return QString("Status");
             }
         }
