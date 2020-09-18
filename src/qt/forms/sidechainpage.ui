@@ -73,7 +73,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Your sidechain balance</string>
+                 <string>Your sidechain balance:</string>
                 </property>
                </widget>
               </item>
