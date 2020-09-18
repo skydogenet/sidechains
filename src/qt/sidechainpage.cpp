@@ -55,9 +55,7 @@
 #include <qrencode.h>
 #endif
 
-static const int nTrainRefresh = 30 * 1000; // 30 seconds
-static const int nRetryRefresh = 30 * 1000; // 30 seconds
-static const int nTrainWarningSleep = 30 * 1000; // 60 seconds
+static const int nConnectionCheckInterval = 30 * 1000; // 30 seconds
 
 static const int PAGE_DEFAULT_INDEX = 0;
 static const int PAGE_RESTART_INDEX = 1;
@@ -72,6 +70,21 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
 {
     ui->setupUi(this);
 
+    // Connection error message box
+    connectionErrorMessage = new QMessageBox(this);
+    connectionErrorMessage->setDefaultButton(QMessageBox::Ok);
+    connectionErrorMessage->setWindowTitle("Failed to connect to the mainchain!");
+    std::string str;
+    str = "The sidechain has failed to connect to the mainchain!\n\n";
+    str += "If this is your first time running the sidechain ";
+    str += "please visit the \"Parent Chain\" tab.\n\n";
+    str += "This may also be due to configuration issues. ";
+    str += "Please check that you have set up configuration files.\n\n";
+    str += "Also make sure that the mainchain node is running!\n\n";
+    str += "Networking will be disabled until the connection is restored\n\n";
+    str += "Will retry in a few seconds after you close this window...\n";
+    connectionErrorMessage->setText(QString::fromStdString(str));
+
     // Initialize configuration generator dialog - only for the conf page of
     // the stacked widget. Clicking on "redo mainchain connection" will spawn
     // its own instance.
@@ -82,37 +95,10 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     bmmTimer = new QTimer(this);
     connect(bmmTimer, SIGNAL(timeout()), this, SLOT(RefreshBMM()));
 
-    // Initialize and start the train timer - refresh number of blocks left on
-    // mainchain until another WT^ can be proposed)
-    trainTimer = new QTimer(this);
-    connect(trainTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
-    trainTimer->start(nTrainRefresh);
-
-    // A timer to retry updating the train schedule if it fails
-    fSleepTrainWarning = false;
-    trainRetryTimer = new QTimer(this);
-    connect(trainRetryTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
-
-    // A sleep timer for the train update warning so that it isn't displayed
-    // a bunch of times quickly when blocks are connected
-    trainWarningSleepTimer = new QTimer(this);
-    connect(trainWarningSleepTimer, SIGNAL(timeout()), this, SLOT(ResetTrainWarningSleep()));
-
-    // Initialize the train error message box
-    trainErrorMessageBox = new QMessageBox(this);
-    trainErrorMessageBox->setDefaultButton(QMessageBox::Ok);
-    trainErrorMessageBox->setWindowTitle("Failed to connect to the mainchain!");
-    std::string str;
-    str = "The sidechain has failed to connect to the mainchain!\n\n";
-    str += "If this is your first time running the sidechain ";
-    str += "please visit the \"Parent Chain\" tab.\n\n";
-    str += "This may also be due to configuration issues. ";
-    str += "Please check that you have set up configuration files.\n\n";
-    str += "Also make sure that the mainchain node is running!\n\n";
-    str += "Networking will be disabled until the connection is restored\n\n";
-    str += "Will retry in a few seconds after you close this window...\n";
-
-    trainErrorMessageBox->setText(QString::fromStdString(str));
+    // Initialize and start the connection check timer
+    connectionCheckTimer = new QTimer(this);
+    connect(connectionCheckTimer, SIGNAL(timeout()), this, SLOT(CheckConnection()));
+    connectionCheckTimer->start(nConnectionCheckInterval);
 
     // Initialize pending WT table model
     unspentWTModel = new SidechainWTTableModel(this);
@@ -120,7 +106,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Initialize BMM table model;
     bmmModel = new SidechainBMMTableModel(this);
 
-    // Pending WT table context menu
+    // Pending WT table custom context menu
 
     ui->tableViewUnspentWT->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -197,8 +183,6 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
 
     std::string strAddress = GenerateAddress("Sidechain Deposit");
     ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
-
-    RefreshTrain();
 
     connect(ui->checkBoxAutoWTPrimeRefresh, SIGNAL(stateChanged(int)), this,
             SLOT(on_checkBoxAutoWTPrimeRefresh_changed(int)));
@@ -819,36 +803,6 @@ void SidechainPage::RefreshBMM()
     }
 }
 
-void SidechainPage::RefreshTrain()
-{
-    SidechainClient client;
-    int nMainchainBlocks = 0;
-    if (!client.GetBlockCount(nMainchainBlocks)) {
-        UpdateNetworkActive(false /* fMainchainConnected */);
-        trainTimer->stop();
-        if (!fSleepTrainWarning && ui->stackedWidget->currentIndex() != PAGE_CONFIG_INDEX
-                && ui->stackedWidget->currentIndex() != PAGE_RESTART_INDEX) {
-            trainErrorMessageBox->close();
-            trainErrorMessageBox->exec();
-            fSleepTrainWarning = true;
-            trainWarningSleepTimer->start(nTrainWarningSleep);
-        }
-        trainRetryTimer->start(nRetryRefresh);
-        ui->train->setText("? - not connected to mainchain");
-        return;
-    }
-
-    UpdateNetworkActive(true /* fMainchainConnected */);
-
-    // If the retry timer was running we want to stop it now that a connection
-    // has been established
-    trainRetryTimer->stop();
-    trainTimer->start(nTrainRefresh);
-
-    std::string strTrain = "N/A";
-    ui->train->setText(QString::fromStdString(strTrain));
-}
-
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
 {
     // Check if the StartBMM button has been pushed
@@ -863,12 +817,6 @@ void SidechainPage::on_pushButtonConfigureBMM_clicked()
 {
     ConfGeneratorDialog *dialog = new ConfGeneratorDialog(this);
     dialog->exec();
-}
-
-void SidechainPage::ResetTrainWarningSleep()
-{
-    trainWarningSleepTimer->stop();
-    fSleepTrainWarning = false;
 }
 
 void SidechainPage::ShowRestartPage()
@@ -901,7 +849,7 @@ void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
 
     if (fMainchainConnected) {
         // Close the connection warning popup if it is open
-        trainErrorMessageBox->close();
+        connectionErrorMessage->close();
     }
     // Update the GUI to show or hide the network connection warning.
     // Only switch to the network warning if the configuration warning isn't
@@ -1118,6 +1066,29 @@ void SidechainPage::StopBMM()
     ui->pushButtonStartBMM->setEnabled(true);
     ui->pushButtonStopBMM->setEnabled(false);
     ui->pushButtonNewBMM->setEnabled(false);
+}
+
+void SidechainPage::CheckConnection()
+{
+    bool fConnected = CheckMainchainConnection();
+    if (!fConnected) {
+        UpdateNetworkActive(false /* fMainchainConnected */);
+        connectionCheckTimer->stop();
+        if (ui->stackedWidget->currentIndex() != PAGE_CONFIG_INDEX
+                && ui->stackedWidget->currentIndex() != PAGE_RESTART_INDEX) {
+            connectionErrorMessage->close();
+            connectionErrorMessage->exec();
+
+            // Start the timer again with a longer interval
+            connectionCheckTimer->start(nConnectionCheckInterval * 2);
+        }
+    } else {
+        // Set the timer to the normal interval
+        connectionCheckTimer->stop();
+        connectionCheckTimer->start(nConnectionCheckInterval);
+
+        UpdateNetworkActive(true /* fMainchainConnected */);
+    }
 }
 
 void SidechainPage::ClearWTPrimeExplorer()

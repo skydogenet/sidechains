@@ -224,11 +224,6 @@ void WalletView::gotoSidechainPage()
     setCurrentWidget(sidechainPage);
 }
 
-void WalletView::refreshSidechainTrainSchedule()
-{
-    sidechainPage->RefreshTrain();
-}
-
 bool WalletView::handlePaymentRequest(const SendCoinsRecipient& recipient)
 {
     return sendCoinsPage->handlePaymentRequest(recipient);

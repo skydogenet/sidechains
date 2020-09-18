@@ -51,8 +51,6 @@ public Q_SLOTS:
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
 
-    void RefreshTrain();
-
     void setNumBlocks(const int nBlocks, const QDateTime& time,
             const double progress, const bool fHeader);
 
@@ -78,8 +76,6 @@ private Q_SLOTS:
     void RefreshBMM();
 
     void on_pushButtonConfigureBMM_clicked();
-
-    void ResetTrainWarningSleep();
 
     void ShowRestartPage();
 
@@ -117,6 +113,8 @@ private Q_SLOTS:
 
     void on_pushButtonManualBMM_clicked();
 
+    void CheckConnection();
+
 private:
     Ui::SidechainPage *ui;
 
@@ -130,18 +128,14 @@ private:
     SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;
     SidechainWTTableModel *unspentWTModel;
 
+    QMessageBox* connectionErrorMessage;
+
     QAction *wtRefundAction;
     QAction *copyWTIDAction;
     QMenu *wtContextMenu;
 
     QTimer *bmmTimer;
-    QTimer *trainTimer;
-    QTimer *trainRetryTimer;
-    QTimer *trainWarningSleepTimer;
-
-    bool fSleepTrainWarning;
-
-    QMessageBox *trainErrorMessageBox;
+    QTimer *connectionCheckTimer;
 
     int nBlocks;
 
