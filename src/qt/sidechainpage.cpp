@@ -312,7 +312,7 @@ void SidechainPage::generateQR(std::string data)
 
 void SidechainPage::setWalletModel(WalletModel *model)
 {
-    this->walletModel = model;
+    walletModel = model;
     wtPrimeHistoryDialog->setWalletModel(model);
     unspentWTModel->setWalletModel(model);
     bmmModel->setWalletModel(model);
@@ -344,9 +344,9 @@ void SidechainPage::setClientModel(ClientModel *model)
     if (model)
     {
         connect(model, SIGNAL(numBlocksChanged(int, QDateTime, double, bool)),
-                this, SLOT(setNumBlocks(int, QDateTime, double, bool)));
+                this, SLOT(setNumBlocks(int)));
 
-        nBlocks = model->getNumBlocks();
+        setNumBlocks(model->getNumBlocks());
     }
 }
 
@@ -358,17 +358,83 @@ void SidechainPage::setBalance(const CAmount& balance, const CAmount& unconfirme
     ui->available->setText(BitcoinUnits::formatWithUnit(unit, balance, false, BitcoinUnits::separatorAlways));
 }
 
-void SidechainPage::setNumBlocks(const int nBlocksIn, const QDateTime& time,
-        const double progress, const bool fHeader)
+void SidechainPage::setNumBlocks(const int nBlocksIn)
 {
-    if (ui->checkBoxAutoWTPrimeRefresh->isChecked()) {
-        // Update to the current WT^
-        UpdateToLatestWTPrime(false /* fRequested */);
-    }
+    if (!clientModel)
+        return;
 
     UpdateSidechainWealth();
 
     nBlocks = nBlocksIn;
+
+    // Check on updates to current / next WT^
+
+    uint256 hashLatest;
+    if (!psidechaintree->GetLastWTPrimeHash(hashLatest)) {
+        // Update the next bundle label on the transfer tab
+        ui->labelNextBundle->setText("Waiting for withdrawals.");
+
+        // If there hasn't been a WT^ created yet, display message on banner
+        QString str = "WT^: None yet. Waiting for withdrawals.";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+
+    SidechainWTPrime wtPrime;
+    if (!psidechaintree->GetWTPrime(hashLatest, wtPrime)) {
+        ui->labelNextBundle->setText("Error...");
+
+        QString str = "WT^: Error...";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+
+    // Update UI to the latest WT^ if wanted
+    if (ui->checkBoxAutoWTPrimeRefresh->isChecked()) {
+        // Update to the current WT^
+        SetCurrentWTPrime(hashLatest.ToString(), false);
+    }
+
+    if (wtPrime.status == WTPRIME_FAILED) {
+        // If the last WT^ failed, display how many blocks should be remaining
+        // in the cool down period before the next WT^
+        int nWaitPeriod = WTPRIME_FAIL_WAIT_PERIOD - (nBlocksIn - wtPrime.nFailHeight);
+        if (nWaitPeriod < 0)
+            nWaitPeriod = 0;
+
+        ui->labelNextBundle->setText(QString::number(nWaitPeriod) + " blocks.");
+
+        QString str;
+        str = "WT^: None right now. Next in: ";
+        str += QString::number(nWaitPeriod);
+        str += " blocks.";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+    else
+    if (wtPrime.status == WTPRIME_SPENT) {
+        ui->labelNextBundle->setText("Waiting for withdrawals.");
+        QString str = "WT^: None right now. Waiting for withdrawals.";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+    else
+    if (wtPrime.status == WTPRIME_CREATED) {
+        // If the WT^ has created status, display the required work score minus
+        // the current work score.
+        SidechainClient client;
+        int nWorkScore = 0;
+        if (client.GetWorkScore(hashLatest, nWorkScore)) {
+            ui->labelNextBundle->setText(QString::number(MAINCHAIN_WTPRIME_MIN_WORKSCORE - nWorkScore) + " blocks.");
+        } else {
+            ui->labelNextBundle->setText(QString::number(nWorkScore) + " blocks.");
+        }
+
+        QString strBanner = "WT^: ";
+        strBanner += QString::fromStdString(hashLatest.ToString());
+        Q_EMIT WTPrimeBannerUpdate(strBanner);
+        return;
+    }
 }
 
 void SidechainPage::on_pushButtonMainchain_clicked()
@@ -843,7 +909,8 @@ void SidechainPage::on_pushButtonShowPastWTPrimes_clicked()
     wtPrimeHistoryDialog->show();
 }
 
-void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
+void SidechainPage::UpdateNetworkActive(bool fMainchainConnected)
+{
     // Enable or disable networking based on connection to mainchain
     SetNetworkActive(fMainchainConnected, "Sidechain page update.");
 
@@ -896,6 +963,9 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
 
 void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequested)
 {
+    if (!walletModel)
+        return;
+
     // If the user didn't request this update (fRequested) themselves, don't
     // show error messages
 
@@ -1109,6 +1179,9 @@ void SidechainPage::ClearWTPrimeExplorer()
 
 void SidechainPage::UpdateSidechainWealth()
 {
+    if (!walletModel)
+        return;
+
     CAmount amountCTIP = CAmount(0);
 
     SidechainDeposit deposit;

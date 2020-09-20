@@ -51,8 +51,7 @@ public Q_SLOTS:
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
 
-    void setNumBlocks(const int nBlocks, const QDateTime& time,
-            const double progress, const bool fHeader);
+    void setNumBlocks(const int nBlocks);
 
 private Q_SLOTS:
     void on_pushButtonMainchain_clicked();
@@ -118,8 +117,8 @@ private Q_SLOTS:
 private:
     Ui::SidechainPage *ui;
 
-    WalletModel *walletModel;
-    ClientModel *clientModel;
+    WalletModel *walletModel = nullptr;
+    ClientModel *clientModel = nullptr;
 
     const PlatformStyle *platformStyle;
 
@@ -167,6 +166,7 @@ private:
 
 Q_SIGNALS:
     void OnlyMyWTsToggled(bool fChecked);
+    void WTPrimeBannerUpdate(QString str);
 };
 
 #endif // SIDECHAINPAGE_H
