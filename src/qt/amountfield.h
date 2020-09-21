@@ -48,6 +48,8 @@ public:
     /** Enable/Disable. */
     void setEnabled(bool fEnabled);
 
+    void setDisplayMode();
+
 Q_SIGNALS:
     void valueChanged();
 

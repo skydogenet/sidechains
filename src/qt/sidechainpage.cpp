@@ -269,6 +269,10 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Transfer tab widget
     ui->tabWidgetTransfer->setTabIcon(0, platformStyle->SingleColorIcon(":/icons/left"));
     ui->tabWidgetTransfer->setTabIcon(1, platformStyle->SingleColorIcon(":/icons/right"));
+
+    // Setup the total WT amount line edit
+    ui->lineEditTotalWT->setValue(CAmount(0));
+    ui->lineEditTotalWT->setDisplayMode();
 }
 
 SidechainPage::~SidechainPage()
@@ -582,14 +586,11 @@ void SidechainPage::on_lineEditWTPrimeHash_returnPressed()
 void SidechainPage::UpdateWTTotal()
 {
     // Update the total amount on the sidechain withdrawal area
-    int unit = walletModel->getOptionsModel()->getDisplayUnit();
-
     CAmount amountTotal = 0;
     amountTotal += ui->payAmount->value();
     amountTotal += ui->feeAmount->value();
     amountTotal += ui->mainchainFeeAmount->value();
-
-    ui->labelTotalWT->setText(BitcoinUnits::formatWithUnit(unit, amountTotal, false, BitcoinUnits::separatorAlways));
+    ui->lineEditTotalWT->setValue(amountTotal);
 }
 
 void SidechainPage::on_pushButtonWTHelp_clicked()

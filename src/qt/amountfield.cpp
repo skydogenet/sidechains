@@ -140,3 +140,14 @@ void AmountField::ValidateAmount()
     setValue(amount);
     setValid(true);
 }
+
+void AmountField::setDisplayMode()
+{
+    ui->lineEditAmount->setReadOnly(true);
+    this->setStyleSheet("QLineEdit[readOnly=\"true\"] {"
+                        "background: rgba(0, 0, 0, 0%);"
+                        "border-width: 2px;"
+                        "border-style: solid;"
+                        "border-color: rgba(0, 0, 0, 0%);"
+                        "}");
+}
