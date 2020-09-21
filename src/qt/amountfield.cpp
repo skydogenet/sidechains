@@ -20,6 +20,7 @@ AmountField::AmountField(QWidget *parent) :
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     ui->lineEditAmount->setLayout(layout);
+    ui->lineEditAmount->setFixedSize(200, 32);
 
     labelUnit = new QLabel(this);
     labelUnit->setEnabled(false); // So that it displays with disabled style
