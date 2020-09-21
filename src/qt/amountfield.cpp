@@ -19,8 +19,9 @@ AmountField::AmountField(QWidget *parent) :
     ui->setupUi(this);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
+
     ui->lineEditAmount->setLayout(layout);
-    ui->lineEditAmount->setFixedSize(200, 32);
+    ui->lineEditAmount->setFixedSize(200, 28);
 
     labelUnit = new QLabel(this);
     labelUnit->setEnabled(false); // So that it displays with disabled style
