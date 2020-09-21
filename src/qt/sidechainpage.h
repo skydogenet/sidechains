@@ -24,6 +24,7 @@ class SidechainWTTableModel;
 class WalletModel;
 
 QT_BEGIN_NAMESPACE
+class QMenu;
 class QMessageBox;
 QT_END_NAMESPACE
 
@@ -50,10 +51,7 @@ public Q_SLOTS:
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
 
-    void RefreshTrain();
-
-    void setNumBlocks(const int nBlocks, const QDateTime& time,
-            const double progress, const bool fHeader);
+    void setNumBlocks(const int nBlocks);
 
 private Q_SLOTS:
     void on_pushButtonMainchain_clicked();
@@ -72,19 +70,11 @@ private Q_SLOTS:
 
     void on_deleteButton_clicked();
 
-    void on_pushButtonCreateBlock_clicked();
-
-    void on_pushButtonSendCriticalRequest_clicked();
-
-    void on_pushButtonSubmitBlock_clicked();
-
     void on_spinBoxRefreshInterval_valueChanged(int n);
 
     void RefreshBMM();
 
     void on_pushButtonConfigureBMM_clicked();
-
-    void ResetTrainWarningSleep();
 
     void ShowRestartPage();
 
@@ -112,11 +102,23 @@ private Q_SLOTS:
 
     void on_pushButtonNewBMM_clicked();
 
+    void on_checkBoxOnlyMyWTs_toggled(bool fChecked);
+
+    void WTContextMenu(const QPoint& point);
+
+    void CopyWTID();
+
+    void RequestRefund();
+
+    void on_pushButtonManualBMM_clicked();
+
+    void CheckConnection();
+
 private:
     Ui::SidechainPage *ui;
 
-    WalletModel *walletModel;
-    ClientModel *clientModel;
+    WalletModel *walletModel = nullptr;
+    ClientModel *clientModel = nullptr;
 
     const PlatformStyle *platformStyle;
 
@@ -125,14 +127,14 @@ private:
     SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;
     SidechainWTTableModel *unspentWTModel;
 
+    QMessageBox* connectionErrorMessage;
+
+    QAction *wtRefundAction;
+    QAction *copyWTIDAction;
+    QMenu *wtContextMenu;
+
     QTimer *bmmTimer;
-    QTimer *trainTimer;
-    QTimer *trainRetryTimer;
-    QTimer *trainWarningSleepTimer;
-
-    bool fSleepTrainWarning;
-
-    QMessageBox *trainErrorMessageBox;
+    QTimer *connectionCheckTimer;
 
     int nBlocks;
 
@@ -142,13 +144,7 @@ private:
 
     bool validateMainchainFeeAmount();
 
-    void generateAddress();
-
-    bool CreateBMMBlock(CBlock& block, QString error = "");
-
-    uint256 SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain);
-
-    bool SubmitBMMBlock(const CBlock& block);
+    std::string GenerateAddress(const std::string& strLabel = "");
 
     // Handle networking being enabled / disabled
     void UpdateNetworkActive(bool fMainchainConnected);
@@ -167,6 +163,10 @@ private:
     void StartBMM();
 
     void StopBMM();
+
+Q_SIGNALS:
+    void OnlyMyWTsToggled(bool fChecked);
+    void WTPrimeBannerUpdate(QString str);
 };
 
 #endif // SIDECHAINPAGE_H

@@ -17,6 +17,7 @@
 #include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/util.h>
+#include <sidechain.h>
 #include <sidechainclient.h>
 #include <timedata.h>
 #include <txdb.h>
@@ -679,6 +680,29 @@ UniValue updatemainblockcache(const JSONRPCRequest& request)
     return result;
 }
 
+UniValue listmywithdrawals(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "listmywithdrawals\n"
+            "\nArguments: None\n"
+            "\nList your sidechain withdrawals.\n"
+            "\nResult:\n"
+            "id             (string)\n"
+        );
+
+    std::set<uint256> setWTID = bmmCache.GetCachedWTID();
+
+    UniValue result(UniValue::VARR);
+    for (const uint256& u : setWTID) {
+        UniValue obj(UniValue::VOBJ);
+        obj.pushKV("id", u.ToString());
+        result.push_back(obj);
+    }
+
+    return result;
+}
+
 UniValue rebroadcastwtprimehex(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
@@ -705,6 +729,35 @@ UniValue rebroadcastwtprimehex(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
+UniValue getwt(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 1)
+        throw std::runtime_error(
+            "getwt\n"
+            "\nArguments:\n"
+            "1. \"id (string, required) the WT (withdrawal) ID\"\n"
+            "\nGet WT information\n"
+        );
+
+    uint256 id = uint256S(request.params[0].get_str());
+    if (id.IsNull())
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid WT ID!");
+
+    SidechainWT wt;
+    if (!psidechaintree->GetWT(id, wt))
+        throw JSONRPCError(RPC_MISC_ERROR, "WT does not exist!");
+
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("destination", wt.strDestination);
+    result.pushKV("refunddestination", wt.strRefundDestination);
+    result.pushKV("amount", wt.amount);
+    result.pushKV("amountmainchainfee",wt.mainchainFee );
+    result.pushKV("status", wt.GetStatusStr());
+    result.pushKV("hashblindwtx", wt.hashBlindWTX.ToString());
+
+    return result;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           argNames
   //  --------------------- ------------------------    -----------------------    ----------
@@ -728,7 +781,9 @@ static const CRPCCommand commands[] =
     { "sidechain",          "getmainchainblockhash",    &getmainchainblockhash,    {"height"}},
     { "sidechain",          "verifymainblockcache",     &verifymainblockcache,     {}},
     { "sidechain",          "updatemainblockcache",     &updatemainblockcache,     {}},
+    { "sidechain",          "listmywithdrawals",        &listmywithdrawals,        {}},
     { "sidechain",          "rebroadcastwtprimehex",    &rebroadcastwtprimehex,    {}},
+    { "sidechain",          "getwt",                    &getwt,                    {"id"}},
 
 };
 

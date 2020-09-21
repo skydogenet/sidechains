@@ -103,6 +103,9 @@ void WalletView::setBitcoinGUI(BitcoinGUI *gui)
 
         // Pass through transaction notifications
         connect(this, SIGNAL(incomingTransaction(QString,int,CAmount,QString,QString,QString)), gui, SLOT(incomingTransaction(QString,int,CAmount,QString,QString,QString)));
+
+        // Pass updates to the WT^ banner from the sidechain page to the BitcoinGUI instance
+        connect(sidechainPage, SIGNAL(WTPrimeBannerUpdate(QString)), gui, SLOT(WTPrimeBannerUpdated(QString)));
     }
 }
 
@@ -222,11 +225,6 @@ void WalletView::gotoVerifyMessageTab(QString addr)
 void WalletView::gotoSidechainPage()
 {
     setCurrentWidget(sidechainPage);
-}
-
-void WalletView::refreshSidechainTrainSchedule()
-{
-    sidechainPage->RefreshTrain();
 }
 
 bool WalletView::handlePaymentRequest(const SendCoinsRecipient& recipient)

@@ -10,6 +10,7 @@
 #include <qt/confgeneratordialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
+#include <qt/manualbmmdialog.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/sidechainbmmtablemodel.h>
@@ -37,6 +38,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QMenu>
 #include <QMessageBox>
 #include <QStackedWidget>
 #include <QScrollBar>
@@ -53,9 +55,7 @@
 #include <qrencode.h>
 #endif
 
-static const int nTrainRefresh = 30 * 1000; // 30 seconds
-static const int nRetryRefresh = 30 * 1000; // 30 seconds
-static const int nTrainWarningSleep = 30 * 1000; // 60 seconds
+static const int nConnectionCheckInterval = 30 * 1000; // 30 seconds
 
 static const int PAGE_DEFAULT_INDEX = 0;
 static const int PAGE_RESTART_INDEX = 1;
@@ -70,6 +70,21 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
 {
     ui->setupUi(this);
 
+    // Connection error message box
+    connectionErrorMessage = new QMessageBox(this);
+    connectionErrorMessage->setDefaultButton(QMessageBox::Ok);
+    connectionErrorMessage->setWindowTitle("Failed to connect to the mainchain!");
+    std::string str;
+    str = "The sidechain has failed to connect to the mainchain!\n\n";
+    str += "If this is your first time running the sidechain ";
+    str += "please visit the \"Parent Chain\" tab.\n\n";
+    str += "This may also be due to configuration issues. ";
+    str += "Please check that you have set up configuration files.\n\n";
+    str += "Also make sure that the mainchain node is running!\n\n";
+    str += "Networking will be disabled until the connection is restored\n\n";
+    str += "Will retry in a few seconds after you close this window...\n";
+    connectionErrorMessage->setText(QString::fromStdString(str));
+
     // Initialize configuration generator dialog - only for the conf page of
     // the stacked widget. Clicking on "redo mainchain connection" will spawn
     // its own instance.
@@ -80,43 +95,34 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     bmmTimer = new QTimer(this);
     connect(bmmTimer, SIGNAL(timeout()), this, SLOT(RefreshBMM()));
 
-    // Iniitialize and start the train timer - refresh number of blocks left on
-    // mainchain until another WT^ can be proposed)
-    trainTimer = new QTimer(this);
-    connect(trainTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
-    trainTimer->start(nTrainRefresh);
-
-    // A timer to retry updating the train schedule if it fails
-    fSleepTrainWarning = false;
-    trainRetryTimer = new QTimer(this);
-    connect(trainRetryTimer, SIGNAL(timeout()), this, SLOT(RefreshTrain()));
-
-    // A sleep timer for the train update warning so that it isn't displayed
-    // a bunch of times quickly when blocks are connected
-    trainWarningSleepTimer = new QTimer(this);
-    connect(trainWarningSleepTimer, SIGNAL(timeout()), this, SLOT(ResetTrainWarningSleep()));
-
-    // Initialize the train error message box
-    trainErrorMessageBox = new QMessageBox(this);
-    trainErrorMessageBox->setDefaultButton(QMessageBox::Ok);
-    trainErrorMessageBox->setWindowTitle("Failed to connect to the mainchain!");
-    std::string str;
-    str = "The sidechain has failed to connect to the mainchain!\n\n";
-    str += "If this is your first time running the sidechain ";
-    str += "please visit the \"Parent Chain\" tab.\n\n";
-    str += "This may also be due to configuration issues. ";
-    str += "Please check that you have set up configuration files.\n\n";
-    str += "Also make sure that the mainchain node is running!\n\n";
-    str += "Networking will be disabled until the connection is restored\n\n";
-    str += "Will retry in a few seconds after you close this window...\n";
-
-    trainErrorMessageBox->setText(QString::fromStdString(str));
+    // Initialize and start the connection check timer
+    connectionCheckTimer = new QTimer(this);
+    connect(connectionCheckTimer, SIGNAL(timeout()), this, SLOT(CheckConnection()));
+    connectionCheckTimer->start(nConnectionCheckInterval);
 
     // Initialize pending WT table model
     unspentWTModel = new SidechainWTTableModel(this);
 
     // Initialize BMM table model;
     bmmModel = new SidechainBMMTableModel(this);
+
+    // Pending WT table custom context menu
+
+    ui->tableViewUnspentWT->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    wtContextMenu = new QMenu(this);
+    wtContextMenu->setObjectName("wtContextMenu");
+
+    copyWTIDAction = new QAction(tr("Copy Withdrawal ID"), this);
+    wtRefundAction = new QAction(tr("Cancel Withdrawal"), this);
+
+    wtContextMenu->addAction(copyWTIDAction);
+    wtContextMenu->addAction(wtRefundAction);
+
+    connect(ui->tableViewUnspentWT, SIGNAL(customContextMenuRequested(QPoint)), this,
+            SLOT(WTContextMenu(QPoint)));
+    connect(copyWTIDAction, SIGNAL(triggered()), this, SLOT(CopyWTID()));
+    connect(wtRefundAction, SIGNAL(triggered()), this, SLOT(RequestRefund()));
 
     // Table style
 
@@ -166,16 +172,17 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->tableViewBMM->setModel(bmmModel);
 
     // Set BMM table column sizes
-    ui->tableViewBMM->setColumnWidth(0, COLUMN_STATUS);
-    ui->tableViewBMM->setColumnWidth(1, COLUMN_TXNS);
-    ui->tableViewBMM->setColumnWidth(2, COLUMN_FEES);
-    ui->tableViewBMM->setColumnWidth(3, COLUMN_BMM_AMOUNT);
-    ui->tableViewBMM->setColumnWidth(4, COLUMN_BMM_TXID);
-    ui->tableViewBMM->setColumnWidth(5, COLUMN_SIDECHAIN_HEIGHT);
-    ui->tableViewBMM->setColumnWidth(6, COLUMN_MAINCHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(0, COLUMN_BMM_TXID);
+    ui->tableViewBMM->setColumnWidth(1, COLUMN_MAINCHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(2, COLUMN_SIDECHAIN_HEIGHT);
+    ui->tableViewBMM->setColumnWidth(3, COLUMN_TXNS);
+    ui->tableViewBMM->setColumnWidth(4, COLUMN_FEES);
+    ui->tableViewBMM->setColumnWidth(5, COLUMN_BMM_AMOUNT);
+    ui->tableViewBMM->setColumnWidth(6, COLUMN_PROFIT);
+    ui->tableViewBMM->setColumnWidth(7, COLUMN_STATUS);
 
-    generateAddress();
-    RefreshTrain();
+    std::string strAddress = GenerateAddress("Sidechain Deposit");
+    ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
 
     connect(ui->checkBoxAutoWTPrimeRefresh, SIGNAL(stateChanged(int)), this,
             SLOT(on_checkBoxAutoWTPrimeRefresh_changed(int)));
@@ -203,7 +210,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
         ui->stackedWidget->setCurrentIndex(PAGE_DEFAULT_INDEX);
     }
 
-    ui->bmmAmount->setValue(DEFAULT_CRITICAL_DATA_AMOUNT);
+    ui->bmmBidAmount->setValue(DEFAULT_CRITICAL_DATA_AMOUNT);
 
     ui->payAmount->setValue(0);
     ui->feeAmount->setValue(0);
@@ -225,13 +232,13 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     connect(ui->mainchainFeeAmount, SIGNAL(valueChanged()),
             this, SLOT(UpdateWTTotal()));
 
-    // Style wealth tab. This isn't a usable tab (right now) and is actually
+    // Setup wealth tab. This isn't a usable tab (right now) and is actually
     // just a trick to show a label next to the tabs on the tab widget. There's
     // also an unused (hidden) spacer tab to move the wealth label over a bit.
-
     // TODO consts for tab index
-    // Hide the spacer tab that seperates the label we have inserted from the
+    // Hide the spacer tab that separates the label we have inserted from the
     // other tabs. We have a custom style sheet for disabled tabs.
+    ui->tabWidgetMain->setStyleSheet("QTabBar::tab:disabled {background: transparent;}");
     ui->tabWidgetMain->setTabEnabled(3, false);
     // Set the total wealth tab disabled as well
     ui->tabWidgetMain->setTabEnabled(4, false);
@@ -251,8 +258,8 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->pushButtonWTHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->pasteButton->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
     ui->deleteButton->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
-    ui->pushButtonNew->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
-    ui->pushButtonCopy->setIcon(platformStyle->SingleColorIcon(":/icons/spinner-000"));
+    ui->pushButtonCopy->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
+    ui->pushButtonNew->setIcon(platformStyle->SingleColorIcon(":/movies/spinner-000"));
 
     // Main sidechain tab widget
     ui->tabWidgetMain->setTabIcon(0, platformStyle->SingleColorIcon(":/icons/tx_inout"));
@@ -305,7 +312,7 @@ void SidechainPage::generateQR(std::string data)
 
 void SidechainPage::setWalletModel(WalletModel *model)
 {
-    this->walletModel = model;
+    walletModel = model;
     wtPrimeHistoryDialog->setWalletModel(model);
     unspentWTModel->setWalletModel(model);
     bmmModel->setWalletModel(model);
@@ -337,9 +344,9 @@ void SidechainPage::setClientModel(ClientModel *model)
     if (model)
     {
         connect(model, SIGNAL(numBlocksChanged(int, QDateTime, double, bool)),
-                this, SLOT(setNumBlocks(int, QDateTime, double, bool)));
+                this, SLOT(setNumBlocks(int)));
 
-        nBlocks = model->getNumBlocks();
+        setNumBlocks(model->getNumBlocks());
     }
 }
 
@@ -351,17 +358,83 @@ void SidechainPage::setBalance(const CAmount& balance, const CAmount& unconfirme
     ui->available->setText(BitcoinUnits::formatWithUnit(unit, balance, false, BitcoinUnits::separatorAlways));
 }
 
-void SidechainPage::setNumBlocks(const int nBlocksIn, const QDateTime& time,
-        const double progress, const bool fHeader)
+void SidechainPage::setNumBlocks(const int nBlocksIn)
 {
-    if (ui->checkBoxAutoWTPrimeRefresh->isChecked()) {
-        // Update to the current WT^
-        UpdateToLatestWTPrime(false /* fRequested */);
-    }
+    if (!clientModel)
+        return;
 
     UpdateSidechainWealth();
 
     nBlocks = nBlocksIn;
+
+    // Check on updates to current / next WT^
+
+    uint256 hashLatest;
+    if (!psidechaintree->GetLastWTPrimeHash(hashLatest)) {
+        // Update the next bundle label on the transfer tab
+        ui->labelNextBundle->setText("Waiting for withdrawals.");
+
+        // If there hasn't been a WT^ created yet, display message on banner
+        QString str = "WT^: None yet. Waiting for withdrawals.";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+
+    SidechainWTPrime wtPrime;
+    if (!psidechaintree->GetWTPrime(hashLatest, wtPrime)) {
+        ui->labelNextBundle->setText("Error...");
+
+        QString str = "WT^: Error...";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+
+    // Update UI to the latest WT^ if wanted
+    if (ui->checkBoxAutoWTPrimeRefresh->isChecked()) {
+        // Update to the current WT^
+        SetCurrentWTPrime(hashLatest.ToString(), false);
+    }
+
+    if (wtPrime.status == WTPRIME_FAILED) {
+        // If the last WT^ failed, display how many blocks should be remaining
+        // in the cool down period before the next WT^
+        int nWaitPeriod = WTPRIME_FAIL_WAIT_PERIOD - (nBlocksIn - wtPrime.nFailHeight);
+        if (nWaitPeriod < 0)
+            nWaitPeriod = 0;
+
+        ui->labelNextBundle->setText(QString::number(nWaitPeriod) + " blocks.");
+
+        QString str;
+        str = "WT^: None right now. Next in: ";
+        str += QString::number(nWaitPeriod);
+        str += " blocks.";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+    else
+    if (wtPrime.status == WTPRIME_SPENT) {
+        ui->labelNextBundle->setText("Waiting for withdrawals.");
+        QString str = "WT^: None right now. Waiting for withdrawals.";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+    else
+    if (wtPrime.status == WTPRIME_CREATED) {
+        // If the WT^ has created status, display the required work score minus
+        // the current work score.
+        SidechainClient client;
+        int nWorkScore = 0;
+        if (client.GetWorkScore(hashLatest, nWorkScore)) {
+            ui->labelNextBundle->setText(QString::number(MAINCHAIN_WTPRIME_MIN_WORKSCORE - nWorkScore) + " blocks.");
+        } else {
+            ui->labelNextBundle->setText(QString::number(nWorkScore) + " blocks.");
+        }
+
+        QString strBanner = "WT^: ";
+        strBanner += QString::fromStdString(hashLatest.ToString());
+        Q_EMIT WTPrimeBannerUpdate(strBanner);
+        return;
+    }
 }
 
 void SidechainPage::on_pushButtonMainchain_clicked()
@@ -381,7 +454,8 @@ void SidechainPage::on_pushButtonCopy_clicked()
 
 void SidechainPage::on_pushButtonNew_clicked()
 {
-    generateAddress();
+    ui->lineEditDepositAddress->setText(
+            QString::fromStdString(GenerateAddress("Sidechain Deposit")));
 }
 
 void SidechainPage::on_pushButtonWT_clicked()
@@ -437,8 +511,19 @@ void SidechainPage::on_pushButtonWT_clicked()
     CTxDestination dest = DecodeDestination(strDest, true);
     if (!IsValidDestination(dest)) {
         // Invalid address message box
-        messageBox.setWindowTitle("Invalid destination!");
+        messageBox.setWindowTitle("Invalid withdrawal destination!");
         messageBox.setText("Check the address you have entered and try again.");
+        messageBox.exec();
+        return;
+    }
+
+    // Generate refund destination
+    std::string strRefundDest = GenerateAddress("WT Refund");
+    CTxDestination refundDest = DecodeDestination(strRefundDest, false);
+    if (!IsValidDestination(refundDest)) {
+        // Invalid address message box
+        messageBox.setWindowTitle("Invalid refund destination!");
+        messageBox.setText("Check the refund address you have entered and try again.");
         messageBox.exec();
         return;
     }
@@ -448,7 +533,8 @@ void SidechainPage::on_pushButtonWT_clicked()
     CAmount feeAmount = ui->feeAmount->value();
     CAmount mainchainFeeAmount = ui->mainchainFeeAmount->value();
     uint256 txid;
-    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strError, txid)) {
+    uint256 wtid;
+    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strRefundDest, strError, txid, wtid)) {
         // Create burn transaction error message box
         messageBox.setWindowTitle("Creating withdraw transaction failed!");
         QString createError = "Error creating transaction: ";
@@ -458,6 +544,9 @@ void SidechainPage::on_pushButtonWT_clicked()
         messageBox.exec();
         return;
     }
+
+    // Cache users WT ID
+    bmmCache.CacheWTID(wtid);
 
     // Successful withdraw message box
     messageBox.setWindowTitle("Withdraw transaction created!");
@@ -522,7 +611,16 @@ void SidechainPage::on_pushButtonWTHelp_clicked()
         "mainchain txn fee is too low, it may not be included in the "
         "withdrawal-constructor. The constructor automatically sorts all "
         "withdrawals by their mainchain fee/byte rate — you can view other "
-        "withdrawal-candidates on the Withdrawal Explorer page.";
+        "withdrawal-candidates on the Withdrawal Explorer page.\n\n"
+
+        " * You can cancel the withdrawal via the withdrawal explorer."
+        " This costs a second sidechain txn fee.\n\n"
+        " * Once included in a Bundle, withdrawals cannot be canceled."
+        " Bundles succeed or fail as a group.\n\n"
+        " * If a bundle fails, its withdrawals reenter the pool of Candidate"
+        " WTs. A grace period of 144 SC blocks (~24 hours) allows frustrated"
+        " users to bail out of the withdrawal process (and reclaim their SC"
+        " coins).\n";
 
     QMessageBox messageBox;
     messageBox.setIcon(QMessageBox::Information);
@@ -623,16 +721,17 @@ bool SidechainPage::validateMainchainFeeAmount()
     return true;
 }
 
-void SidechainPage::generateAddress()
+std::string SidechainPage::GenerateAddress(const std::string& strLabel)
 {
     if (vpwallets.empty())
-        return;
+        return "";
 
     LOCK2(cs_main, vpwallets[0]->cs_wallet);
 
     vpwallets[0]->TopUpKeyPool();
 
     CPubKey newKey;
+    std::string strAddress = "";
     if (vpwallets[0]->GetKeyFromPool(newKey)) {
         // We want a "legacy" type address
         OutputType type = OUTPUT_TYPE_LEGACY;
@@ -642,168 +741,14 @@ void SidechainPage::generateAddress()
         vpwallets[0]->LearnRelatedScripts(newKey, type);
 
         // Generate QR code
-        std::string strAddress = EncodeDestination(dest);
+        strAddress = EncodeDestination(dest);
         generateQR(strAddress);
 
-        ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
-
         // Add to address book
-        vpwallets[0]->SetAddressBook(dest, "Sidechain Deposit", "receive");
-    }
-    // TODO display error if we didn't get a key
-}
-
-void SidechainPage::on_pushButtonCreateBlock_clicked()
-{
-    QMessageBox messageBox;
-    messageBox.setDefaultButton(QMessageBox::Ok);
-
-    CBlock block;
-    QString error = "";
-    if (!CreateBMMBlock(block, error)) {
-        messageBox.setWindowTitle("Error creating BMM block!");
-        messageBox.setText(error);
-        messageBox.exec();
-        return;
+        vpwallets[0]->SetAddressBook(dest, strLabel, "receive");
     }
 
-    std::stringstream ss;
-    ss << "BMM blinded block hash (h*):\n" << block.GetBlindHash().ToString();
-    ss << std::endl;
-    ss << std::endl;
-    ss << "BMM Block:\n" << block.ToString() << std::endl;
-
-    ui->textBrowser->setText(QString::fromStdString(ss.str()));
-    ui->lineEditManualBMMHash->setText(QString::fromStdString(block.GetBlindHash().ToString()));
-}
-
-void SidechainPage::on_pushButtonSendCriticalRequest_clicked()
-{
-    QMessageBox messageBox;
-    messageBox.setDefaultButton(QMessageBox::Ok);
-    messageBox.setWindowTitle("Error sending BMM request to mainchain!");
-
-    if (ui->lineEditManualBMMHash->text().isEmpty()) {
-        messageBox.setText("You must click \"Generate BMM Block\" first!");
-        messageBox.exec();
-        return;
-    }
-
-    uint256 hashBMM = uint256S(ui->lineEditManualBMMHash->text().toStdString());
-    if (hashBMM.IsNull()) {
-        messageBox.setText("Invalid BMM block hash (h*)!");
-        messageBox.exec();
-        return;
-    }
-
-    if (ui->lineEditManualMainchainBlockHash->text().isEmpty()) {
-        messageBox.setText("You must enter the current mainchain chain tip block hash!");
-        messageBox.exec();
-        return;
-    }
-
-    uint256 hashMainBlock = uint256S(ui->lineEditManualMainchainBlockHash->text().toStdString());
-    if (hashMainBlock.IsNull()) {
-        messageBox.setText("Invalid previous mainchain block hash!");
-        messageBox.exec();
-        return;
-    }
-
-    uint256 hashTXID = SendBMMRequest(hashBMM, hashMainBlock);
-
-    if (hashTXID.IsNull()) {
-        messageBox.setText("Failed to create BMM request on mainchain!");
-        messageBox.exec();
-        return;
-    }
-
-    // Show result
-    messageBox.setWindowTitle("BMM request created on mainchain!");
-    QString result = "txid: ";
-    result += QString::fromStdString(hashTXID.ToString());
-    messageBox.setText(result);
-    messageBox.exec();
-    return;
-
-}
-
-void SidechainPage::on_pushButtonSubmitBlock_clicked()
-{
-    QMessageBox messageBox;
-    messageBox.setDefaultButton(QMessageBox::Ok);
-
-    uint256 hashBlock = uint256S(ui->lineEditBMMHash->text().toStdString());
-    CBlock block;
-
-    if (!bmmCache.GetBMMBlock(hashBlock, block)) {
-        // Block not stored message box
-        messageBox.setWindowTitle("Block not found!");
-        messageBox.setText("You do not have this BMM block cached.");
-        messageBox.exec();
-        return;
-    }
-
-    // Get user input h* and coinbase hex
-    std::string strProof = ui->lineEditProof->text().toStdString();
-    CMutableTransaction mtx;
-    if (!DecodeHexTx(mtx, ui->lineEditCoinbaseHex->text().toStdString())) {
-        // Invalid transaction hex input message box
-        messageBox.setWindowTitle("Invalid transaction hex!");
-        messageBox.setText("The transaction hex is invalid.");
-        messageBox.exec();
-        return;
-    }
-
-    CTransaction criticalTx(mtx);
-    block.criticalProof = strProof;
-    block.criticalTx = criticalTx;
-
-    if (SubmitBMMBlock(block)) {
-        // Block submitted message box
-        messageBox.setWindowTitle("Block Submitted!");
-        QString result = "BMM Block hash:\n";
-        result += QString::fromStdString(block.GetHash().ToString());
-        result += "\n\n";
-        result += "BMM (Blinded) hash: \n";
-        result += QString::fromStdString(block.GetBlindHash().ToString());
-        result += "\n";
-        messageBox.setText(result);
-        messageBox.exec();
-        return;
-    } else {
-        // Failed to submit block submitted message box
-        messageBox.setWindowTitle("Failed to submit block!");
-        messageBox.setText("The submitted block is invalid.");
-        messageBox.exec();
-    }
-}
-
-bool SidechainPage::CreateBMMBlock(CBlock& block, QString error)
-{
-    SidechainClient client;
-    std::string strError = "";
-    bool fCreated = client.CreateBMMBlock(block, strError);
-
-    error = QString::fromStdString(strError);
-    return fCreated;
-}
-
-uint256 SidechainPage::SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain)
-{
-    // TODO use user input bmm amount
-    SidechainClient client;
-    uint256 hashTXID = client.SendBMMCriticalDataRequest(hashBMM, hashBlockMain, 0, 0);
-    return hashTXID;
-}
-
-bool SidechainPage::SubmitBMMBlock(const CBlock& block)
-{
-    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    if (!ProcessNewBlock(Params(), shared_pblock, true, NULL)) {
-        return false;
-    }
-
-    return true;
+    return strAddress;
 }
 
 void SidechainPage::RefreshBMM()
@@ -812,7 +757,7 @@ void SidechainPage::RefreshBMM()
     messageBox.setDefaultButton(QMessageBox::Ok);
 
     // Get & check the BMM amount
-    CAmount amount = ui->bmmAmount->value();
+    CAmount amount = ui->bmmBidAmount->value();
     if (amount <= 0) {
         StopBMM();
 
@@ -845,6 +790,8 @@ void SidechainPage::RefreshBMM()
     std::vector<uint256> vOrphan;
     if (!UpdateMainBlockHashCache(fReorg, vOrphan))
     {
+        StopBMM();
+        UpdateNetworkActive(false /* fMainchainConnected */);
         messageBox.setWindowTitle("Automated BMM failed - couldn't update mainchain block cache!");
         std::string str;
         str = "The sidechain has failed to update the mainchain block cache!\n\n";
@@ -922,40 +869,10 @@ void SidechainPage::RefreshBMM()
     }
 }
 
-void SidechainPage::RefreshTrain()
-{
-    SidechainClient client;
-    int nMainchainBlocks = 0;
-    if (!client.GetBlockCount(nMainchainBlocks)) {
-        UpdateNetworkActive(false /* fMainchainConnected */);
-        trainTimer->stop();
-        if (!fSleepTrainWarning && ui->stackedWidget->currentIndex() != PAGE_CONFIG_INDEX
-                && ui->stackedWidget->currentIndex() != PAGE_RESTART_INDEX) {
-            trainErrorMessageBox->close();
-            trainErrorMessageBox->exec();
-            fSleepTrainWarning = true;
-            trainWarningSleepTimer->start(nTrainWarningSleep);
-        }
-        trainRetryTimer->start(nRetryRefresh);
-        ui->train->setText("? - not connected to mainchain");
-        return;
-    }
-
-    UpdateNetworkActive(true /* fMainchainConnected */);
-
-    // If the retry timer was running we want to stop it now that a connection
-    // has been established
-    trainRetryTimer->stop();
-    trainTimer->start(nTrainRefresh);
-
-    std::string strTrain = "N/A";
-    ui->train->setText(QString::fromStdString(strTrain));
-}
-
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
 {
     // Check if the StartBMM button has been pushed
-    if (ui->pushButtonStartBMM->isEnabled()) {
+    if (!ui->pushButtonStartBMM->isEnabled()) {
         // Restart BMM with the new refresh interval
         StopBMM();
         StartBMM();
@@ -966,12 +883,6 @@ void SidechainPage::on_pushButtonConfigureBMM_clicked()
 {
     ConfGeneratorDialog *dialog = new ConfGeneratorDialog(this);
     dialog->exec();
-}
-
-void SidechainPage::ResetTrainWarningSleep()
-{
-    trainWarningSleepTimer->stop();
-    fSleepTrainWarning = false;
 }
 
 void SidechainPage::ShowRestartPage()
@@ -998,13 +909,14 @@ void SidechainPage::on_pushButtonShowPastWTPrimes_clicked()
     wtPrimeHistoryDialog->show();
 }
 
-void SidechainPage::UpdateNetworkActive(bool fMainchainConnected) {
+void SidechainPage::UpdateNetworkActive(bool fMainchainConnected)
+{
     // Enable or disable networking based on connection to mainchain
     SetNetworkActive(fMainchainConnected, "Sidechain page update.");
 
     if (fMainchainConnected) {
         // Close the connection warning popup if it is open
-        trainErrorMessageBox->close();
+        connectionErrorMessage->close();
     }
     // Update the GUI to show or hide the network connection warning.
     // Only switch to the network warning if the configuration warning isn't
@@ -1051,6 +963,9 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
 
 void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequested)
 {
+    if (!walletModel)
+        return;
+
     // If the user didn't request this update (fRequested) themselves, don't
     // show error messages
 
@@ -1223,6 +1138,29 @@ void SidechainPage::StopBMM()
     ui->pushButtonNewBMM->setEnabled(false);
 }
 
+void SidechainPage::CheckConnection()
+{
+    bool fConnected = CheckMainchainConnection();
+    if (!fConnected) {
+        UpdateNetworkActive(false /* fMainchainConnected */);
+        connectionCheckTimer->stop();
+        if (ui->stackedWidget->currentIndex() != PAGE_CONFIG_INDEX
+                && ui->stackedWidget->currentIndex() != PAGE_RESTART_INDEX) {
+            connectionErrorMessage->close();
+            connectionErrorMessage->exec();
+
+            // Start the timer again with a longer interval
+            connectionCheckTimer->start(nConnectionCheckInterval * 2);
+        }
+    } else {
+        // Set the timer to the normal interval
+        connectionCheckTimer->stop();
+        connectionCheckTimer->start(nConnectionCheckInterval);
+
+        UpdateNetworkActive(true /* fMainchainConnected */);
+    }
+}
+
 void SidechainPage::ClearWTPrimeExplorer()
 {
     ui->tableWidgetWTs->setRowCount(0);
@@ -1241,20 +1179,19 @@ void SidechainPage::ClearWTPrimeExplorer()
 
 void SidechainPage::UpdateSidechainWealth()
 {
+    if (!walletModel)
+        return;
+
+    CAmount amountCTIP = CAmount(0);
+
     SidechainDeposit deposit;
-    if (!psidechaintree->GetLastDeposit(deposit)) {
-        // TODO Error
-        return;
-    }
-    if (deposit.n >= deposit.dtx.vout.size()) {
-        // TODO Error
-        return;
+    if (psidechaintree->GetLastDeposit(deposit)) {
+        if (deposit.n < deposit.dtx.vout.size())
+            amountCTIP = deposit.dtx.vout[deposit.n].nValue;
     }
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
-
-    CAmount amountCtip = deposit.dtx.vout[deposit.n].nValue;
-    QString wealth = BitcoinUnits::formatWithUnit(unit, amountCtip, false,
+    QString wealth = BitcoinUnits::formatWithUnit(unit, amountCTIP, false,
             BitcoinUnits::separatorAlways);
 
     QString label = "Total sidechain wealth: ";
@@ -1278,7 +1215,7 @@ void SidechainPage::updateDisplayUnit()
 
     int nDisplayUnit = walletModel->getOptionsModel()->getDisplayUnit();
 
-    ui->bmmAmount->setDisplayUnit(nDisplayUnit);
+    ui->bmmBidAmount->setDisplayUnit(nDisplayUnit);
     ui->payAmount->setDisplayUnit(nDisplayUnit);
     ui->feeAmount->setDisplayUnit(nDisplayUnit);
     ui->mainchainFeeAmount->setDisplayUnit(nDisplayUnit);
@@ -1290,4 +1227,175 @@ void SidechainPage::on_pushButtonNewBMM_clicked()
         bmmCache.ClearBMMBlocks();
         RefreshBMM();
     }
+}
+
+void SidechainPage::on_checkBoxOnlyMyWTs_toggled(bool fChecked)
+{
+    Q_EMIT(OnlyMyWTsToggled(fChecked));
+}
+
+void SidechainPage::WTContextMenu(const QPoint& point)
+{
+    QModelIndex index = ui->tableViewUnspentWT->indexAt(point);
+    QModelIndexList selection = ui->tableViewUnspentWT->selectionModel()->selectedRows(0);
+    if (selection.empty())
+        return;
+
+    if (index.isValid()) {
+        bool fMine = selection.at(0).data(SidechainWTTableModel::IsMineRole).toBool();
+        wtRefundAction->setEnabled(fMine);
+        wtContextMenu->popup(ui->tableViewUnspentWT->viewport()->mapToGlobal(point));
+    }
+}
+
+void SidechainPage::CopyWTID()
+{
+    GUIUtil::copyEntryData(ui->tableViewUnspentWT, 0, SidechainWTTableModel::WTIDRole);
+}
+
+void SidechainPage::RequestRefund()
+{
+    if (!ui->tableViewUnspentWT->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewUnspentWT->selectionModel()->selectedRows(0);
+    if (selection.empty())
+        return;
+
+    // Get the WT ID from the model
+    uint256 wtID;
+    wtID.SetHex(selection.at(0).data(SidechainWTTableModel::WTIDRole).toString().toStdString());
+
+    QMessageBox messageBox;
+    messageBox.setDefaultButton(QMessageBox::Ok);
+
+    // Check for active wallet
+
+    if (vpwallets.empty()) {
+        // No active wallet message box
+        messageBox.setWindowTitle("No active wallet found!");
+        messageBox.setText("You must have an active wallet to request a WT refund.");
+        messageBox.exec();
+        return;
+    }
+    if (vpwallets[0]->IsLocked()) {
+        // Locked wallet message box
+        messageBox.setWindowTitle("Wallet locked!");
+        messageBox.setText("Wallet must be unlocked.");
+        messageBox.exec();
+        return;
+    }
+
+    // Get WT
+    SidechainWT wt;
+    if (!psidechaintree->GetWT(wtID, wt)) {
+        messageBox.setWindowTitle("Failed to look up WT!");
+        messageBox.setText("Specified withdrawal not found in database.");
+        messageBox.exec();
+        return;
+    }
+
+    // Check WT status
+    if (wt.status != WT_UNSPENT) {
+        messageBox.setWindowTitle("Invalid WT status!");
+        messageBox.setText("WT must be unspent to refund.");
+        messageBox.exec();
+        return;
+    }
+
+    // Get refund address
+    CTxDestination dest = DecodeDestination(wt.strRefundDestination);
+    if (!IsValidDestination(dest)) {
+        messageBox.setWindowTitle("Failed to decode refund destination!");
+        messageBox.setText("Failed to decode refund destination address.");
+        messageBox.exec();
+        return;
+    }
+
+    // Double check that address is for KeyID
+    const CKeyID* id = boost::get<CKeyID>(&dest);
+    if (!id) {
+        messageBox.setWindowTitle("Invalid refund destination!");
+        messageBox.setText("The refund destination must be a \"legacy\" address.");
+        messageBox.exec();
+        return;
+    }
+
+    int unit = walletModel->getOptionsModel()->getDisplayUnit();
+
+    // Confirm that the user wants to create refund request
+    QMessageBox confirmMessage;
+    confirmMessage.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+    confirmMessage.setDefaultButton(QMessageBox::Cancel);
+    confirmMessage.setIcon(QMessageBox::Information);
+    confirmMessage.setWindowTitle("Confirm WT Refund Request");
+    QString refundMessage = "This will create a refund request for your withdrawal.\n\n";
+    refundMessage += BitcoinUnits::formatWithUnit(unit, wt.amount, false, BitcoinUnits::separatorAlways);
+    refundMessage += " will be refunded to your refund address:\n\n";
+    refundMessage += QString::fromStdString(wt.strRefundDestination);
+    refundMessage += "\n\n";
+    refundMessage += "This will cost an additional transaction fee.\n\n";
+    refundMessage += "Are you sure?";
+    confirmMessage.setText(refundMessage);
+
+    int nRes = confirmMessage.exec();
+    if (nRes == QMessageBox::Cancel)
+        return;
+
+    // Get private key for refund address from the wallet
+    CKey privKey;
+    {
+        LOCK2(cs_main, vpwallets[0]->cs_wallet);
+
+        if (!vpwallets[0]->GetKey(*id, privKey)) {
+            messageBox.setWindowTitle("Failed to get private key for refund destination!");
+            messageBox.setText("Cannot request refund for withdrawal created by another wallet.");
+            messageBox.exec();
+            return;
+        }
+    }
+
+    // Get refund message hash
+    uint256 hashMessage = GetWTRefundMessageHash(wtID);
+
+    // Sign refund message hash
+    std::vector<unsigned char> vchSig;
+    if (!privKey.SignCompact(hashMessage, vchSig)) {
+        messageBox.setWindowTitle("Failed to sign refund message!");
+        messageBox.setText("Failed to sign refund request.");
+        messageBox.exec();
+        return;
+    }
+
+    std::string strFail = "";
+    uint256 txid;
+    if (!vpwallets[0]->CreateWTRefundRequest(wtID, vchSig, strFail, txid)) {
+        // Create refund transaction error message box
+        messageBox.setWindowTitle("Creating refund request failed!");
+        QString error = "Error creating transaction: ";
+        error += QString::fromStdString(strFail);
+        error += "\n";
+        messageBox.setText(error);
+        messageBox.exec();
+        return;
+    }
+
+    // TODO cache refund request?
+    // Cache users WT ID
+    //bmmCache.CacheWTID(wtid);
+
+    // Successful refund request message box
+    messageBox.setWindowTitle("Refund request created!");
+    QString result = "txid: " + QString::fromStdString(txid.ToString());
+    result += "\n";
+    result += "Amount to be refunded: ";
+    result += BitcoinUnits::formatWithUnit(unit, wt.amount, false, BitcoinUnits::separatorAlways);
+    messageBox.setText(result);
+    messageBox.exec();
+}
+
+void SidechainPage::on_pushButtonManualBMM_clicked()
+{
+    ManualBMMDialog dialog;
+    dialog.exec();
 }

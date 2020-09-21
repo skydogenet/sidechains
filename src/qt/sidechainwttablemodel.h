@@ -26,6 +26,7 @@ struct WTTableObject
     QString destination;
     unsigned int nCumulativeWeight;
     uint256 id;
+    bool fMine;
 };
 
 class SidechainWTTableModel : public QAbstractTableModel
@@ -34,6 +35,14 @@ class SidechainWTTableModel : public QAbstractTableModel
 
 public:
     explicit SidechainWTTableModel(QObject *parent = 0);
+
+    enum RoleIndex {
+        /** WT ID */
+        WTIDRole = Qt::UserRole,
+        /** Is WT Mine? */
+        IsMineRole,
+    };
+
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
@@ -44,6 +53,7 @@ public:
 
 public Q_SLOTS:
     void UpdateModel();
+    void SetOnlyMyWTs(bool fChecked);
 
 private:
     QList<QVariant> model;
@@ -51,6 +61,8 @@ private:
 
     WalletModel *walletModel;
     ClientModel *clientModel;
+
+    bool fOnlyMyWTs;
 };
 
 #endif // BITCOIN_SIDECHAINWTTABLEMODEL_H

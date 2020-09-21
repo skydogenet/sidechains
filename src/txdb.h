@@ -19,6 +19,7 @@ class CBlockIndex;
 class CCoinsViewDBCursor;
 class SidechainObj;
 class SidechainDeposit;
+class SidechainTransfer;
 class SidechainWT;
 class SidechainWTPrime;
 class uint256;

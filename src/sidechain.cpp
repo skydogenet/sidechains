@@ -1,14 +1,14 @@
-// Copyright (c) 2017 The Bitcoin Core developers
+// Copyright (c) 2017-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "sidechain.h"
+#include <sidechain.h>
 
-#include "clientversion.h"
-#include "core_io.h"
-#include "hash.h"
-#include "streams.h"
-#include "utilmoneystr.h"
+#include <clientversion.h>
+#include <core_io.h>
+#include <hash.h>
+#include <streams.h>
+#include <utilmoneystr.h>
 
 #include <algorithm>
 #include <sstream>
@@ -29,23 +29,6 @@ uint256 SidechainObj::GetHash(void) const
         ret = SerializeHash(*(SidechainDeposit *) this);
 
     return ret;
-}
-
-CScript SidechainObj::GetScript(void) const
-{
-    CDataStream ds (SER_DISK, CLIENT_VERSION);
-    if (sidechainop == DB_SIDECHAIN_WT_OP)
-        ((SidechainWT *) this)->Serialize(ds);
-    else
-    if (sidechainop == DB_SIDECHAIN_WTPRIME_OP)
-        ((SidechainWTPrime *) this)->Serialize(ds);
-    else
-    if (sidechainop == DB_SIDECHAIN_DEPOSIT_OP)
-        ((SidechainDeposit *) this)->Serialize(ds);
-
-    CScript script;
-    script << std::vector<unsigned char>(ds.begin(), ds.end()) << OP_SIDECHAIN;
-    return script;
 }
 
 std::string SidechainObj::ToString(void) const
@@ -127,16 +110,11 @@ std::string SidechainDeposit::ToString() const
     return str.str();
 }
 
-SidechainObj *SidechainObjCtr(const CScript &script)
+SidechainObj* ParseSidechainObj(const std::vector<unsigned char>& vch)
 {
-    CScript::const_iterator pc = script.begin();
-    std::vector<unsigned char> vch;
-    opcodetype opcode;
-
-    if (!script.GetOp(pc, opcode, vch))
-        return NULL;
     if (vch.size() == 0)
         return NULL;
+
     const char *vch0 = (const char *) &vch.begin()[0];
     CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
@@ -157,6 +135,7 @@ SidechainObj *SidechainObjCtr(const CScript &script)
         obj->Unserialize(ds);
         return obj;
     }
+
     return NULL;
 }
 
@@ -192,3 +171,34 @@ void SelectUnspentWT(std::vector<SidechainWT>& vWT)
                 {return wt.status != WT_UNSPENT;}), vWT.end());
 
 }
+
+CScript SidechainObj::GetScript(void) const
+{
+    CDataStream ds (SER_DISK, CLIENT_VERSION);
+    if (sidechainop == DB_SIDECHAIN_WT_OP)
+        ((SidechainWT *) this)->Serialize(ds);
+    else
+    if (sidechainop == DB_SIDECHAIN_WTPRIME_OP)
+        ((SidechainWTPrime *) this)->Serialize(ds);
+    else
+    if (sidechainop == DB_SIDECHAIN_DEPOSIT_OP)
+        ((SidechainDeposit *) this)->Serialize(ds);
+
+    CScript scriptPubKey;
+
+    std::vector<unsigned char> vch(ds.begin(), ds.end());
+
+    // Add script header
+    scriptPubKey.resize(5 + vch.size());
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xAC;
+    scriptPubKey[2] = 0xDC;
+    scriptPubKey[3] = 0xF6;
+    scriptPubKey[4] = 0x6F;
+
+    // Add vch (serialization)
+    memcpy(&scriptPubKey[5], vch.data(), vch.size());
+
+    return scriptPubKey;
+}
+

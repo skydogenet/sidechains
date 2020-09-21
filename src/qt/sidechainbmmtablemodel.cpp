@@ -26,7 +26,7 @@ int SidechainBMMTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int SidechainBMMTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 7;
+    return 8;
 }
 
 QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
@@ -47,75 +47,86 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Qt::DisplayRole:
     {
-        // Status
+        // Mainchain txid
         if (col == 0) {
-            if (object.fFailed)
-                return QString("Failed");
-            else
-            if (object.fConnected)
-                return QString("Connected");
-            else
-                return QString("Created");
+            return QString::fromStdString(object.txid.ToString());
+        }
+        // Mainchain block height
+        if (col == 1) {
+            return QString::number(object.nMainchainHeight);
+        }
+        // Sidechain block height
+        if (col == 2) {
+            return QString::number(object.nSidechainHeight);
         }
         // ntxn
-        if (col == 1) {
+        if (col == 3) {
             return QString::number(object.ntxn);
         }
         // Total fees
-        if (col == 2) {
-            QString amount = BitcoinUnits::formatWithMainchainUnit(unit, object.amountTotalFees, false,
+        if (col == 4) {
+            QString amount = BitcoinUnits::formatWithUnit(unit, object.amountTotalFees, false,
                     BitcoinUnits::separatorAlways);
             return amount;
         }
         // BMM Amount (mainchain bribe)
-        if (col == 3) {
+        if (col == 5) {
             QString amount = BitcoinUnits::formatWithMainchainUnit(unit, object.amount, false,
                     BitcoinUnits::separatorAlways);
             return amount;
         }
-        // Mainchain txid
-        if (col == 4) {
-            return QString::fromStdString(object.txid.ToString());
-        }
-        // Sidechain block height
-        if (col == 5) {
-            return QString::number(object.nSidechainHeight);
-        }
-        // Mainchain block height
+        // Profit
         if (col == 6) {
-            return QString::number(object.nMainchainHeight);
+            CAmount profit = object.amountTotalFees - object.amount;
+            QString amount = BitcoinUnits::formatWithUnit(unit, profit, false,
+                    BitcoinUnits::separatorAlways);
+            return amount;
+        }
+        // Status
+        if (col == 7) {
+            if (object.fFailed)
+                return QString("Failed");
+            else
+            if (object.fConnected)
+                return QString("Success");
+            else
+                return QString("Trying...");
         }
         break;
     }
     case Qt::TextAlignmentRole:
     {
-        // Status
+        // Mainchain txid
         if (col == 0) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // ntxn
+        // Mainchain block height
         if (col == 1) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Total fees
+        // Sidechain block height
         if (col == 2) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // BMM amount
+        // ntxn
         if (col == 3) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Mainchain txid
+        // Total fees
         if (col == 4) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Sidechain block height
+        // BMM amount
         if (col == 5) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Mainchain block height
+        // Profit
         if (col == 6) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Status
+        if (col == 7) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
     }
@@ -128,19 +139,21 @@ QVariant SidechainBMMTableModel::headerData(int section, Qt::Orientation orienta
         if (orientation == Qt::Horizontal) {
             switch (section) {
             case 0:
-                return QString("Status");
-            case 1:
-                return QString("Txns");
-            case 2:
-                return QString("Fees");
-            case 3:
-                return QString("Bid Amount");
-            case 4:
                 return QString("MC txid");
-            case 5:
-                return QString("SC Block");
-            case 6:
+            case 1:
                 return QString("MC Block");
+            case 2:
+                return QString("SC Block");
+            case 3:
+                return QString("Txns");
+            case 4:
+                return QString("Fees");
+            case 5:
+                return QString("Bid Amount");
+            case 6:
+                return QString("Profit");
+            case 7:
+                return QString("Status");
             }
         }
     }
@@ -156,7 +169,7 @@ void SidechainBMMTableModel::AddAttempt(const BMMTableObject& object)
 {
     // Add BMM attempt to model
     beginInsertRows(QModelIndex(), model.size(), model.size());
-        model.append(object);
+        model.prepend(object);
     endInsertRows();
 
 
@@ -168,21 +181,21 @@ void SidechainBMMTableModel::AddAttempt(const BMMTableObject& object)
         return;
 
     int nLimit = 0;
-    QList<BMMTableObject>::reverse_iterator rit = model.rbegin();
-    rit++;
-    for (; rit != model.rend(); rit++) {
+    QList<BMMTableObject>::iterator it = model.begin();
+    it++; // Skip the first (newest) entry
+    for (; it != model.end(); it++) {
         if (nLimit > 6)
             break;
-        if (rit->fConnected)
+        if (it->fConnected)
             continue;
 
         nLimit++;
 
         // Update the failed bool to true & signal to update background colors
-        rit->fFailed = true;
+        it->fFailed = true;
 
-        QModelIndex topLeft = index(rit - model.rbegin(), 0);
-        QModelIndex topRight = index(rit - model.rbegin(), columnCount() - 1);
+        QModelIndex topLeft = index(it - model.begin(), 0);
+        QModelIndex topRight = index(it - model.begin(), columnCount() - 1);
         Q_EMIT QAbstractItemModel::dataChanged(topLeft, topRight, {Qt::BackgroundRole});
     }
 }

@@ -3018,7 +3018,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     if (gArgs.GetBoolArg("-walletrejectlongchains", DEFAULT_WALLET_REJECT_LONG_CHAINS)) {
         // Lastly, ensure this tx will pass the mempool's chain limits
         LockPoints lp;
-        CTxMemPoolEntry entry(wtxNew.tx, 0, 0, 0, false, 0, lp);
+        CTxMemPoolEntry entry(wtxNew.tx, 0, 0, 0, false, false, uint256(), 0, lp);
         CTxMemPool::setEntries setAncestors;
         size_t nLimitAncestors = gArgs.GetArg("-limitancestorcount", DEFAULT_ANCESTOR_LIMIT);
         size_t nLimitAncestorSize = gArgs.GetArg("-limitancestorsize", DEFAULT_ANCESTOR_SIZE_LIMIT)*1000;
@@ -4279,7 +4279,7 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
     }
 }
 
-bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, std::string& strFail, uint256& txid)
+bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, const std::string& strRefundDestination, std::string& strFail, uint256& txid, uint256& wtid)
 {
     if (!(nAmount > 0)) {
         strFail = "Invalid amount - must be greater than 0.";
@@ -4301,6 +4301,12 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
     CTxDestination dest = DecodeDestination(strDestination, true /*fMainchain */);
     if (!IsValidDestination(dest)) {
         strFail = "Invalid destination";
+        return false;
+    }
+
+    CTxDestination refundDest = DecodeDestination(strRefundDestination, false /*fMainchain */);
+    if (!IsValidDestination(refundDest)) {
+        strFail = "Invalid refund destination";
         return false;
     }
 
@@ -4352,9 +4358,12 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
     SidechainWT wt;
     wt.nSidechain = SIDECHAIN_TEST;
     wt.strDestination = strDestination;
+    wt.strRefundDestination = strRefundDestination;
     wt.amount = nAmount + nMainchainFee;
     wt.hashBlindWTX = CTransaction(mtx).GetHash();
     wt.mainchainFee = nMainchainFee;
+
+    wtid = wt.GetID();
 
     mtx.vout.push_back(CTxOut(CAmount(0), wt.GetScript()));
 
@@ -4412,6 +4421,7 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
 
     // Broadcast transaction
     CWalletTx wtx;
+    wtx.mapValue["comment"] = "WT";
     wtx.fTimeReceivedIsTxTime = true;
     wtx.fFromMe = true;
     wtx.BindWallet(this);
@@ -4421,6 +4431,43 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
     CValidationState state;
     if (!CommitTransaction(wtx, reserveKey, g_connman.get(), state)) {
         strFail = "Failed to commit WT! Reject reason: " + FormatStateMessage(state) + "\n";
+        return false;
+    }
+
+    txid = wtx.GetHash();
+
+    return true;
+}
+
+bool CWallet::CreateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, std::string& strFail, uint256& txid)
+{
+    if (mempool.WTRefundExists(wtID)) {
+        strFail = "A refund request is already in the mempool for this withdrawal!";
+        return false;
+    }
+
+    CScript script = GenerateWTRefundRequest(wtID, vchSig);
+
+    CWalletTx wtx;
+    wtx.mapValue["comment"] = "WT Refund Request";
+    wtx.fTimeReceivedIsTxTime = true;
+    wtx.fFromMe = true;
+    wtx.BindWallet(this);
+
+    CReserveKey reserveKey(this);
+    CRecipient recipient = {script, 0, false};
+    CCoinControl coinControl;
+    int nChangePosRet = -1;
+    CAmount nFeeRequired = 0;
+    std::string strError = "";
+    if (!CreateTransaction(std::vector<CRecipient> { recipient }, wtx, reserveKey, nFeeRequired, nChangePosRet, strError, coinControl)) {
+        strFail = "Failed to create WT refund tx! Reason: " + strError + "\n";
+        return false;
+    }
+
+    CValidationState state;
+    if (!CommitTransaction(wtx, reserveKey, g_connman.get(), state)) {
+        strFail = "Failed to commit WT refund tx! Reject reason: " + FormatStateMessage(state) + "\n";
         return false;
     }
 

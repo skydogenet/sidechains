@@ -165,12 +165,12 @@ public:
      * If an optional vector of transactions is passed in, all but the coinbase
      * will be replaced with those transactions.
      */
-    bool GenerateBMMBlock(CBlock& block, std::string& strError, const std::vector<CMutableTransaction>& vtx = std::vector<CMutableTransaction>(), const uint256& hashPrevBlock = uint256(), const CScript& scriptPubKey = CScript());
+    bool GenerateBMMBlock(CBlock& block, std::string& strError, CAmount* nFeesOut = nullptr, const std::vector<CMutableTransaction>& vtx = std::vector<CMutableTransaction>(), const uint256& hashPrevBlock = uint256(), const CScript& scriptPubKey = CScript());
 
 private:
     // Note: Moved to private, should always use GenerateBMMBlock().
     /** Construct a new block template with coinbase to scriptPubKeyIn */
-    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true, bool fSkipBMMChecks = false, const uint256& hashPrevBlock = uint256());
+    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true, bool fSkipBMMChecks = false, const uint256& hashPrevBlock = uint256(), CAmount* nFeesOut = nullptr);
 
     // utility functions
     /** Clear the block's state and prepare for assembling a new block */
@@ -178,11 +178,14 @@ private:
     /** Add a tx to the block */
     void AddToBlock(CTxMemPool::txiter iter);
 
+    // Note: Also returns a vector of WT refund request txns. These txns must
+    // be manually added to the block by the miner.
+    //
     // Methods for how to add transactions to a block.
     /** Add transactions based on feerate including unconfirmed ancestors
       * Increments nPackagesSelected / nDescendantsUpdated with corresponding
       * statistics from the package selection (for logging statistics). */
-    void addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated);
+    void addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, std::vector<CTxMemPool::txiter>& vWTRefundTx, bool fIncludeWTRefunds);
 
     // helper functions for addPackageTxs()
     /** Remove confirmed (inBlock) entries from given set */

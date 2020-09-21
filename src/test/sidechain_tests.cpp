@@ -4,6 +4,7 @@
 
 // TODO move all BMM Cache tests to bmmcache_tests.cpp
 #include "bmmcache.h"
+#include "base58.h"
 #include "chainparams.h"
 #include "consensus/validation.h"
 #include "core_io.h"
@@ -33,6 +34,27 @@ static BlockAssembler AssemblerForTest(const CChainParams& params) {
 
 BOOST_FIXTURE_TEST_SUITE(sidechain_tests, TestChain100Setup)
 
+BOOST_AUTO_TEST_CASE(sidechain_obj)
+{
+    // Test sidechain object (for leveldb) scripts
+
+    SidechainWT wt;
+    wt.nSidechain = 0;
+    wt.strDestination = "";
+    wt.strRefundDestination = "";
+    wt.amount = 0;
+    wt.mainchainFee = 0;
+    wt.status = WT_UNSPENT;
+    wt.hashBlindWTX = uint256();
+
+    CScript script = wt.GetScript();
+
+    std::vector<unsigned char> vch;
+    BOOST_CHECK(script.IsSidechainObj(vch));
+
+    SidechainObj* parsed = ParseSidechainObj(vch);
+    BOOST_CHECK(parsed);
+}
 
 BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
 {
@@ -50,7 +72,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid_not_verified)
     // Generate BMM block
     CBlock block;
     std::string strError = "";
-    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
+    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, nullptr, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     BOOST_CHECK(ProcessNewBlock(chainparams, shared_pblock, true, nullptr, true /* fUnitTest */));
@@ -120,7 +142,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
     // Generate BMM block
     CBlock block;
     std::string strError = "";
-    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
+    BOOST_CHECK(AssemblerForTest(Params()).GenerateBMMBlock(block, strError, nullptr, std::vector<CMutableTransaction>(), uint256(), GetCoinbaseScript()));
 
     // Set -verifybmmcheckblock arg to true
     gArgs.ForceSetArg("-verifybmmcheckblock", "1");
@@ -536,6 +558,183 @@ BOOST_AUTO_TEST_CASE(WTFeeEncoding)
     script = EncodeWTFees(amount);
     BOOST_CHECK(DecodeWTFees(script, amountRead));
     BOOST_CHECK(amount == amountRead);
+}
+
+BOOST_AUTO_TEST_CASE(wt_refund_script)
+{
+    // Test a valid WT refund message / script
+
+    std::string strRefundAddress = "mwezN1bUucdwUXLRYbDhyUkhwfSJyGnXoc";
+    CTxDestination dest = DecodeDestination(strRefundAddress);
+
+    BOOST_CHECK(IsValidDestination(dest));
+
+    // Checking that the destination is for a KeyID
+    const CKeyID* id = boost::get<CKeyID>(&dest);
+    BOOST_REQUIRE(id);
+
+    // Normally this would come from the users sidechain wallet
+    std::string strPrivKey = "cVzpgYmady1ANkCuY1jrAZ2jGWVkEMwqYTkghkBKxZYZMtnRmSAZ";
+
+    CBitcoinSecret vchSecret;
+    BOOST_CHECK(vchSecret.SetString(strPrivKey));
+
+    CKey privKey = vchSecret.GetKey();
+    BOOST_CHECK(privKey.IsValid());
+
+    // Add WT to psidechaintree
+    SidechainWT wt;
+    wt.nSidechain = 0;
+    wt.strDestination = "";
+    wt.strRefundDestination = strRefundAddress;
+    wt.amount = 0;
+    wt.mainchainFee = 0;
+    wt.status = WT_UNSPENT;
+    wt.hashBlindWTX = uint256();
+
+    psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
+
+    uint256 hashMessage = GetWTRefundMessageHash(wt.GetID());
+
+    // We are really only signing the hash of the message
+    std::vector<unsigned char> vchSig;
+    BOOST_CHECK(privKey.SignCompact(hashMessage, vchSig));
+
+    // Generate refund request script
+    CScript script = GenerateWTRefundRequest(wt.GetID(), vchSig);
+
+    // Check refund script
+    uint256 idFromScript;
+    std::vector<unsigned char> vchSigFromScript;
+    BOOST_CHECK(script.IsWTRefundRequest(idFromScript, vchSigFromScript));
+    BOOST_CHECK(idFromScript == wt.GetID());
+    BOOST_CHECK(vchSigFromScript == vchSig);
+
+    // Verify refund script
+    SidechainWT wtOut;
+    BOOST_CHECK(VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
+
+    // Verify again ourselves
+    CPubKey pubkey;
+    BOOST_CHECK(pubkey.RecoverCompact(hashMessage, vchSig));
+
+    BOOST_CHECK(pubkey.GetID() == privKey.GetPubKey().GetID());
+    BOOST_CHECK(CTxDestination(pubkey.GetID()) == dest);
+}
+
+BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
+{
+    // Test a WT refund script with invalid address / signature
+
+    std::string strRefundAddress = "mwezN1bUucdwUXLRYbDhyUkhwfSJyGnXoc";
+    CTxDestination dest = DecodeDestination(strRefundAddress);
+
+    BOOST_CHECK(IsValidDestination(dest));
+
+    // Checking that the destination is for a KeyID
+    const CKeyID* id = boost::get<CKeyID>(&dest);
+    BOOST_REQUIRE(id);
+
+    // Normally this would come from the users sidechain wallet
+    std::string strPrivKey = "cVzpgYmady1ANkCuY1jrAZ2jGWVkEMwqYTkghkBKxZYZMtnRmSAZ";
+
+    CBitcoinSecret vchSecret;
+    BOOST_CHECK(vchSecret.SetString(strPrivKey));
+
+    CKey privKey = vchSecret.GetKey();
+    BOOST_CHECK(privKey.IsValid());
+
+    // We will set the refund address to an address different from the one we
+    // sign the message with and check that it is rejected.
+    std::string strOtherAdress = "mhWcMxHjrqru8VRdr1gzyu2ssJrXpN2f6s";
+
+    // Add WT to psidechaintree
+    SidechainWT wt;
+    wt.nSidechain = 0;
+    wt.strDestination = "";
+    wt.strRefundDestination = strOtherAdress;
+    wt.amount = 0;
+    wt.mainchainFee = 0;
+    wt.status = WT_UNSPENT;
+    wt.hashBlindWTX = uint256();
+
+    psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
+
+    uint256 hashMessage = GetWTRefundMessageHash(wt.GetID());
+
+    // We are really only signing the hash of the message
+    std::vector<unsigned char> vchSig;
+    BOOST_CHECK(privKey.SignCompact(hashMessage, vchSig));
+
+    // Generate refund request script
+    CScript script = GenerateWTRefundRequest(wt.GetID(), vchSig);
+
+    // Check refund script
+    uint256 idFromScript;
+    std::vector<unsigned char> vchSigFromScript;
+    BOOST_CHECK(script.IsWTRefundRequest(idFromScript, vchSigFromScript));
+    BOOST_CHECK(idFromScript == wt.GetID());
+    BOOST_CHECK(vchSigFromScript == vchSig);
+
+    // Refund script should be invalid
+    SidechainWT wtOut;
+    BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
+}
+
+BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
+{
+    // Test a WT refund script with invalid WT ID
+
+    std::string strRefundAddress = "mwezN1bUucdwUXLRYbDhyUkhwfSJyGnXoc";
+    CTxDestination dest = DecodeDestination(strRefundAddress);
+
+    BOOST_CHECK(IsValidDestination(dest));
+
+    // Checking that the destination is for a KeyID
+    const CKeyID* id = boost::get<CKeyID>(&dest);
+    BOOST_REQUIRE(id);
+
+    // Normally this would come from the users sidechain wallet
+    std::string strPrivKey = "cVzpgYmady1ANkCuY1jrAZ2jGWVkEMwqYTkghkBKxZYZMtnRmSAZ";
+
+    CBitcoinSecret vchSecret;
+    BOOST_CHECK(vchSecret.SetString(strPrivKey));
+
+    CKey privKey = vchSecret.GetKey();
+    BOOST_CHECK(privKey.IsValid());
+
+    // Add WT to psidechaintree
+    SidechainWT wt;
+    wt.nSidechain = 0;
+    wt.strDestination = "";
+    wt.strRefundDestination = strRefundAddress;
+    wt.amount = 0;
+    wt.mainchainFee = 0;
+    wt.status = WT_UNSPENT;
+    wt.hashBlindWTX = uint256();
+
+    psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
+
+    // Put an invalid WT ID in the message
+    uint256 hashMessage = GetWTRefundMessageHash(GetRandHash());
+
+    // We are really only signing the hash of the message
+    std::vector<unsigned char> vchSig;
+    BOOST_CHECK(privKey.SignCompact(hashMessage, vchSig));
+
+    // Generate refund request script
+    CScript script = GenerateWTRefundRequest(wt.GetID(), vchSig);
+
+    // Check refund script
+    uint256 idFromScript;
+    std::vector<unsigned char> vchSigFromScript;
+    BOOST_CHECK(script.IsWTRefundRequest(idFromScript, vchSigFromScript));
+    BOOST_CHECK(idFromScript == wt.GetID());
+    BOOST_CHECK(vchSigFromScript == vchSig);
+
+    // Refund script should be invalid
+    SidechainWT wtOut;
+    BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

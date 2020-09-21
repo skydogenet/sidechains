@@ -15,7 +15,6 @@
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/rpcconsole.h>
-#include <qt/sidechainpage.h>
 #include <qt/utilitydialog.h>
 
 #ifdef ENABLE_WALLET
@@ -511,14 +510,6 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
         }
 #endif // ENABLE_WALLET
 
-#ifdef ENABLE_WALLET
-        if (walletFrame) {
-            // Update the sidechain page train schedule when a new block arrives
-            connect(_clientModel, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)),
-                    walletFrame, SLOT(refreshSidechainTrainSchedule()));
-        }
-#endif
-
         OptionsModel* optionsModel = _clientModel->getOptionsModel();
         if(optionsModel)
         {
@@ -799,23 +790,6 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
     if (!clientModel)
         return;
 
-    uint256 hashLatest;
-    psidechaintree->GetLastWTPrimeHash(hashLatest);
-
-    QString latestWTPrime = "WT^: None right now";
-
-    SidechainWTPrime wtPrime;
-    if (psidechaintree->GetWTPrime(hashLatest, wtPrime)) {
-        if (wtPrime.status != WTPRIME_FAILED &&
-                wtPrime.status != WTPRIME_SPENT) {
-            latestWTPrime = "WT^: ";
-            latestWTPrime += QString::fromStdString(hashLatest.ToString());
-        }
-    }
-
-    // Set latest WT^ hash
-    labelLastWTPrime->setText(latestWTPrime);
-
     // Prevent orphan statusbar messages (e.g. hover Quit in main menu, wait until chain-sync starts -> garbled text)
     statusBar()->clearMessage();
 
@@ -974,6 +948,12 @@ void BitcoinGUI::message(const QString &title, const QString &message, unsigned 
     }
     else
         notificator->notify(static_cast<Notificator::Class>(nNotifyIcon), strTitle, message);
+}
+
+void BitcoinGUI::WTPrimeBannerUpdated(QString str)
+{
+    // Set latest WT^ banner text
+    labelLastWTPrime->setText(str);
 }
 
 void BitcoinGUI::changeEvent(QEvent *e)

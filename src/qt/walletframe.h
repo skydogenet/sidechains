@@ -77,8 +77,6 @@ public Q_SLOTS:
     void gotoVerifyMessageTab(QString addr = "");
     /** Switch to sidechain page */
     void gotoSidechainPage();
-    /** Refresh sidechain page train schedule */
-    void refreshSidechainTrainSchedule();
 
     /** Encrypt the wallet */
     void encryptWallet(bool status);

@@ -381,14 +381,8 @@ bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, u
     if (vBMMCache.empty() && fCreateNew) {
         // If we don't have any existing BMM requests cached, create our first
         CBlock block;
-        if (CreateBMMBlock(block, strError, hashPrevBlock)) {
-            // TODO check return value
+        if (CreateBMMBlock(block, strError, nFees, hashPrevBlock)) {
             nTxn = block.vtx.size();
-            // The sidechain template has 0 block subsidy, so the output value
-            // of the coinbase transaction is made up entirely by fees.
-            // If a sidechain developer decides to add a block subsidy this
-            // code will break.
-            nFees = block.vtx.front()->GetValueOut();
             hashCreated = block.GetBlindHash();
             txid = SendBMMCriticalDataRequest(hashCreated, vHashMainBlock.back(), 0, amount);
             bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
@@ -438,14 +432,9 @@ bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, u
 
         // Create a new BMM request (old ones have expired)
         CBlock block;
-        if (fCreateNew && CreateBMMBlock(block, strError, hashPrevBlock)) {
+        if (fCreateNew && CreateBMMBlock(block, strError, nFees, hashPrevBlock)) {
             // Create BMM critical data request
             nTxn = block.vtx.size();
-            // The sidechain template has 0 block subsidy, so the output value
-            // of the coinbase transaction is made up entirely by fees.
-            // If a sidechain developer decides to add a block subsidy this
-            // code will break.
-            nFees = block.vtx.front()->GetValueOut();
             hashCreated = block.GetBlindHash();
             txid = SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlock.back(), 0, amount);
             bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
@@ -462,9 +451,9 @@ bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, u
     return true;
 }
 
-bool SidechainClient::CreateBMMBlock(CBlock& block, std::string& strError, const uint256& hashPrevBlock)
+bool SidechainClient::CreateBMMBlock(CBlock& block, std::string& strError, CAmount& nFees, const uint256& hashPrevBlock)
 {
-    if (!BlockAssembler(Params()).GenerateBMMBlock(block, strError,
+    if (!BlockAssembler(Params()).GenerateBMMBlock(block, strError, &nFees,
                 std::vector<CMutableTransaction>(), hashPrevBlock)) {
         return false;
     }
@@ -696,8 +685,9 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
     // Mainnet RPC = 8332
     // Testnet RPC = 18332
     // Regtest RPC = 18443
-
-    int port = gArgs.GetArg("-mainchainrpcport", 8332);
+    //
+    bool fMainchainRegtest = gArgs.GetBoolArg("-mainchainregtest", false);
+    int port = fMainchainRegtest ? 18443 : 8332;
 
     try {
         // Setup BOOST ASIO for a synchronus call to the mainchain

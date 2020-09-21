@@ -183,8 +183,6 @@ enum opcodetype
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
 
-    OP_SIDECHAIN = 0xc1,
-
     // template matching params
     OP_SMALLINTEGER = 0xfa,
     OP_PUBKEYS = 0xfb,
@@ -650,6 +648,8 @@ public:
     /** Script formats for Drivechains */
     bool IsWTPrimeFailCommit(uint256& hashWTPrime) const;
     bool IsWTPrimeSpentCommit(uint256& hashWTPrime) const;
+    bool IsWTRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSig) const;
+    bool IsSidechainObj(std::vector<unsigned char>& vch) const;
 
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     bool IsPushOnly(const_iterator pc) const;

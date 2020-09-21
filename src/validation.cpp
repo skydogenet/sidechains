@@ -20,7 +20,6 @@
 #include <cuckoocache.h>
 #include <hash.h>
 #include <init.h>
-#include <mutex>
 #include <net.h>
 #include <policy/fees.h>
 #include <policy/policy.h>
@@ -244,6 +243,7 @@ CTxMemPool mempool(&feeEstimator);
 CScript COINBASE_FLAGS;
 
 const std::string strMessageMagic = "Bitcoin Signed Message:\n";
+const std::string strRefundMessageMagic = "REFUND DhjM9iNapSA 3e243e21\n";
 
 std::mutex mainBlockCacheMutex;
 std::mutex mainBlockCacheReorgMutex;
@@ -600,13 +600,13 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
     // If this is a wt check that it is valid
     for (const CTxOut& txout : tx.vout) {
         const CScript& scriptPubKey = txout.scriptPubKey;
-        const size_t script_sz = scriptPubKey.size();
-        if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+        std::vector<unsigned char> vch;
+        if (!scriptPubKey.IsSidechainObj(vch))
             continue;
 
-        SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+        SidechainObj *obj = ParseSidechainObj(vch);
         if (!obj)
-            continue;
+            return state.Invalid(false, REJECT_INVALID, "invalid-sidechain-obj-script");
 
         if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
             SidechainWT *wt = dynamic_cast<SidechainWT*>(obj);
@@ -625,6 +625,32 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             if (!fBurnFound) {
                 return state.DoS(100, false, REJECT_INVALID, "invalid-wt-missing-or-invalid-burn");
             }
+        }
+    }
+
+    // If this transaction is a WT refund request, verify it.
+    for (const CTxOut& o : tx.vout) {
+        const CScript& scriptPubKey = o.scriptPubKey;
+        uint256 wtID;
+        std::vector<unsigned char> vchSig;
+        if (!scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+            continue;
+
+        if (wtID.IsNull()) {
+            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                        REJECT_INVALID, "verify-wt-refund-no-script");
+        }
+
+        // Check if a refund for this WT is already in our memory pool
+        if (pool.WTRefundExists(wtID)) {
+            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                        REJECT_INVALID, "refund-already-in-mempool");
+        }
+
+        SidechainWT wt;
+        if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
+            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                        REJECT_INVALID, "verify-wt-refund-invalid");
         }
     }
 
@@ -744,8 +770,17 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             }
         }
 
+        // Keep track of transactions that have a WT refund request script
+        bool fWTRefund = false;
+        uint256 wtID;
+        for (const CTxOut& o : tx.vout) {
+            std::vector<unsigned char> vchSig;
+            if (o.scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+                fWTRefund = true;
+        }
+
         CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, chainActive.Height(),
-                              fSpendsCoinbase, nSigOpsCost, lp);
+                              fSpendsCoinbase, fWTRefund, wtID, nSigOpsCost, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of
@@ -1628,7 +1663,6 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         // Also check for WT^(s) and restore the status of wt(s) it used
         for (size_t o = 0; o < tx.vout.size(); o++) {
             const CScript& scriptPubKey = tx.vout[o].scriptPubKey;
-            const size_t script_sz = scriptPubKey.size();
             if (!scriptPubKey.IsUnspendable()) {
                 COutPoint out(hash, o);
                 Coin coin;
@@ -1640,8 +1674,9 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
 
             // If this output is a WT^ database entry, reset the status of wt(s)
             // included in the WT^
-            if (script_sz > 2 && scriptPubKey[script_sz - 1] == OP_SIDECHAIN) {
-                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+            std::vector<unsigned char> vch;
+            if (scriptPubKey.IsSidechainObj(vch)) {
+                SidechainObj *obj = ParseSidechainObj(vch);
                 if (!obj) {
                     error("DisconnectBlock(): failure reading sidechain obj");
                     return DISCONNECT_FAILED;
@@ -1702,6 +1737,23 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
 
                 if (!psidechaintree->WriteWTPrimeUpdate(wtPrime)) {
                     error("DisconnectBlock(): Failed to write WT^ undo update!");
+                    return DISCONNECT_FAILED;
+                }
+            }
+
+            // If output is a WT refund request set status back to WT_UNSPENT
+            uint256 wtid;
+            std::vector<unsigned char> vchSig;
+            if (scriptPubKey.IsWTRefundRequest(wtid, vchSig)) {
+                SidechainWT wt;
+                if (!psidechaintree->GetWT(wtid, wt)) {
+                    error("DisconnectBlock(): Failed to read WT for refund undo!");
+                    return DISCONNECT_FAILED;
+                }
+
+                wt.status = WT_UNSPENT;
+                if (!psidechaintree->WriteWTUpdate(std::vector<SidechainWT>{ wt })) {
+                    error("DisconnectBlock(): Failed to write WT refund update!");
                     return DISCONNECT_FAILED;
                 }
             }
@@ -2025,12 +2077,56 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     std::vector<PrecomputedTransactionData> txdata;
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
     CAmount nDepositPayout = 0;
+    CAmount nRefundPayout = 0;
+    std::multimap<std::pair<CScript, CAmount>, uint256> mapRefundOutputs;
+    std::vector<SidechainWT> vRefundedWT;
+    std::set<uint256> setRefundWTID;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
 
         nInputs += tx.vin.size();
 
+        // Find & verify refund request txns - verify coinbase payouts later
+        for (const CTxOut& o : tx.vout) {
+            const CScript& scriptPubKey = o.scriptPubKey;
+            uint256 wtID;
+            std::vector<unsigned char> vchSig;
+            if (!scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+                continue;
+
+            if (wtID.IsNull()) {
+                return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                            REJECT_INVALID, "verify-wt-refund-no-script");
+            }
+
+            SidechainWT wt;
+            if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
+                return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                            REJECT_INVALID, "verify-wt-refund-invalid");
+            }
+
+            if (setRefundWTID.count(wtID)) {
+                return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                            REJECT_INVALID, "verify-wt-refund-duplicate");
+            }
+            setRefundWTID.insert(wtID);
+
+            // Keep track of refund request outputs so that we can verify they
+            // each have a matching coinbase payout output later.
+            CScript scriptDest = GetScriptForDestination(DecodeDestination(wt.strRefundDestination));
+            mapRefundOutputs.insert(std::pair<std::pair<CScript, CAmount>, uint256>( std::make_pair(scriptDest, wt.amount), wtID));
+
+            // Update wt object status and keep track of it so that we can apply
+            // the update later if all verification checks work out.
+            wt.status = WT_SPENT;
+            vRefundedWT.push_back(wt);
+
+            // Keep track of the total refunded WT amount for the block
+            nRefundPayout += wt.amount;
+        }
+
+        // Perform non coinbase txn checks
         if (!tx.IsCoinBase())
         {
             CAmount txfee = 0;
@@ -2055,17 +2151,21 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 return state.DoS(100, error("%s: contains a non-BIP68-final transaction", __func__),
                                  REJECT_INVALID, "bad-txns-nonfinal");
             }
-        } else {
-            // Count deposit output amounts
+        }
+
+        // Count deposit output amounts
+        if (tx.IsCoinBase()) {
             for (const CTxOut& out : tx.vout) {
                 const CScript& scriptPubKey = out.scriptPubKey;
-                const size_t script_sz = scriptPubKey.size();
-                if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+
+                std::vector<unsigned char> vch;
+                if (!scriptPubKey.IsSidechainObj(vch))
                     continue;
 
-                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
-                if (!obj)
-                    continue;
+                SidechainObj *obj = ParseSidechainObj(vch);
+                if (!obj) {
+                    return state.DoS(90, error("%s: invalid sidechain obj script", __func__), REJECT_INVALID, "invalid-sidechain-obj-script");
+                }
 
                 if (obj->sidechainop != DB_SIDECHAIN_DEPOSIT_OP)
                     continue;
@@ -2107,7 +2207,55 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
-    CAmount blockReward = nFees + nDepositPayout;
+    // Verify WT refunds
+    // - Check that for every WT refund request tx in the block a refund payout
+    // of the correct amount to the WT refund address exists in the coinbase tx.
+    //
+    // - Check that no refund payout outputs exist that aren't based on a valid
+    // refund request tx. This is checked by making sure that the coinbase total
+    // out amount is nFees + nDepositPayout + nRefundPayout. Any extra outputs
+    // will make the block invalid.
+    //
+    // Loop through the refund outputs in the multimap. For each key, get the
+    // range of values with the same key (the refund destination script).
+    // Make sure that the correct number of coinbase payout outputs exist for
+    // each bucket of keys.
+    for (auto it = mapRefundOutputs.begin(); it != mapRefundOutputs.end();)
+    {
+        // Get range of outputs with this CTxDestination
+        std::pair<std::multimap<std::pair<CScript, CAmount>, uint256>::iterator, std::multimap<std::pair<CScript, CAmount>, uint256>::iterator> range;
+        range = mapRefundOutputs.equal_range(it->first);
+
+        // Count outputs that match items in the range
+        int nOut = std::distance(range.first, range.second);
+        int nFound = 0;
+        for (const CTxOut& o : block.vtx[0]->vout) {
+            if (o.scriptPubKey == it->first.first && o.nValue == it->first.second) {
+                nFound++;
+
+                // If we aren't looking for multiple outputs, stop now
+                if (nOut == 1) {
+                    break;
+                }
+            }
+        }
+
+        if (nFound != nOut)
+            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+                        REJECT_INVALID, "verify-wt-refund-missing-payout");
+
+        // Move on to end of range
+        it = range.second;
+    }
+
+    // Update status of refunded WT(s)
+    if (!fJustCheck && vRefundedWT.size()) {
+        // Write the updated status of wt(s) in the WT^ (WT_SPENT)
+        if (!psidechaintree->WriteWTUpdate(vRefundedWT))
+            return state.Error(strprintf("%s: Failed to write refunded wt status update!\n", __func__));
+    }
+
+    CAmount blockReward = nFees + nDepositPayout + nRefundPayout;
     if (block.vtx[0]->GetValueOut() > blockReward)
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
@@ -2209,13 +2357,14 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         for (const CTransactionRef& tx : block.vtx) {
             for (const CTxOut& txout : tx->vout) {
                 const CScript& scriptPubKey = txout.scriptPubKey;
-                const size_t script_sz = scriptPubKey.size();
-                if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+
+                std::vector<unsigned char> vch;
+                if (!scriptPubKey.IsSidechainObj(vch))
                     continue;
 
-                SidechainObj *obj = SidechainObjCtr(scriptPubKey);
+                SidechainObj *obj = ParseSidechainObj(vch);
                 if (!obj)
-                    continue;
+                    return state.Error("Invalid sidechain obj script");
 
                 // TODO
                 // Refactor. We are also loading SidechainWT *wt later when
@@ -3514,7 +3663,7 @@ CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime)
     scriptPubKey[4] = 0x89;
 
     // Add WT^ hash
-    memcpy(&scriptPubKey[5], &hashWTPrime, 32);
+    memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
 
     return scriptPubKey;
 }
@@ -3536,9 +3685,77 @@ CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime)
     scriptPubKey[4] = 0xDE;
 
     // Add WT^ hash
-    memcpy(&scriptPubKey[5], &hashWTPrime, 32);
+    memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
 
     return scriptPubKey;
+}
+
+CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig)
+{
+    /*
+     * Generate a script commit indicating that the WT^ failed on the mainchain
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(102);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xFC;
+    scriptPubKey[2] = 0xD2;
+    scriptPubKey[3] = 0xE5;
+    scriptPubKey[4] = 0x46;
+
+    // Add WT ID (the ID it has in ldb)
+    memcpy(&scriptPubKey[5], wtID.begin(), 32);
+
+    // Add vchSig
+    memcpy(&scriptPubKey[37], vchSig.data(), 65);
+
+    return scriptPubKey;
+}
+
+bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, SidechainWT& wt)
+{
+    if (wtID.IsNull()) {
+        LogPrintf("%s: Null WT ID!\n", __func__);
+        return false;
+    }
+    if (vchSig.size() != 65) {
+        LogPrintf("%s: Invalid signature size!\n", __func__);
+        return false;
+    }
+
+    // Regenerate standard refund message & get hash
+    CHashWriter ss(SER_GETHASH, 0);
+    ss << strMessageMagic;
+    ss << strRefundMessageMagic;
+    ss << wtID.ToString();
+
+    // Recover the public key that signed the refund request
+    CPubKey pubkey;
+    if (!pubkey.RecoverCompact(ss.GetHash(), vchSig)) {
+        LogPrintf("%s: Failed to recover pubkey!\n", __func__);
+        return false;
+    }
+
+    // Lookup & verify status of WT
+    if (!psidechaintree->GetWT(wtID, wt)) {
+        LogPrintf("%s: WT not found!\n", __func__);
+        return false;
+    }
+    // Check status of WT
+    if (wt.status != WT_UNSPENT) {
+        LogPrintf("%s: WT status != WT_UNSPENT\n", __func__);
+        return false;
+    }
+    // Verify refund address matches the one recreated from signature
+    if (DecodeDestination(wt.strRefundDestination) != CTxDestination(pubkey.GetID())) {
+        LogPrintf("%s: Refund address does not match signature!\n", __func__);
+        return false;
+    }
+
+    return true;
 }
 
 /** Context-dependent validity checks.
@@ -5320,6 +5537,72 @@ void DumpMainBlockCache()
     }
 }
 
+void DumpWTIDCache()
+{
+    std::set<uint256> setWTID = bmmCache.GetCachedWTID();
+    if (setWTID.empty())
+        return;
+
+    int count = setWTID.size();
+
+    fs::path path = GetDataDir() / "wtid.dat";
+    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    if (fileout.IsNull()) {
+        return;
+    }
+
+    try {
+        fileout << 160000; // version required to read: 0.16.00 or later
+        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << count; // Number of WT IDs in file
+
+        for (const uint256& u : setWTID) {
+            fileout << u;
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Error writing WT ID cache: %s", __func__, e.what());
+        return;
+    }
+}
+
+void LoadWTIDCache()
+{
+    fs::path path = GetDataDir() / "wtid.dat";
+    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    if (filein.IsNull()) {
+        return;
+    }
+
+    // TODO log this
+    uint64_t fileSize = fs::file_size(path);
+
+    std::vector<uint256> vWTID;
+    try {
+        int nVersionRequired, nVersionThatWrote;
+        filein >> nVersionRequired;
+        filein >> nVersionThatWrote;
+        if (nVersionRequired > CLIENT_VERSION) {
+            return;
+        }
+
+        int count = 0;
+        filein >> count;
+        for (int i = 0; i < count; i++) {
+            uint256 wtid;
+            filein >> wtid;
+            vWTID.push_back(wtid);
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Error reading WT ID cache: %s", __func__, e.what());
+        return;
+    }
+
+    for (const uint256& u : vWTID)
+        bmmCache.CacheWTID(u);
+}
+
 /** Create joined WT^ to be sent to the mainchain */
 bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck, bool fCheckUnique)
 {
@@ -5471,13 +5754,16 @@ bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransa
     for (const CTransactionRef& tx : vtx) {
         for (const CTxOut& txout : tx->vout) {
             const CScript& scriptPubKey = txout.scriptPubKey;
-            const size_t script_sz = scriptPubKey.size();
-            if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+
+            std::vector<unsigned char> vch;
+            if (!scriptPubKey.IsSidechainObj(vch))
                 continue;
 
-            SidechainObj *obj = SidechainObjCtr(scriptPubKey);
-            if (!obj)
-                continue;
+            SidechainObj *obj = ParseSidechainObj(vch);
+            if (!obj)  {
+                strFail = "Invalid sidechain obj!\n";
+                return false;
+            }
 
             if (obj->sidechainop != DB_SIDECHAIN_WTPRIME_OP)
                 continue;
@@ -5965,6 +6251,17 @@ bool DecodeWTFees(const CScript& script, CAmount& amount)
     }
 
     return true;
+}
+
+uint256 GetWTRefundMessageHash(const uint256& wtid)
+{
+    // Standard format of refund request message
+    CHashWriter ss(SER_GETHASH, 0);
+    ss << strMessageMagic;
+    ss << strRefundMessageMagic;
+    ss << wtid.ToString();
+
+    return ss.GetHash();
 }
 
 //! Guess how far we are in the verification process at the given block index

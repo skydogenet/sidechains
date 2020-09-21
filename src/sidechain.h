@@ -1,17 +1,17 @@
-// Copyright (c) 2017 The Bitcoin Core developers
+// Copyright (c) 2017-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_PRIMITIVES_SIDECHAIN_H
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
-#include "amount.h"
-#include "merkleblock.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "script/script.h"
-#include "serialize.h"
-#include "uint256.h"
+#include <amount.h>
+#include <merkleblock.h>
+#include <primitives/transaction.h>
+#include <pubkey.h>
+#include <script/script.h>
+#include <serialize.h>
+#include <uint256.h>
 
 #include <limits.h>
 #include <string>
@@ -99,6 +99,7 @@ struct SidechainObj {
 struct SidechainWT: public SidechainObj {
     uint8_t nSidechain;
     std::string strDestination;
+    std::string strRefundDestination;
     CAmount amount;
     CAmount mainchainFee;
     char status;
@@ -114,6 +115,7 @@ struct SidechainWT: public SidechainObj {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
         READWRITE(strDestination);
+        READWRITE(strRefundDestination);
         READWRITE(amount);
         READWRITE(mainchainFee);
         READWRITE(status);
@@ -237,9 +239,9 @@ struct SidechainBMMProof
 };
 
 /**
- * Create sidechain object
+ * Parse sidechain object from a sidechain object script
  */
-SidechainObj *SidechainObjCtr(const CScript &);
+SidechainObj* ParseSidechainObj(const std::vector<unsigned char>& vch);
 
 // Functions for both WT^ creation and the GUI to use in order to make sure that
 // what the GUI displays (on the pending WT table) is the same as what the WT^

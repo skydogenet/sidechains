@@ -88,8 +88,6 @@ public Q_SLOTS:
     void gotoVerifyMessageTab(QString addr = "");
     /** Switch to sidechain page */
     void gotoSidechainPage();
-    /** Refresh the sidechain train schedule */
-    void refreshSidechainTrainSchedule();
 
     /** Show incoming transaction notification for new transactions.
 

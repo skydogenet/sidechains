@@ -163,7 +163,7 @@ public Q_SLOTS:
     void setNumConnections(int count);
     /** Set network state shown in the UI */
     void setNetworkActive(bool networkActive);
-    /** Set number of blocks and last block date shown in the UI */
+    /** Set number of blocks, WT^ banner and last block date shown in the UI */
     void setNumBlocks(int count, const QDateTime& blockDate, double nVerificationProgress, bool headers);
 
     /** Notify the user of an event from the core network or transaction handling code.
@@ -174,6 +174,8 @@ public Q_SLOTS:
        @param[in] ret       pointer to a bool that will be modified to whether Ok was clicked (modal only)
     */
     void message(const QString &title, const QString &message, unsigned int style, bool *ret = nullptr);
+
+    void WTPrimeBannerUpdated(QString str);
 
 #ifdef ENABLE_WALLET
     /** Set the encryption status as shown in the UI.

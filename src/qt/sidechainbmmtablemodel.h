@@ -37,13 +37,14 @@ struct BMMTableObject
 
 enum ColumnWidth
 {
-    COLUMN_STATUS = 80,
+    COLUMN_BMM_TXID = 100,
+    COLUMN_MAINCHAIN_HEIGHT = 80,
+    COLUMN_SIDECHAIN_HEIGHT = 80,
     COLUMN_TXNS = 45,
     COLUMN_FEES = 130,
     COLUMN_BMM_AMOUNT = 130,
-    COLUMN_BMM_TXID = 100,
-    COLUMN_SIDECHAIN_HEIGHT = 80,
-    COLUMN_MAINCHAIN_HEIGHT = 80,
+    COLUMN_PROFIT = 130,
+    COLUMN_STATUS = 80,
 };
 
 class SidechainBMMTableModel : public QAbstractTableModel
