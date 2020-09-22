@@ -954,7 +954,7 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
         return;
 
     fs::path pathConfMain = pathDrivechain / "drivenet.conf";
-    fs::path pathConfSide = pathSide / "testchain.conf";
+    fs::path pathConfSide = pathSide / "trainchain.conf";
 
     // Do drivenet.conf & side.conf exist?
     if (fs::exists(pathConfMain) && fs::exists(pathConfSide))

@@ -32,7 +32,7 @@ static BlockAssembler AssemblerForTest(const CChainParams& params) {
     return BlockAssembler(params, options);
 }
 
-BOOST_FIXTURE_TEST_SUITE(sidechain_tests, TestChain100Setup)
+BOOST_FIXTURE_TEST_SUITE(sidechain_tests, TrainChain100Setup)
 
 BOOST_AUTO_TEST_CASE(sidechain_obj)
 {
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
 }
 
 // TODO although more complicated than it may seem at first, it would be nice
-// if we could also have a valid test that uses the TestChain100 and extends
+// if we could also have a valid test that uses the TrainChain100 and extends
 // that chain. For now we can call VerifyCriticalHashProof on the block.
 
 BOOST_AUTO_TEST_CASE(sidechain_bmm_cache)

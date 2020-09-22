@@ -115,9 +115,9 @@ TestingSetup::~TestingSetup()
         fs::remove_all(pathTemp);
 }
 
-TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
+TrainChain100Setup::TrainChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
 {
-    // Disable default enabled BMM checks for testchain generation - otherwise
+    // Disable default enabled BMM checks for trainchain generation - otherwise
     // these blocks would need valid BMM and a mainchain connection for unit
     // testing
 
@@ -149,7 +149,7 @@ TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
 // Create a new block with just given transactions, coinbase paying to
 // scriptPubKey, and try to add it to the current chain.
 //
-CBlock TestChain100Setup::CreateAndProcessBlock(const CScript& scriptPubKey)
+CBlock TrainChain100Setup::CreateAndProcessBlock(const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
     CBlock block;
@@ -164,7 +164,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const CScript& scriptPubKey)
     return result;
 }
 
-CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& vtx, const CScript& scriptPubKey)
+CBlock TrainChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& vtx, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
     CBlock block;
@@ -179,12 +179,12 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransa
     return result;
 }
 
-CScript TestChain100Setup::GetCoinbaseScript() const
+CScript TrainChain100Setup::GetCoinbaseScript() const
 {
     return CScript() << ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
 }
 
-TestChain100Setup::~TestChain100Setup()
+TrainChain100Setup::~TrainChain100Setup()
 {
 }
 
