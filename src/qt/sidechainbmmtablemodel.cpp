@@ -126,7 +126,7 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
         }
         // Status
         if (col == 7) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
     }
