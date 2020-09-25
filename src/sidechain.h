@@ -46,7 +46,7 @@ struct Sidechain {
 
 enum Sidechains {
     // This sidechain
-    SIDECHAIN_TEST = 0,
+    SIDECHAIN_TEST = 1,
 };
 
 //! WT status / zone (unspent, included in a WT^, paid out)
