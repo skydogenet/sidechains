@@ -89,7 +89,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
     messageBox.setWindowTitle("Error writing config files!");
     messageBox.setIcon(QMessageBox::Critical);
 
-    // Make sure we can find the sidechain data directory
+    // Does the sidechain directory exist?
     fs::path pathSide = GetDefaultDataDir();
     if (!fs::exists(pathSide)) {
         // Show error message
@@ -109,14 +109,70 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
         return false;
     }
 
+    // If mainchain already has a configuration file, check if it is already
+    // configured for RPC & BMM. If it is already configured we will copy the
+    // username and password into the sidechain config file. If mainchain
+    // doesn't have RPC configured we will generate a new mainchain config file.
+
     // Do we need to backup the old config file?
     fs::path pathConf = pathData / "drivenet.conf";
-    if (fs::exists(pathConf)) {
+    bool fExists = fs::exists(pathConf);
+
+    // Check for existing RPC configuration
+    bool fMainchainConfigured = false;
+    QString strMCUser = "";
+    QString strMCPass = "";
+    if (fExists) {
+        QFile fileMain(QString::fromStdString(pathConf.string()));
+        if (!fileMain.open(QIODevice::ReadWrite | QIODevice::Text)) {
+            return false;
+        }
+
+        // Read the mainchain config file
+        QTextStream in(&fileMain);
+        QString strMain = in.readAll();
+        fileMain.close();
+
+        // Search for rpcuser, rpcpassword. Verify server & minerbreakforbmm
+        bool fServer = false;
+        bool fBreakBMM = false;
+
+        // Split config file into list of strings
+        QStringList listStrConf = strMain.split("\n", QString::SkipEmptyParts);
+        for (const QString& str : listStrConf) {
+            if (str.contains("rpcuser=")) {
+                strMCUser = str.section("=", 1);
+            }
+            else
+            if (str.contains("rpcpassword=")) {
+                strMCPass = str.section("=", 1);
+            }
+            else
+            if (str.contains("server=")) {
+                fServer = true;
+            }
+            else
+            if (str.contains("minerbreakforbmm=")) {
+                fBreakBMM = true;
+            }
+        }
+
+        if (!strMCUser.isEmpty() && !strMCPass.isEmpty() && fServer && fBreakBMM) {
+            LogPrintf("%s: Detected existing mainchain configuration - copying!\n", __func__);
+            fMainchainConfigured = true;
+        }
+    }
+
+    // If the existing mainchain conf doesn't have RPC setup we will back up i
+    // the old one and create a new one.
+
+    if (!fExists || !fMainchainConfigured) {
         // Rename old configuration file
         QString strNew = QString::fromStdString(pathConf.string());
         strNew += ".OLD";
 
         // Make sure that we moved it
+
         if (!QFile::rename(QString::fromStdString(pathConf.string()), strNew)) {
             QString strError = "You must first remove ";
             strError += strNew;
@@ -125,43 +181,41 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
             messageBox.exec();
             return false;
         }
+
+        if (fs::exists(pathConf)) {
+            QString strError = "Failed to rename: ";
+            strError += QString::fromStdString(pathConf.string());
+            strError += "!\n";
+            strError += "You must remove ";
+            strError += QString::fromStdString(pathConf.string());
+            strError += ".\n";
+            messageBox.setText(strError);
+            messageBox.exec();
+            return false;
+        }
+
+        // Write new mainchain configuration file
+        QFile file(QString::fromStdString(pathConf.string()));
+        if (!file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+            QString strError = "Error while opening for write: ";
+            strError += QString::fromStdString(pathConf.string());
+            strError += "!\n";
+            messageBox.setText(strError);
+            messageBox.exec();
+            return false;
+        }
+
+        QTextStream out(&file);
+        out << "rpcuser=";
+        out << strUser;
+        out << "\n";
+        out << "rpcpassword=";
+        out << strPass;
+        out << "\n";
+        out << "server=1\n";
+        out << "minerbreakforbmm=1\n";
+        file.close();
     }
-
-    if (fs::exists(pathConf)) {
-        QString strError = "Failed to rename: ";
-        strError += QString::fromStdString(pathConf.string());
-        strError += "!\n";
-        strError += "You must remove ";
-        strError += QString::fromStdString(pathConf.string());
-        strError += ".\n";
-        messageBox.setText(strError);
-        messageBox.exec();
-
-        // We failed to rename the conf file
-        return false;
-    }
-
-    // Write new mainchain configuration file
-    QFile file(QString::fromStdString(pathConf.string()));
-    if (!file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        QString strError = "Error while opening for write: ";
-        strError += QString::fromStdString(pathConf.string());
-        strError += "!\n";
-        messageBox.setText(strError);
-        messageBox.exec();
-        return false;
-    }
-
-    QTextStream out(&file);
-    out << "rpcuser=";
-    out << strUser;
-    out << "\n";
-    out << "rpcpassword=";
-    out << strPass;
-    out << "\n";
-    out << "server=1\n";
-    out << "minerbreakforbmm=1\n";
-    file.close();
 
     // Write sidechain configuration file
     // Do we need to backup the old config file?
@@ -209,10 +263,10 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
 
     QTextStream outSide(&fileSide);
     outSide << "rpcuser=";
-    outSide << strUser;
+    outSide << (fMainchainConfigured ? strMCUser : strUser);
     outSide << "\n";
     outSide << "rpcpassword=";
-    outSide << strPass;
+    outSide << (fMainchainConfigured ? strMCPass : strPass);
     outSide << "\n";
 
     fileSide.close();
