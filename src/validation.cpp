@@ -2314,7 +2314,10 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                         client.HaveFailedWTPrime(hashWTPrime) :
                         client.HaveSpentWTPrime(hashWTPrime);
 
-                    if (!fVerified)
+
+                    // TODO remove case for height < 2921
+                    // Special case for bug fixed during drivechain testnet 34
+                    if (!fVerified && pindex->nHeight > 2921)
                         return state.Error(strprintf("%s: Invalid WT^ update : %s - %s!\n",
                                     __func__, fFailCommit ? "Failed" : "Paid out",
                                     hashWTPrime.ToString()));
