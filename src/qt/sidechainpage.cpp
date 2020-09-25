@@ -883,7 +883,7 @@ void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
     }
 }
 
-void SidechainPage::on_pushButtonConfigureBMM_clicked()
+void SidechainPage::on_pushButtonConfigureMainchainConnection_clicked()
 {
     ConfGeneratorDialog *dialog = new ConfGeneratorDialog(this);
     dialog->exec();
