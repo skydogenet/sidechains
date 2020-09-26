@@ -74,7 +74,7 @@ private Q_SLOTS:
 
     void RefreshBMM();
 
-    void on_pushButtonConfigureBMM_clicked();
+    void on_pushButtonConfigureMainchainConnection_clicked();
 
     void ShowRestartPage();
 

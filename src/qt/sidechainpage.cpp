@@ -883,7 +883,7 @@ void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
     }
 }
 
-void SidechainPage::on_pushButtonConfigureBMM_clicked()
+void SidechainPage::on_pushButtonConfigureMainchainConnection_clicked()
 {
     ConfGeneratorDialog *dialog = new ConfGeneratorDialog(this);
     dialog->exec();
@@ -954,7 +954,7 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
         return;
 
     fs::path pathConfMain = pathDrivechain / "drivenet.conf";
-    fs::path pathConfSide = pathSide / "testchain.conf";
+    fs::path pathConfSide = pathSide / "trainchain.conf";
 
     // Do drivenet.conf & side.conf exist?
     if (fs::exists(pathConfMain) && fs::exists(pathConfSide))

@@ -110,24 +110,24 @@ public:
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000002");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x7dcf990be441eaf4d1713d41a65cebc8477269cb06f91403e8e5bde7e858152b");
+        consensus.defaultAssumeValid = uint256S("0x790921789ef98d8a09af239e7d07c6b40463dc023520efdb69e5914d36dc54fe");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
          * a large 32-bit integer with any alignment.
          */
-        pchMessageStart[0] = 0xf5;
-        pchMessageStart[1] = 0xd5;
+        pchMessageStart[0] = 0xa5;
+        pchMessageStart[1] = 0x7f;
         pchMessageStart[2] = 0xbe;
-        pchMessageStart[3] = 0xd8;
-        nDefaultPort = 2564;
+        pchMessageStart[3] = 0xd2;
+        nDefaultPort = 2586;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1600712910, 3, 0x207fffff, 1, 0);
+        genesis = CreateGenesisBlock(1600813083, 3, 0x207fffff, 1, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        assert(consensus.hashGenesisBlock == uint256S("0x7dcf990be441eaf4d1713d41a65cebc8477269cb06f91403e8e5bde7e858152b"));
+        assert(consensus.hashGenesisBlock == uint256S("0x790921789ef98d8a09af239e7d07c6b40463dc023520efdb69e5914d36dc54fe"));
         assert(genesis.hashMerkleRoot == uint256S("0x8eb1364f43885edf1322b2d32095e57abb03c32a61a80ac25c8db3de58e16b8a"));
 
         vSeeds.clear();
@@ -151,7 +151,7 @@ public:
 
         checkpointData = {
             {
-                { 0, uint256S("0x7dcf990be441eaf4d1713d41a65cebc8477269cb06f91403e8e5bde7e858152b")},
+                { 0, uint256S("0x790921789ef98d8a09af239e7d07c6b40463dc023520efdb69e5914d36dc54fe")},
             }
         };
 
@@ -184,7 +184,7 @@ public:
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.fPowNoRetargeting = true;
-        consensus.nRuleChangeActivationThreshold = 1512; // 75% for testchains
+        consensus.nRuleChangeActivationThreshold = 1512; // 75% for trainchains
         consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
@@ -274,7 +274,7 @@ public:
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.fPowNoRetargeting = true;
-        consensus.nRuleChangeActivationThreshold = 108; // 75% for testchains
+        consensus.nRuleChangeActivationThreshold = 108; // 75% for trainchains
         consensus.nMinerConfirmationWindow = 144; // Faster than normal for regtest (144 instead of 2016)
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 0;

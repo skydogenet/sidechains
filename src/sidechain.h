@@ -20,7 +20,7 @@
 /* Sidechain Identifiers */
 
 //! Sidechain address bytes
-static const std::string SIDECHAIN_ADDRESS_BYTES = "0186ff51f527ffdcf2413d50bdf8fab1feb20e5f82815dad48c73cf462b8b313";
+static const std::string SIDECHAIN_ADDRESS_BYTES = "6636970264b02297c62d67b5d7a6db13eff9ec8cda73208481d70a461a5b05d0";
 
 //! Sidechain build commit hash
 static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "efe0934d9dd57d149205ed96c3ba0f5d9a798baf";
@@ -30,7 +30,7 @@ static const std::string SIDECHAIN_BUILD_TAR_HASH = "f20e1f628c7b6702184b3dce115
 
 static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 140;
 
-static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
+static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 300;
 
 // Temporary testnet value
 static const int WTPRIME_FAIL_WAIT_PERIOD = 20;
@@ -46,7 +46,7 @@ struct Sidechain {
 
 enum Sidechains {
     // This sidechain
-    SIDECHAIN_TEST = 0,
+    SIDECHAIN_TEST = 1,
 };
 
 //! WT status / zone (unspent, included in a WT^, paid out)
