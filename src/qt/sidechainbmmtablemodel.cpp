@@ -128,6 +128,7 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
         if (col == 7) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
+        break;
     }
     }
     return QVariant();
@@ -158,6 +159,18 @@ QVariant SidechainBMMTableModel::headerData(int section, Qt::Orientation orienta
         }
     }
     return QVariant();
+}
+
+Qt::ItemFlags SidechainBMMTableModel::flags (const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return Qt::NoItemFlags;
+
+    BMMTableObject object = model.at(index.row());
+    if (object.fFailed)
+        return Qt::NoItemFlags;
+    else
+        return Qt::ItemIsEnabled;
 }
 
 void SidechainBMMTableModel::setWalletModel(WalletModel *model)
