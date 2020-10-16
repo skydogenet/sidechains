@@ -163,17 +163,16 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
         }
     }
 
-    // If the existing mainchain conf doesn't have RPC setup we will back up i
-    // the old one and create a new one.
-
-    if (!fExists || !fMainchainConfigured) {
+    // If the existing mainchain conf doesn't have RPC setup we will back it up
+    // and delete the original.
+    if (fExists && !fMainchainConfigured) {
         // Rename old configuration file
         QString strNew = QString::fromStdString(pathConf.string());
         strNew += ".OLD";
 
-        // Make sure that we moved it
-
-        if (!QFile::rename(QString::fromStdString(pathConf.string()), strNew)) {
+        // Check for existing backup
+        //fs::path pathBackup = pathConf + ".OLD";
+        if (fs::exists(strNew.toStdString())) {
             QString strError = "You must first remove ";
             strError += strNew;
             strError += ".\n";
@@ -182,7 +181,16 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
             return false;
         }
 
-        if (fs::exists(pathConf)) {
+        if (!QFile::rename(QString::fromStdString(pathConf.string()), strNew)) {
+            QString strError = "Failed to backup old configuration file!\n";
+            strError += "Remove existing config files and try again.\n";
+            messageBox.setText(strError);
+            messageBox.exec();
+            return false;
+        }
+
+        // Make sure that we moved it
+        if (fExists && fs::exists(pathConf)) {
             QString strError = "Failed to rename: ";
             strError += QString::fromStdString(pathConf.string());
             strError += "!\n";
@@ -194,7 +202,11 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
             return false;
         }
 
-        // Write new mainchain configuration file
+    }
+
+    // Now if we removed the old configuration or didn't find one we will write
+    // a new mainchain configuration file.
+    if (!fExists || !fMainchainConfigured) {
         QFile file(QString::fromStdString(pathConf.string()));
         if (!file.open(QIODevice::ReadWrite | QIODevice::Text)) {
             QString strError = "Error while opening for write: ";
@@ -205,6 +217,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
             return false;
         }
 
+        // Write new mainchain configuration file
         QTextStream out(&file);
         out << "rpcuser=";
         out << strUser;
