@@ -26,13 +26,10 @@
 #include <QIcon>
 #include <QList>
 
-// Amount column is right-aligned it contains numbers
 static int column_alignments[] = {
-        Qt::AlignLeft|Qt::AlignVCenter, /* status */
-        Qt::AlignLeft|Qt::AlignVCenter, /* watchonly */
+        Qt::AlignHCenter|Qt::AlignVCenter, /* # Confs */
         Qt::AlignLeft|Qt::AlignVCenter, /* date */
-        Qt::AlignLeft|Qt::AlignVCenter, /* type */
-        Qt::AlignLeft|Qt::AlignVCenter, /* address */
+        Qt::AlignLeft|Qt::AlignVCenter, /* txid */
         Qt::AlignRight|Qt::AlignVCenter /* amount */
     };
 
@@ -245,7 +242,7 @@ TransactionTableModel::TransactionTableModel(const PlatformStyle *_platformStyle
         fProcessingQueuedTransactions(false),
         platformStyle(_platformStyle)
 {
-    columns << QString() << QString() << tr("Date") << tr("Type") << tr("Label") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
+    columns << tr("Conf") << tr("Date") << tr("TxID") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit()) << QString();
     priv->refreshWallet();
 
     connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
@@ -519,8 +516,14 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
 
     switch(role)
     {
-    case RawDecorationRole:
-        switch(index.column())
+    case Qt::DecorationRole:
+    {
+        QIcon icon = qvariant_cast<QIcon>(index.data(RawDecorationRole));
+        return platformStyle->TextColorIcon(icon);
+    }
+    case OverviewDecorationRole:
+    {
+        switch (index.column())
         {
         case Status:
             return txStatusDecoration(rec);
@@ -530,20 +533,24 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
             return txAddressDecoration(rec);
         }
         break;
-    case Qt::DecorationRole:
-    {
-        QIcon icon = qvariant_cast<QIcon>(index.data(RawDecorationRole));
-        return platformStyle->TextColorIcon(icon);
     }
     case Qt::DisplayRole:
         switch(index.column())
         {
+        case Status:
+        {
+            int64_t nDepth = rec->status.depth;
+            if (nDepth > 9999)
+                return ">9999";
+            else
+                return QString::number(nDepth);
+        }
         case Date:
             return formatTxDate(rec);
         case Type:
             return formatTxType(rec);
         case ToAddress:
-            return formatTxToAddress(rec, false);
+            return QString::fromStdString(rec->hash.ToString());
         case Amount:
             return formatTxAmount(rec, true, BitcoinUnits::separatorAlways);
         }
@@ -667,15 +674,13 @@ QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientat
             switch(section)
             {
             case Status:
-                return tr("Transaction status. Hover over this field to show number of confirmations.");
+                return tr("Number of confirmations");
             case Date:
                 return tr("Date and time that the transaction was received.");
-            case Type:
-                return tr("Type of transaction.");
             case Watchonly:
                 return tr("Whether or not a watch-only address is involved in this transaction.");
             case ToAddress:
-                return tr("User-defined intent/purpose of the transaction.");
+                return tr("Transaction ID");
             case Amount:
                 return tr("Amount removed from or added to balance.");
             }

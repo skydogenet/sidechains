@@ -29,11 +29,11 @@ public:
 
     enum ColumnIndex {
         Status = 0,
-        Watchonly = 1,
-        Date = 2,
-        Type = 3,
-        ToAddress = 4,
-        Amount = 5
+        Date = 1,
+        ToAddress = 2,
+        Amount = 3,
+        Watchonly = 4,
+        Type = 5,
     };
 
     /** Roles to get specific information from a transaction row.
@@ -52,7 +52,7 @@ public:
         LongDescriptionRole,
         /** Address of transaction */
         AddressRole,
-        /** Label of address related to transaction */
+        /** TXID */
         LabelRole,
         /** Net amount of transaction */
         AmountRole,
@@ -72,6 +72,8 @@ public:
         StatusRole,
         /** Unprocessed icon */
         RawDecorationRole,
+        /** Overview decoration role */
+        OverviewDecorationRole,
     };
 
     int rowCount(const QModelIndex &parent) const;
