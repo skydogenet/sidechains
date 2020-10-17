@@ -21,6 +21,7 @@ class QFrame;
 class QLineEdit;
 class QMenu;
 class QModelIndex;
+class QPushButton;
 class QSignalMapper;
 class QTableView;
 QT_END_NAMESPACE
@@ -37,24 +38,12 @@ public:
 
     void setModel(WalletModel *model);
 
-    // Date ranges for filter
-    enum DateEnum
-    {
-        All,
-        Today,
-        ThisWeek,
-        ThisMonth,
-        LastMonth,
-        ThisYear,
-        Range
-    };
-
     enum ColumnWidths {
-        STATUS_COLUMN_WIDTH = 30,
-        WATCHONLY_COLUMN_WIDTH = 23,
+        CONF_COLUMN_WIDTH = 64,
         DATE_COLUMN_WIDTH = 120,
-        TYPE_COLUMN_WIDTH = 113,
-        AMOUNT_MINIMUM_COLUMN_WIDTH = 120,
+        TXID_COLUMN_WIDTH = 500,
+        AMOUNT_COLUMN_WIDTH = 140,
+        WATCHONLY_COLUMN_WIDTH = 23,
         MINIMUM_COLUMN_WIDTH = 23
     };
 
@@ -62,37 +51,24 @@ private:
     WalletModel *model;
     TransactionFilterProxy *transactionProxyModel;
     QTableView *transactionView;
-
-    QComboBox *dateWidget;
-    QComboBox *typeWidget;
     QComboBox *watchOnlyWidget;
+
     QLineEdit *search_widget;
-    QLineEdit *amountWidget;
+    QPushButton *exportButton;
 
     QMenu *contextMenu;
     QSignalMapper *mapperThirdPartyTxUrls;
 
-    QFrame *dateRangeWidget;
     QDateTimeEdit *dateFrom;
     QDateTimeEdit *dateTo;
     QAction *abandonAction;
     QAction *bumpFeeAction;
 
-    QWidget *createDateRangeWidget();
-
-    GUIUtil::TableViewLastColumnResizingFixer *columnResizingFixer;
-
-    virtual void resizeEvent(QResizeEvent* event);
-
     bool eventFilter(QObject *obj, QEvent *event);
 
 private Q_SLOTS:
     void contextualMenu(const QPoint &);
-    void dateRangeChanged();
     void showDetails();
-    void copyAddress();
-    void editLabel();
-    void copyLabel();
     void copyAmount();
     void copyTxID();
     void copyTxHex();
@@ -109,10 +85,7 @@ Q_SIGNALS:
     void message(const QString &title, const QString &message, unsigned int style);
 
 public Q_SLOTS:
-    void chooseDate(int idx);
-    void chooseType(int idx);
     void chooseWatchonly(int idx);
-    void changedAmount();
     void changedSearch();
     void exportClicked();
     void focusTransaction(const QModelIndex&);
