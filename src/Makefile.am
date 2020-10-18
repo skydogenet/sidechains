@@ -81,6 +81,7 @@ BITCOIN_CORE_H = \
   bech32.h \
   bloom.h \
   blockencodings.h \
+  bmmcache.h \
   chain.h \
   chainparams.h \
   chainparamsbase.h \
@@ -196,6 +197,7 @@ libbitcoin_server_a_SOURCES = \
   addrman.cpp \
   bloom.cpp \
   blockencodings.cpp \
+  bmmcache.cpp \
   chain.cpp \
   checkpoints.cpp \
   consensus/tx_verify.cpp \
@@ -294,8 +296,6 @@ libbitcoin_consensus_a_SOURCES = \
   amount.h \
   arith_uint256.cpp \
   arith_uint256.h \
-  bmmcache.h \
-  bmmcache.cpp \
   consensus/merkle.cpp \
   consensus/merkle.h \
   consensus/params.h \
