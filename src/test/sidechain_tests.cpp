@@ -564,7 +564,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script)
 {
     // Test a valid WT refund message / script
 
-    std::string strRefundAddress = "mwezN1bUucdwUXLRYbDhyUkhwfSJyGnXoc";
+    std::string strRefundAddress = "sVf5Jjy6EuVdq2oKFDaQAxb6rTYbmQZAPT";
     CTxDestination dest = DecodeDestination(strRefundAddress);
 
     BOOST_CHECK(IsValidDestination(dest));
@@ -574,7 +574,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script)
     BOOST_REQUIRE(id);
 
     // Normally this would come from the users sidechain wallet
-    std::string strPrivKey = "cVzpgYmady1ANkCuY1jrAZ2jGWVkEMwqYTkghkBKxZYZMtnRmSAZ";
+    std::string strPrivKey = "cVS8pYc1uyM1R64QEvPzJHiJn84q9Agd3mCHvyvFTf3zmCTXNAh4";
 
     CBitcoinSecret vchSecret;
     BOOST_CHECK(vchSecret.SetString(strPrivKey));
@@ -626,7 +626,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
 {
     // Test a WT refund script with invalid address / signature
 
-    std::string strRefundAddress = "mwezN1bUucdwUXLRYbDhyUkhwfSJyGnXoc";
+    std::string strRefundAddress = "sVf5Jjy6EuVdq2oKFDaQAxb6rTYbmQZAPT";
     CTxDestination dest = DecodeDestination(strRefundAddress);
 
     BOOST_CHECK(IsValidDestination(dest));
@@ -636,7 +636,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
     BOOST_REQUIRE(id);
 
     // Normally this would come from the users sidechain wallet
-    std::string strPrivKey = "cVzpgYmady1ANkCuY1jrAZ2jGWVkEMwqYTkghkBKxZYZMtnRmSAZ";
+    std::string strPrivKey = "cVS8pYc1uyM1R64QEvPzJHiJn84q9Agd3mCHvyvFTf3zmCTXNAh4";
 
     CBitcoinSecret vchSecret;
     BOOST_CHECK(vchSecret.SetString(strPrivKey));
@@ -646,7 +646,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
 
     // We will set the refund address to an address different from the one we
     // sign the message with and check that it is rejected.
-    std::string strOtherAdress = "mhWcMxHjrqru8VRdr1gzyu2ssJrXpN2f6s";
+    std::string strOtherAdress = "sSnLM62jFg5XHiHdN1nzbQ9dHXzUnZS2kP";
 
     // Add WT to psidechaintree
     SidechainWT wt;
@@ -685,7 +685,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
 {
     // Test a WT refund script with invalid WT ID
 
-    std::string strRefundAddress = "mwezN1bUucdwUXLRYbDhyUkhwfSJyGnXoc";
+    std::string strRefundAddress = "sVf5Jjy6EuVdq2oKFDaQAxb6rTYbmQZAPT";
     CTxDestination dest = DecodeDestination(strRefundAddress);
 
     BOOST_CHECK(IsValidDestination(dest));
@@ -695,7 +695,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
     BOOST_REQUIRE(id);
 
     // Normally this would come from the users sidechain wallet
-    std::string strPrivKey = "cVzpgYmady1ANkCuY1jrAZ2jGWVkEMwqYTkghkBKxZYZMtnRmSAZ";
+    std::string strPrivKey = "cVS8pYc1uyM1R64QEvPzJHiJn84q9Agd3mCHvyvFTf3zmCTXNAh4";
 
     CBitcoinSecret vchSecret;
     BOOST_CHECK(vchSecret.SetString(strPrivKey));
