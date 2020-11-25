@@ -184,8 +184,9 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Right align BMM table header
     ui->tableViewBMM->horizontalHeader()->setDefaultAlignment(Qt::AlignRight);
 
-    std::string strAddress = GenerateAddress("Sidechain Deposit");
+    std::string strAddress = GenerateDepositAddress(GenerateAddress("Sidechain Deposit"));
     ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
+    generateQR(strAddress);
 
     connect(ui->checkBoxAutoWTPrimeRefresh, SIGNAL(stateChanged(int)), this,
             SLOT(on_checkBoxAutoWTPrimeRefresh_changed(int)));
@@ -287,11 +288,6 @@ void SidechainPage::generateQR(std::string data)
 {
     if (data.empty())
         return;
-
-    CTxDestination dest = DecodeDestination(data);
-    if (!IsValidDestination(dest)) {
-        return;
-    }
 
 #ifdef USE_QRCODE
     ui->QRCode->clear();
@@ -461,8 +457,11 @@ void SidechainPage::on_pushButtonCopy_clicked()
 
 void SidechainPage::on_pushButtonNew_clicked()
 {
-    ui->lineEditDepositAddress->setText(
-            QString::fromStdString(GenerateAddress("Sidechain Deposit")));
+    std::string strAddress = GenerateDepositAddress(GenerateAddress("Sidechain Deposit"));
+    ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
+
+    // Generate QR code
+    generateQR(strAddress);
 }
 
 void SidechainPage::on_pushButtonWT_clicked()
@@ -744,9 +743,7 @@ std::string SidechainPage::GenerateAddress(const std::string& strLabel)
         // Watch the script
         vpwallets[0]->LearnRelatedScripts(newKey, type);
 
-        // Generate QR code
         strAddress = EncodeDestination(dest);
-        generateQR(strAddress);
 
         // Add to address book
         vpwallets[0]->SetAddressBook(dest, strLabel, "receive");
