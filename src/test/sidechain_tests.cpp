@@ -737,4 +737,24 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
     BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
 }
 
+
+BOOST_AUTO_TEST_CASE(depositaddress)
+{
+    // Generate a deposit address for testchain (0) and make sure the format
+    // matches what we expect.
+    std::string strDest = "patrick";
+
+    std::string strDepositAddress = GenerateDepositAddress(strDest);
+
+    BOOST_CHECK(strDepositAddress == "s0_patrick_bdcaee");
+
+    // Parsing should return just "patrick"
+    std::string strOut = "";
+    unsigned int nSidechain;
+    BOOST_CHECK(ParseDepositAddress(strDepositAddress, strOut, nSidechain));
+    BOOST_CHECK(strOut == "patrick");
+    BOOST_CHECK(nSidechain == THIS_SIDECHAIN);
+
+}
+
 BOOST_AUTO_TEST_SUITE_END()

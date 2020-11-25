@@ -17,7 +17,31 @@
 #include <string>
 #include <vector>
 
+
+//
+//
+//
+//
+// TODO note to sidechain developers:
+//
+// SIDECHAIN_ADDRESS_BYTES, BUILD_COMMIT_HASH & BUILD_TAR_HASH all must be set
+// by you. Address bytes can be set before gitian building the first release,
+// build commit and tar hash must be set with the values from the first release.
+//
+// You must also update the genesis block, port numbers (including rpc server)
+// magic bytes, data directory, checkpoint blocks, and all other chainparams.
+//
+// You also must update THIS_SIDECHAIN with the sidechain number that gets
+// assigned to this sidechain once activated.
+//
+//
+//
+//
+
 /* Sidechain Identifiers */
+
+//! Sidechain number
+static const unsigned int THIS_SIDECHAIN = 0;
 
 //! Sidechain address bytes
 static const std::string SIDECHAIN_ADDRESS_BYTES = "0186ff51f527ffdcf2413d50bdf8fab1feb20e5f82815dad48c73cf462b8b313";
@@ -255,5 +279,9 @@ void SortWTPrimeByHeight(std::vector<SidechainWTPrime>& vWTPrime);
 
 // Erase all SidechainWT from a vector which do not have WT_UNSPENT status
 void SelectUnspentWT(std::vector<SidechainWT>& vWT);
+
+std::string GenerateDepositAddress(const std::string& strDestIn);
+
+bool ParseDepositAddress(const std::string& strAddressIn, std::string& strAddressOut, unsigned int& nSidechainOut);
 
 #endif // BITCOIN_PRIMITIVES_SIDECHAIN_H
