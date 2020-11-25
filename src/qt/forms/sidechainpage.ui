@@ -447,6 +447,11 @@
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
+                    <property name="font">
+                     <font>
+                      <family>Noto Mono</family>
+                     </font>
+                    </property>
                     <property name="placeholderText">
                      <string>Sidechain Deposit Address</string>
                     </property>
