@@ -746,7 +746,7 @@ BOOST_AUTO_TEST_CASE(depositaddress)
 
     std::string strDepositAddress = GenerateDepositAddress(strDest);
 
-    BOOST_CHECK(strDepositAddress == "s0_patrick_bdcaee");
+    BOOST_CHECK(strDepositAddress == "s0_patrick_643e86");
 
     // Parsing should return just "patrick"
     std::string strOut = "";
