@@ -9,6 +9,7 @@
 #include <hash.h>
 #include <streams.h>
 #include <utilmoneystr.h>
+#include <utilstrencodings.h>
 
 #include <algorithm>
 #include <sstream>
@@ -215,15 +216,14 @@ std::string GenerateDepositAddress(const std::string& strDestIn)
     strDepositAddress += strDestIn;
     strDepositAddress += "_";
 
-    // Generate checksum
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strDepositAddress;
+    // Generate checksum (first 6 bytes of SHA-256 hash)
+    std::vector<unsigned char> vch;
+    vch.resize(CSHA256::OUTPUT_SIZE);
+    CSHA256().Write((unsigned char*)&strDepositAddress[0], strDepositAddress.size()).Finalize(&vch[0]);
+    std::string strHash = HexStr(vch.begin(), vch.end());
 
-    // Invalidates ss
-    uint256 hash = ss.GetHash();
-
-    // Prepend checksum bits
-    strDepositAddress += hash.ToString().substr(58, 6);
+    // Append checksum bits
+    strDepositAddress += strHash.substr(0, 6);
 
     return strDepositAddress;
 }
@@ -270,12 +270,14 @@ bool ParseDepositAddress(const std::string& strAddressIn, std::string& strAddres
     if (strNoCheck.empty())
         return false;
 
-    // Generate our own checksum of the address - checksum
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strNoCheck;
+    // Generate checksum (first 6 bytes of SHA-256 hash)
+    std::vector<unsigned char> vch;
+    vch.resize(CSHA256::OUTPUT_SIZE);
+    CSHA256().Write((unsigned char*)&strNoCheck[0], strNoCheck.size()).Finalize(&vch[0]);
+    std::string strHash = HexStr(vch.begin(), vch.end());
 
-    // Invalidates ss
-    uint256 hash = ss.GetHash();
+    if (strHash.size() != 64)
+        return false;
 
     // Get checksum from address string
     std::string strCheck = strAddressIn.substr(delim2 + 1, strAddressIn.size());
@@ -283,7 +285,7 @@ bool ParseDepositAddress(const std::string& strAddressIn, std::string& strAddres
         return false;
 
     // Compare address checksum with our checksum
-    if (strCheck != hash.ToString().substr(58, 6))
+    if (strCheck != strHash.substr(0, 6))
         return false;
 
     return true;
