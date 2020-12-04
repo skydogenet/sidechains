@@ -758,6 +758,38 @@ UniValue getwt(const JSONRPCRequest& request)
     return result;
 }
 
+UniValue formatdepositaddress(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 1)
+        throw std::runtime_error(
+            "formatdepositaddress \"address\"\n"
+            "\nTakes any string and returns a sidechain deposit address\n"
+            "Use this command to turn a sidechain receiving address into a deposit address.\n"
+            "\nArguments:\n"
+            "1. \"address\"      (string, required) The destination to be formatted as a deposit address\n"
+            "\nResult:\n"
+            "deposit address\n"
+            "\nExamples:\n"
+            + HelpExampleCli("formatdepositaddress", "\"1PSSGeFHDnKNxiEyFrD1wcEaHr9hrQDDWc\"")
+            + HelpExampleRpc("formatdepositaddress", "\"1PSSGeFHDnKNxiEyFrD1wcEaHr9hrQDDWc\"")
+        );
+
+    std::string strAddress = request.params[0].get_str();
+    if (strAddress.empty())
+        throw JSONRPCError(RPC_MISC_ERROR, "Input is blank!");
+
+
+    std::string strDepositAddress = GenerateDepositAddress(strAddress);
+    std::string strAddressOut = "";
+    unsigned int nSidechainOut;
+    if (!ParseDepositAddress(strDepositAddress, strAddressOut, nSidechainOut))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to verify deposit address!");
+
+    UniValue ret(UniValue::VOBJ);
+    ret.pushKV("depositaddress", strDepositAddress);
+    return ret;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           argNames
   //  --------------------- ------------------------    -----------------------    ----------
@@ -784,6 +816,7 @@ static const CRPCCommand commands[] =
     { "sidechain",          "listmywithdrawals",        &listmywithdrawals,        {}},
     { "sidechain",          "rebroadcastwtprimehex",    &rebroadcastwtprimehex,    {}},
     { "sidechain",          "getwt",                    &getwt,                    {"id"}},
+    { "sidechain",          "formatdepositaddress",     &formatdepositaddress,     {"address"}},
 
 };
 
