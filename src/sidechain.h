@@ -60,6 +60,9 @@ static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
 static const int WTPRIME_FAIL_WAIT_PERIOD = 20;
 // Real value final release: static const int WTPRIME_FAIL_WAIT_PERIOD = 144;
 
+// The destination string for the change of a WT^
+static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
+
 struct Sidechain {
     uint8_t nSidechain;
     CScript depositScript;
@@ -204,7 +207,7 @@ struct SidechainWTPrime: public SidechainObj {
  */
 struct SidechainDeposit : public SidechainObj {
     uint8_t nSidechain;
-    CKeyID keyID;
+    std::string strDest;
     CAmount amtUserPayout;
     CMutableTransaction dtx;
     CMainchainMerkleBlock proof;
@@ -219,7 +222,7 @@ struct SidechainDeposit : public SidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
-        READWRITE(keyID);
+        READWRITE(strDest);
         READWRITE(amtUserPayout);
         READWRITE(dtx);
         READWRITE(proof);
@@ -232,7 +235,7 @@ struct SidechainDeposit : public SidechainObj {
     {
         if (sidechainop == d.sidechainop &&
                 nSidechain == d.nSidechain &&
-                keyID == d.keyID &&
+                strDest == d.strDest &&
                 amtUserPayout == d.amtUserPayout &&
                 dtx == d.dtx &&
                 proof == d.proof &&

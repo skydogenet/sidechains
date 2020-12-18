@@ -100,7 +100,7 @@ std::string SidechainDeposit::ToString() const
     str << "sidechainop=" << sidechainop << std::endl;
     str << "nSidechain=" << (unsigned int)nSidechain << std::endl;
     str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
-    str << "keyID=" << keyID.ToString() << std::endl;
+    str << "strDest=" << strDest << std::endl;
     str << "payout=" << FormatMoney(amtUserPayout) << std::endl;
     str << "mainchaintxid=" << dtx.GetHash().ToString() << std::endl;
     str << "n=" << std::to_string(n) << std::endl;

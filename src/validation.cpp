@@ -5668,6 +5668,9 @@ bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& w
 
     CMutableTransaction wjtx; // WT^
 
+    // Add SIDECHAIN_WTPRIME_RETURN_DEST OP_RETURN output
+    wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WTPRIME_RETURN_DEST))));
+
     // Add a dummy output for mainchain fee encoding (updated later)
     CAmount amountMainchainFees = 0;
     wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << CScriptNum(1LL << 40)));
@@ -5680,6 +5683,7 @@ bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& w
 
         amountMainchainFees += wt.mainchainFee;
 
+        // TODO check IsValidDestination
         // Output to mainchain keyID
         CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
         wjtx.vout.push_back(CTxOut(amountWT, GetScriptForDestination(dest)));
@@ -5701,7 +5705,7 @@ bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& w
     }
 
     // Update mainchain fee encoding output.
-    wjtx.vout.front().scriptPubKey = EncodeWTFees(amountMainchainFees);
+    wjtx.vout[1].scriptPubKey = EncodeWTFees(amountMainchainFees);
 
     // Did anything make it into the WT^?
     if (!wjtx.vout.size()) {
@@ -5795,17 +5799,24 @@ bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransa
                 vWT.push_back(wt);
             }
 
+            // Check that there are actually enough outputs for this to be valid
+            if (wtPrime->wtPrime.vout.size() < 3) {
+                strFail = "Invalid WT^ - too few outputs!\n";
+                return false;
+            }
+
             // Check that the number of outputs equals the number of
-            // WT(s) listed in the WT^ + one encoded mainchain fee output
-            if (wtPrime->wtPrime.vout.size() != vWT.size() + 1) {
-                strFail = "Invalid WT^ - too many outputs!\n";
+            // WT(s) listed in the WT^ + one encoded mainchain fee output + one
+            // encoded change return dest output
+            if (wtPrime->wtPrime.vout.size() != vWT.size() + 2) {
+                strFail = "Invalid WT^ - missing / extra outputs!\n";
                 return false;
             }
 
             // Check that the amount in the encoded mainchain fee output is
             // equal to the sum of fees from the wt(s)
             CAmount amountRead = 0;
-            if (!DecodeWTFees(wtPrime->wtPrime.vout.front().scriptPubKey, amountRead)) {
+            if (!DecodeWTFees(wtPrime->wtPrime.vout[1].scriptPubKey, amountRead)) {
                 strFail = "Invalid WT^ - failed to decode mainchain fee output!\n";
                 return false;
             }

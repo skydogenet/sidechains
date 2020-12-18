@@ -687,7 +687,12 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
     //
     // - Set the payout amount by subtracting the previous CTIP from the next.
     //
-    // * Create and return the payout txn
+    // * Create and return a vector of vectors where each sub vector is the list
+    // of outputs required to payout a deposit correctly. We keep the outputs
+    // for each deposit contained in their own vector instead of combining them
+    // all because we must include all of the outputs for a deposit payout to
+    // be valid and if we run out of space we need to know which outputs to
+    // remove without invalidating a deposit.
     //
 
     // Get list of deposits from the mainchain
@@ -871,69 +876,92 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
         }
     }
 
-    // Create the deposit transaction
+    // Create the deposit transaction.
+    // We will loop through the sorted list of new deposits, double check a few
+    // things, and then create an output paying the deposit to the destination
+    // string if possible.
     for (const SidechainDeposit& deposit : vDepositSorted) {
+        // Outputs created to payout this deposit - to be added to vOutPackages
         std::vector<CTxOut> vOut;
-        // Special case for WT^ change return - we don't want to pay anyone that
-        if (deposit.keyID == CKeyID(uint160(ParseHex("1111111111111111111111111111111111111111")))) {
+
+        // Double check that the destination isn't blank
+        if (deposit.strDest.empty()) {
+            LogPrintf("%s: Error sidechain deposit empty strDest! Deposit:\n%s\n", __func__, deposit.ToString());
+            return false;
+        }
+
+        // Quickly double check for a burn output
+        bool fBurnFound = false;
+        for (const CTxOut& out : deposit.dtx.vout) {
+            const CScript& scriptPubKey = out.scriptPubKey;
+            if (!scriptPubKey.size())
+                continue;
+
+            if (scriptPubKey[0] != OP_RETURN)
+                continue;
+
+            if (scriptPubKey.size() < 3) {
+                LogPrintf("%s: Error sidechain deposit invalid scriptPubKey (too small)! Deposit:\n%s\n", __func__, deposit.ToString());
+                return false;
+            }
+
+            fBurnFound = true;
+            break;
+        }
+        if (!fBurnFound) {
+            LogPrintf("%s: Error sidechain deposit invalid (no burn found)! Deposit:\n%s\n", __func__, deposit.ToString());
+            return false;
+        }
+
+        // Special case for WT^ change return. We don't pay anyone this deposit
+        // but it still must be added to the database.
+        if (deposit.strDest == SIDECHAIN_WTPRIME_RETURN_DEST) {
             vOut.push_back(CTxOut(0, deposit.GetScript()));
             // Add this deposits output to the vector of deposit outputs
             vOutPackages.push_back(vOut);
             continue;
         }
 
-        // Perform a few repeat / backup checks and then add payout output
-        for (const CTxOut& out : deposit.dtx.vout) {
-            const CScript& scriptPubKey = out.scriptPubKey;
+        //
+        // TODO Refactor for clarity and simplify collection of deposit fees
+        // This is subtracting the deposit fee but not paying it to the
+        // coinbase scriptPubKey - it is paying to the sidechainChangeScript
+        //
+        // Should be refactored to just pay the fee to the coinbase script
+        // if possible.
+        //
+        // TODO bug: I don't think most people will figure out how to
+        // collect these fees. It is so complicated that I consider it a bug
+        // and it is possible that miners will forget to ever collect these
+        // fees.
 
-            // Double check that keyID is not null
-            if (deposit.keyID.IsNull()) {
-                LogPrintf("%s: Error sidechain deposit null keyID! Deposit:\n%s\n", __func__, deposit.ToString());
-                return false;
-            }
-
-            // We are looking for the burn output so skip spendable outputs
-            if (!scriptPubKey.IsUnspendable())
-                continue;
-
-            if (scriptPubKey.size() < 2) {
-                LogPrintf("%s: Error sidechain deposit invalid scriptPubKey! Deposit:\n%s\n", __func__, deposit.ToString());
-                return false;
-            }
-
-
-            //
-            // TODO Refactor for clarity and simplify collection of deposit fees
-            // This is subtracting the deposit fee but not paying it to the
-            // coinbase scriptPubKey - it is paying to the sidechainChangeScript
-            //
-            // Should be refactored to just pay the fee to the coinbase script
-            // if possible.
-            //
-
-            // Payout
-            if (deposit.amtUserPayout >= SIDECHAIN_DEPOSIT_FEE) {
-                // Pay keyID the deposit if it isn't dust after paying fee
-                CScript script;
-                script << OP_DUP << OP_HASH160 << ToByteVector(deposit.keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
-                CTxOut depositOut(deposit.amtUserPayout - SIDECHAIN_DEPOSIT_FEE, script);
+        // Payout
+        if (deposit.amtUserPayout >= SIDECHAIN_DEPOSIT_FEE) {
+            // TODO detect destination from strDest.
+            // Decode keyID from strDest
+            // Pay KeyID.
+            CTxDestination dest = DecodeDestination(deposit.strDest);
+            if (IsValidDestination(dest)) {
+                // Pay deposit if destination is valid and amount isn't dust
+                // after paying deposit fee.
+                CTxOut depositOut(deposit.amtUserPayout - SIDECHAIN_DEPOSIT_FEE, GetScriptForDestination(dest));
                 if (!IsDust(depositOut, ::dustRelayFee))
                     vOut.push_back(depositOut);
 
-                // Depositor pays fee to sidechain
+                // Pay deposit fee
                 CKeyID sidechainKey;
                 sidechainKey.SetHex(SIDECHAIN_CHANGE_KEY);
                 CScript sidechainChangeScript;
                 sidechainChangeScript << OP_DUP << OP_HASH160 << ToByteVector(sidechainKey) << OP_EQUALVERIFY << OP_CHECKSIG;
                 vOut.push_back(CTxOut(SIDECHAIN_DEPOSIT_FEE, sidechainChangeScript));
             }
-
-            // Add serialization of deposit
-            vOut.push_back(CTxOut(0, deposit.GetScript()));
-
-            // Add this deposits outputs to the vector of deposit outputs
-            vOutPackages.push_back(vOut);
         }
+
+        // Add serialization of deposit
+        vOut.push_back(CTxOut(0, deposit.GetScript()));
+
+        // Add this deposits outputs to the vector of deposit outputs
+        vOutPackages.push_back(vOut);
     }
 
     LogPrintf("%s: Created deposit outputs for: %u deposits!\n", __func__, vOutPackages.size());
