@@ -169,8 +169,10 @@ void SidechainWTTableModel::UpdateModel()
     // Create a fake WT^ transaction so that we can estimate the total size of
     // the WT^. WT(s) in the table after the cumulative size is too large will
     // be highlighted.
-    // Add a dummy output for mainchain fee encoding (updated later)
     CMutableTransaction wjtx;
+    // Add SIDECHAIN_WTPRIME_RETURN_DEST output
+    wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WTPRIME_RETURN_DEST))));
+    // Add a dummy output for mainchain fee encoding
     wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << CScriptNum(1LL << 40)));
     wjtx.nVersion = 2;
     wjtx.vin.resize(1); // Dummy vin for serialization...
