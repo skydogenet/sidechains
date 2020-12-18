@@ -99,13 +99,13 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
                 deposit.nSidechain = nSidechain;
             }
             else
-            if (v.first == "keyid") {
-                // Read keyID
-                std::string data = v.second.data();
-                if (!data.length())
+            if (v.first == "strdest") {
+                // Read destination string
+                std::string strDest = v.second.data();
+                if (strDest.empty())
                     continue;
 
-                deposit.keyID.SetHex(data);
+                deposit.strDest = strDest;
             }
             else
             if (v.first == "txhex") {
