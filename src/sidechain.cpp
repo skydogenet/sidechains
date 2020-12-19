@@ -98,7 +98,6 @@ std::string SidechainDeposit::ToString() const
 {
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;
-    str << "nSidechain=" << (unsigned int)nSidechain << std::endl;
     str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
     str << "strDest=" << strDest << std::endl;
     str << "payout=" << FormatMoney(amtUserPayout) << std::endl;
