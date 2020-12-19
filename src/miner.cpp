@@ -805,14 +805,6 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
         }
     }
 
-    // TODO
-    // Improve this code by requesting only DB_LAST_SIDECHAIN_DEPOSIT and
-    // refactor the code to work with that required deposit instead of loading
-    // all of the deposits.
-
-    // Get the deposits in the database
-    std::vector<SidechainDeposit> vDepositDB = psidechaintree->GetDeposits(SIDECHAIN_TEST);
-
     // Look up the CTIP spent by the first new sorted deposit
     if (fHaveDeposits) {
         bool fFound = false;
