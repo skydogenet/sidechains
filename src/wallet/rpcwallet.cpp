@@ -223,7 +223,7 @@ UniValue getdepositaddress(const JSONRPCRequest& request)
     pwallet->LearnRelatedScripts(newKey, output_type);
     CTxDestination dest = GetDestinationForKey(newKey, output_type);
 
-    pwallet->SetAddressBook(dest, "", "deposit");
+    pwallet->SetAddressBook(dest, "sidechain", "deposit");
 
     return GenerateDepositAddress(EncodeDestination(dest));
 }

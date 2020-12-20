@@ -785,9 +785,7 @@ UniValue formatdepositaddress(const JSONRPCRequest& request)
     if (!ParseDepositAddress(strDepositAddress, strAddressOut, nSidechainOut))
         throw JSONRPCError(RPC_MISC_ERROR, "Failed to verify deposit address!");
 
-    UniValue ret(UniValue::VOBJ);
-    ret.pushKV("depositaddress", strDepositAddress);
-    return ret;
+    return strDepositAddress;
 }
 
 static const CRPCCommand commands[] =
