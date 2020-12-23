@@ -937,20 +937,32 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     fConfig = false;
     fConnection = false;
 
-    // Does the sidechain directory exist?
-    fs::path pathSide = GetDefaultDataDir();
-    if (!fs::exists(pathSide))
-        return;
-
-    // Get ~/
     fs::path pathHome = GetHomeDir();
+    std::string strDrivenetData = "";
+
+#ifdef WIN32
+    strDrivenetData = "DriveNet";
+#else
+#ifdef MAC_OSX
+    strDrivenetData = "DriveNet";
+#else
+    strDrivenetData = ".drivenet";
+#endif
+#endif
 
     // Does the drivenet directory exist?
-    fs::path pathDrivechain = pathHome / ".drivenet";
-    if (!fs::exists(pathDrivechain))
-        return;
+    fs::path pathDrivenetData = pathHome / strDrivenetData;
+    if (!fs::exists(pathDrivenetData))
+        LogPrintf("%s: Configuration error - drivechain data directory not found!\n");
 
-    fs::path pathConfMain = pathDrivechain / "drivenet.conf";
+    // Does the sidechain directory exist?
+    fs::path pathSide = GetDefaultDataDir();
+    if (!fs::exists(pathSide)) {
+        LogPrintf("%s: Configuration error - sidechain data directory not found!\n", __func__);
+    }
+
+    // Do we have configuration files for the mainchain & sidechain?
+    fs::path pathConfMain = pathDrivenetData / "drivenet.conf";
     fs::path pathConfSide = pathSide / "testchain.conf";
 
     // Do drivenet.conf & side.conf exist?
@@ -959,6 +971,10 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
 
     // Check if we can connect to the mainchain
     fConnection = CheckMainchainConnection();
+
+    // TODO maybe we shouldn't update network status here, it might not
+    // be clear to someone calling this function that it will also
+    // update network activity based on results...
     UpdateNetworkActive(fConnection);
 }
 
