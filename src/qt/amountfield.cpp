@@ -19,12 +19,16 @@ AmountField::AmountField(QWidget *parent) :
     ui->setupUi(this);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->setContentsMargins(0,0,0,0);
 
     ui->lineEditAmount->setLayout(layout);
     ui->lineEditAmount->setFixedSize(200, 28);
 
     labelUnit = new QLabel(this);
     labelUnit->setEnabled(false); // So that it displays with disabled style
+    labelUnit->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+    labelUnit->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+
     layout->addStretch(50);
     layout->addWidget(labelUnit);
 
@@ -34,6 +38,8 @@ AmountField::AmountField(QWidget *parent) :
 
     setDisplayUnit(unit);
     setValue(CAmount(0));
+
+    this->updateGeometry();
 }
 
 AmountField::~AmountField()
