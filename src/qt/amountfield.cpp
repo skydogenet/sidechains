@@ -27,7 +27,7 @@ AmountField::AmountField(QWidget *parent) :
     labelUnit = new QLabel(this);
     labelUnit->setEnabled(false); // So that it displays with disabled style
     labelUnit->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-    labelUnit->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    labelUnit->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
     layout->addStretch(50);
     layout->addWidget(labelUnit);
