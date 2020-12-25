@@ -100,8 +100,20 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
 
     fs::path pathHome = GetHomeDir();
 
+    std::string strData = "";
+#ifdef WIN32
+    strData = "DriveNet";
+#else
+
+#ifdef MAC_OSX
+    strData = "DriveNet";
+#else
+    strData = ".drivenet";
+#endif
+#endif
+
     // Does the drivenet directory exist?
-    fs::path pathData = pathHome / ".drivenet";
+    fs::path pathData = pathHome / strData;
     if (!fs::exists(pathData)) {
         QString strError = "DriveNet data directory (~/.drivenet) not found!\n";
         messageBox.setText(strError);

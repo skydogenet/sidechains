@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>820</width>
+    <width>1058</width>
     <height>481</height>
    </rect>
   </property>
@@ -139,8 +139,8 @@
              </property>
              <property name="iconSize">
               <size>
-               <width>32</width>
-               <height>32</height>
+               <width>64</width>
+               <height>64</height>
               </size>
              </property>
              <property name="tabBarAutoHide">
@@ -281,6 +281,12 @@
                    <property name="icon">
                     <iconset resource="../bitcoin.qrc">
                      <normaloff>:/icons/transaction_0</normaloff>:/icons/transaction_0</iconset>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>24</width>
+                     <height>24</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -446,6 +452,11 @@
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Noto Mono</family>
+                     </font>
                     </property>
                     <property name="placeholderText">
                      <string>Sidechain Deposit Address</string>
@@ -1101,7 +1112,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string>Manual</string>
+                <string>Manual BMM</string>
                </property>
               </widget>
              </item>

@@ -189,6 +189,44 @@ UniValue getnewaddress(const JSONRPCRequest& request)
     return EncodeDestination(dest);
 }
 
+UniValue getdepositaddress(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "getdepositaddress\n"
+            "\nReturns a new sidechain deposit address for receiving deposits from the mainchain.\n"
+            "\nResult:\n"
+            "\"address\"    (string) The new sidechain deposit address\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getdepositaddress", "")
+            + HelpExampleRpc("getdepositaddress", "")
+        );
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    OutputType output_type = OUTPUT_TYPE_LEGACY;
+
+    if (!pwallet->IsLocked()) {
+        pwallet->TopUpKeyPool();
+    }
+
+    // Generate a new key that is added to wallet
+    CPubKey newKey;
+    if (!pwallet->GetKeyFromPool(newKey)) {
+        throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+    }
+    pwallet->LearnRelatedScripts(newKey, output_type);
+    CTxDestination dest = GetDestinationForKey(newKey, output_type);
+
+    pwallet->SetAddressBook(dest, "sidechain", "deposit");
+
+    return GenerateDepositAddress(EncodeDestination(dest));
+}
 
 CTxDestination GetAccountDestination(CWallet* const pwallet, std::string strAccount, bool bForceNew=false)
 {
@@ -4025,6 +4063,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "getaddressinfo",                   &getaddressinfo,                {"address"} },
     { "wallet",             "getbalance",                       &getbalance,                    {"account","minconf","include_watchonly"} },
     { "wallet",             "getnewaddress",                    &getnewaddress,                 {"account","address_type"} },
+    { "wallet",             "getdepositaddress",                &getdepositaddress,             {} },
     { "wallet",             "getrawchangeaddress",              &getrawchangeaddress,           {"address_type"} },
     { "wallet",             "getreceivedbyaccount",             &getreceivedbyaccount,          {"account","minconf"} },
     { "wallet",             "getreceivedbyaddress",             &getreceivedbyaddress,          {"address","minconf"} },

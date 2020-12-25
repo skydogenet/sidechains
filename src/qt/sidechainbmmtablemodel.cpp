@@ -173,6 +173,18 @@ QVariant SidechainBMMTableModel::headerData(int section, Qt::Orientation orienta
     return QVariant();
 }
 
+Qt::ItemFlags SidechainBMMTableModel::flags (const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return Qt::NoItemFlags;
+
+    BMMTableObject object = model.at(index.row());
+    if (object.fFailed)
+        return Qt::NoItemFlags;
+    else
+        return Qt::ItemIsEnabled;
+}
+
 void SidechainBMMTableModel::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;

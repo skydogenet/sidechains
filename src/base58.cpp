@@ -273,9 +273,9 @@ CTxDestination DecodeDestination(const std::string& str, const CChainParams& par
         // base58-encoded Bitcoin addresses.
         // Public-key-hash-addresses have version 0 (or 111 testnet).
         // The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
-        bool fMainchainRegtest = gArgs.GetBoolArg("-mainchainregtest", false);
+        bool fRegtest = gArgs.GetBoolArg("-regtest", false);
         std::vector<unsigned char> pubkey_prefix;
-        if (fMainchain && fMainchainRegtest)
+        if (fMainchain && fRegtest)
             pubkey_prefix = params.Base58Prefix(CChainParams::MAINCHAIN_REGTEST_PUBKEY_ADDRESS);
         else
         if (fMainchain)

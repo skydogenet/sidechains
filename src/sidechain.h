@@ -17,7 +17,31 @@
 #include <string>
 #include <vector>
 
+
+//
+//
+//
+//
+// TODO note to sidechain developers:
+//
+// SIDECHAIN_ADDRESS_BYTES, BUILD_COMMIT_HASH & BUILD_TAR_HASH all must be set
+// by you. Address bytes can be set before gitian building the first release,
+// build commit and tar hash must be set with the values from the first release.
+//
+// You must also update the genesis block, port numbers (including rpc server)
+// magic bytes, data directory, checkpoint blocks, and all other chainparams.
+//
+// You also must update THIS_SIDECHAIN with the sidechain number that gets
+// assigned to this sidechain once activated.
+//
+//
+//
+//
+
 /* Sidechain Identifiers */
+
+//! Sidechain number
+static const unsigned int THIS_SIDECHAIN = 0;
 
 //! Sidechain address bytes
 static const std::string SIDECHAIN_ADDRESS_BYTES = "6636970264b02297c62d67b5d7a6db13eff9ec8cda73208481d70a461a5b05d0";
@@ -35,6 +59,9 @@ static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 300;
 // Temporary testnet value
 static const int WTPRIME_FAIL_WAIT_PERIOD = 20;
 // Real value final release: static const int WTPRIME_FAIL_WAIT_PERIOD = 144;
+
+// The destination string for the change of a WT^
+static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
 
 struct Sidechain {
     uint8_t nSidechain;
@@ -180,7 +207,7 @@ struct SidechainWTPrime: public SidechainObj {
  */
 struct SidechainDeposit : public SidechainObj {
     uint8_t nSidechain;
-    CKeyID keyID;
+    std::string strDest;
     CAmount amtUserPayout;
     CMutableTransaction dtx;
     CMainchainMerkleBlock proof;
@@ -195,7 +222,7 @@ struct SidechainDeposit : public SidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
-        READWRITE(keyID);
+        READWRITE(strDest);
         READWRITE(amtUserPayout);
         READWRITE(dtx);
         READWRITE(proof);
@@ -208,7 +235,7 @@ struct SidechainDeposit : public SidechainObj {
     {
         if (sidechainop == d.sidechainop &&
                 nSidechain == d.nSidechain &&
-                keyID == d.keyID &&
+                strDest == d.strDest &&
                 amtUserPayout == d.amtUserPayout &&
                 dtx == d.dtx &&
                 proof == d.proof &&
@@ -255,5 +282,9 @@ void SortWTPrimeByHeight(std::vector<SidechainWTPrime>& vWTPrime);
 
 // Erase all SidechainWT from a vector which do not have WT_UNSPENT status
 void SelectUnspentWT(std::vector<SidechainWT>& vWT);
+
+std::string GenerateDepositAddress(const std::string& strDestIn);
+
+bool ParseDepositAddress(const std::string& strAddressIn, std::string& strAddressOut, unsigned int& nSidechainOut);
 
 #endif // BITCOIN_PRIMITIVES_SIDECHAIN_H

@@ -99,13 +99,13 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
                 deposit.nSidechain = nSidechain;
             }
             else
-            if (v.first == "keyid") {
-                // Read keyID
-                std::string data = v.second.data();
-                if (!data.length())
+            if (v.first == "strdest") {
+                // Read destination string
+                std::string strDest = v.second.data();
+                if (strDest.empty())
                     continue;
 
-                deposit.keyID.SetHex(data);
+                deposit.strDest = strDest;
             }
             else
             if (v.first == "txhex") {
@@ -686,8 +686,8 @@ bool SidechainClient::SendRequestToMainchain(const std::string& json, boost::pro
     // Testnet RPC = 18332
     // Regtest RPC = 18443
     //
-    bool fMainchainRegtest = gArgs.GetBoolArg("-mainchainregtest", false);
-    int port = fMainchainRegtest ? 18443 : 8332;
+    bool fRegtest = gArgs.GetBoolArg("-regtest", false);
+    int port = fRegtest ? 18443 : 8332;
 
     try {
         // Setup BOOST ASIO for a synchronus call to the mainchain
