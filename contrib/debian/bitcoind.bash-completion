@@ -1,2 +1,2 @@
-contrib/testchaind.bash-completion	testchaind
-contrib/testchain-cli.bash-completion	testchain-cli
+contrib/thunderd.bash-completion	thunderd
+contrib/thunder-cli.bash-completion	thunder-cli

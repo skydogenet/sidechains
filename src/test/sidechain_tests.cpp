@@ -32,7 +32,7 @@ static BlockAssembler AssemblerForTest(const CChainParams& params) {
     return BlockAssembler(params, options);
 }
 
-BOOST_FIXTURE_TEST_SUITE(sidechain_tests, TestChain100Setup)
+BOOST_FIXTURE_TEST_SUITE(sidechain_tests, Thunder100Setup)
 
 BOOST_AUTO_TEST_CASE(sidechain_obj)
 {
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_invalid_verified)
 }
 
 // TODO although more complicated than it may seem at first, it would be nice
-// if we could also have a valid test that uses the TestChain100 and extends
+// if we could also have a valid test that uses the Thunder100 and extends
 // that chain. For now we can call VerifyCriticalHashProof on the block.
 
 BOOST_AUTO_TEST_CASE(sidechain_bmm_cache)
@@ -788,7 +788,7 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
 
 BOOST_AUTO_TEST_CASE(depositaddress)
 {
-    // Generate a deposit address for testchain (0) and make sure the format
+    // Generate a deposit address for thunder (0) and make sure the format
     // matches what we expect.
     std::string strDest = "patrick";
 

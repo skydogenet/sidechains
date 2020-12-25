@@ -1,31 +1,31 @@
-# /etc/conf.d/testchaind: config file for /etc/init.d/testchaind
+# /etc/conf.d/thunderd: config file for /etc/init.d/thunderd
 
 # Config file location
 #BITCOIND_CONFIGFILE="/etc/bitcoin/bitcoin.conf"
 
 # What directory to write pidfile to?  (created and owned by $BITCOIND_USER)
-#BITCOIND_PIDDIR="/var/run/testchaind"
+#BITCOIND_PIDDIR="/var/run/thunderd"
 
 # What filename to give the pidfile
-#BITCOIND_PIDFILE="${BITCOIND_PIDDIR}/testchaind.pid"
+#BITCOIND_PIDFILE="${BITCOIND_PIDDIR}/thunderd.pid"
 
-# Where to write testchaind data (be mindful that the blockchain is large)
-#BITCOIND_DATADIR="/var/lib/testchaind"
+# Where to write thunderd data (be mindful that the blockchain is large)
+#BITCOIND_DATADIR="/var/lib/thunderd"
 
-# User and group to own testchaind process
+# User and group to own thunderd process
 #BITCOIND_USER="bitcoin"
 #BITCOIND_GROUP="bitcoin"
 
-# Path to testchaind executable
-#BITCOIND_BIN="/usr/bin/testchaind"
+# Path to thunderd executable
+#BITCOIND_BIN="/usr/bin/thunderd"
 
-# Nice value to run testchaind under
+# Nice value to run thunderd under
 #BITCOIND_NICE=0
 
 # Additional options (avoid -conf and -datadir, use flags above)
 #BITCOIND_OPTS=""
 
-# The timeout in seconds OpenRC will wait for testchaind to terminate
+# The timeout in seconds OpenRC will wait for thunderd to terminate
 # after a SIGTERM has been raised.
 # Note that this will be mapped as argument to start-stop-daemon's
 # '--retry' option, which means you can specify a retry schedule

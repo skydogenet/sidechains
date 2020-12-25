@@ -396,9 +396,9 @@ SOURCES += src/addrdb.cpp \
            src/sidechain.cpp \
            src/sidechainclient.cpp \
            src/sync.cpp \
-           src/testchain-cli.cpp \
-           src/testchain-tx.cpp \
-           src/testchaind.cpp \
+           src/thunder-cli.cpp \
+           src/thunder-tx.cpp \
+           src/thunderd.cpp \
            src/threadinterrupt.cpp \
            src/timedata.cpp \
            src/torcontrol.cpp \

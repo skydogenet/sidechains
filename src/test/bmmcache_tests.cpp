@@ -21,7 +21,7 @@ std::deque<uint256> GenerateRandomHashChain(int nCount)
     return dHash;
 }
 
-BOOST_FIXTURE_TEST_SUITE(bmmcache_tests, TestChain100Setup)
+BOOST_FIXTURE_TEST_SUITE(bmmcache_tests, Thunder100Setup)
 
 
 BOOST_AUTO_TEST_CASE(bmmcache_1_block)

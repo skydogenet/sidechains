@@ -75,8 +75,8 @@ class CScript;
 // Testing fixture that pre-creates a
 // 100-block REGTEST-mode block chain
 //
-struct TestChain100Setup : public TestingSetup {
-    TestChain100Setup();
+struct Thunder100Setup : public TestingSetup {
+    Thunder100Setup();
 
     // Create a new block with coinbase paying to scriptPubKey, and try to add
     // it to the current chain.
@@ -86,7 +86,7 @@ struct TestChain100Setup : public TestingSetup {
 
     CScript GetCoinbaseScript() const;
 
-    ~TestChain100Setup();
+    ~Thunder100Setup();
 
     std::vector<CTransaction> coinbaseTxns; // For convenience, coinbase transactions
     CKey coinbaseKey; // private/public key needed to spend coinbase transactions

@@ -1,8 +1,8 @@
 
 Debian
 ====================
-This directory contains files used to package testchaind/bitcoin-qt
-for Debian-based Linux systems. If you compile testchaind/bitcoin-qt yourself, there are some useful files here.
+This directory contains files used to package thunderd/bitcoin-qt
+for Debian-based Linux systems. If you compile thunderd/bitcoin-qt yourself, there are some useful files here.
 
 ## bitcoin: URI support ##
 
