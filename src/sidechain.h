@@ -41,7 +41,7 @@
 /* Sidechain Identifiers */
 
 //! Sidechain number
-static const unsigned int THIS_SIDECHAIN = 0;
+static const unsigned int THIS_SIDECHAIN = 1;
 
 //! Sidechain address bytes
 static const std::string SIDECHAIN_ADDRESS_BYTES = "6636970264b02297c62d67b5d7a6db13eff9ec8cda73208481d70a461a5b05d0";
