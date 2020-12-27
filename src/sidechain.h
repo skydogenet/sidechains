@@ -41,10 +41,10 @@
 /* Sidechain Identifiers */
 
 //! Sidechain number
-static const unsigned int THIS_SIDECHAIN = 3;
+static const unsigned int THIS_SIDECHAIN = 2;
 
 //! Sidechain address bytes
-static const std::string SIDECHAIN_ADDRESS_BYTES = "0186ff51f527ffdcf2413d50bdf8fab1feb20e5f82815dad48c73cf462b8b313";
+static const std::string SIDECHAIN_ADDRESS_BYTES = "0705ad97d60076757da514293e86a3c5686d2b3e52d2309aee36a13a548e7d30";
 
 //! Sidechain build commit hash
 static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "efe0934d9dd57d149205ed96c3ba0f5d9a798baf";
