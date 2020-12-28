@@ -39,7 +39,7 @@ bool SidechainClient::BroadcastWTPrime(const std::string& hex)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"receivewtprime\", \"params\": ");
     json.append("[");
-    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append(",\"");
     json.append(hex);
     json.append("\"] }");
@@ -93,7 +93,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
                 if (!data.length())
                     continue;
                 uint8_t nSidechain = std::stoi(data);
-                if (nSidechain != SIDECHAIN_TEST)
+                if (nSidechain != THIS_SIDECHAIN)
                     continue;
 
                 deposit.nSidechain = nSidechain;
@@ -263,7 +263,7 @@ uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical,
     json.append(",\"");
     json.append(hashCritical.ToString());
     json.append("\",");
-    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append(",");
     json.append(UniValue(0).write());
     json.append(",\"");
@@ -305,7 +305,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listsidechainctip\", \"params\": ");
     json.append("[");
-    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append("] }");
 
     // Try to request CTIP from mainchain
@@ -541,7 +541,7 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"getworkscore\", \"params\": ");
     json.append("[");
-    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append(",");
     json.append("\"");
     json.append(hashWTPrime.ToString());
@@ -571,7 +571,7 @@ bool SidechainClient::ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime)
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"listwtprimestatus\", \"params\": ");
     json.append("[");
-    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append("] }");
 
     boost::property_tree::ptree ptree;
@@ -634,7 +634,7 @@ bool SidechainClient::HaveSpentWTPrime(const uint256& hashWTPrime)
     json.append(hashWTPrime.ToString());
     json.append("\"");
     json.append(",");
-    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append("] }");
 
     // Try to request mainchain block hash
@@ -660,7 +660,7 @@ bool SidechainClient::HaveFailedWTPrime(const uint256& hashWTPrime)
     json.append(hashWTPrime.ToString());
     json.append("\"");
     json.append(",");
-    json.append(UniValue(SIDECHAIN_TEST).write());
+    json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append("] }");
 
     // Try to request mainchain block hash

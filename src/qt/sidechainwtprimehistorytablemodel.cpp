@@ -124,7 +124,7 @@ void SidechainWTPrimeHistoryTableModel::UpdateModel()
 
     // Get all of the current WT^(s)
     std::vector<SidechainWTPrime> vWTPrime;
-    vWTPrime = psidechaintree->GetWTPrimes(SIDECHAIN_TEST);
+    vWTPrime = psidechaintree->GetWTPrimes(THIS_SIDECHAIN);
 
     if (vWTPrime.empty())
         return;
