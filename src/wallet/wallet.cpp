@@ -4314,7 +4314,7 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
 
     // WT data ouput
     SidechainWT wt;
-    wt.nSidechain = SIDECHAIN_TEST;
+    wt.nSidechain = THIS_SIDECHAIN;
     wt.strDestination = strDestination;
     wt.strRefundDestination = strRefundDestination;
     wt.amount = nAmount + nMainchainFee;

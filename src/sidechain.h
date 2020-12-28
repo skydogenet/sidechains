@@ -71,11 +71,6 @@ struct Sidechain {
     std::string GetSidechainName() const;
 };
 
-enum Sidechains {
-    // This sidechain
-    SIDECHAIN_TEST = 0,
-};
-
 //! WT status / zone (unspent, included in a WT^, paid out)
 static const char WT_UNSPENT = 'u';
 static const char WT_IN_WTPRIME = 'p';

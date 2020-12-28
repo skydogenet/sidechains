@@ -5643,7 +5643,7 @@ bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& w
     }
 
     // Get WT(s) from psidechaintree
-    std::vector<SidechainWT> vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
+    std::vector<SidechainWT> vWT = psidechaintree->GetWTs(THIS_SIDECHAIN);
     if (vWT.empty()) {
         LogPrintf("%s: No wt(s) to create WT^\n", __func__);
         return false;
@@ -5664,7 +5664,7 @@ bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& w
 
     // WT^ database object for psidechaintree (sidechain only)
     SidechainWTPrime wtPrime;
-    wtPrime.nSidechain = SIDECHAIN_TEST;
+    wtPrime.nSidechain = THIS_SIDECHAIN;
 
     CMutableTransaction wjtx; // WT^
 
