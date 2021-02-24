@@ -16,6 +16,7 @@
 #include <netbase.h>
 #include <rpc/server.h>
 #include <rpc/client.h>
+#include <sidechain.h>
 #include <util.h>
 
 #include <openssl/crypto.h>
@@ -498,6 +499,12 @@ RPCConsole::RPCConsole(const PlatformStyle *_platformStyle, QWidget *parent) :
 
     consoleFontSize = settings.value(fontSizeSettingsKey, QFontInfo(QFont()).pointSize()).toInt();
     clear();
+
+    // Sidechain params tab
+    ui->labelSidechainNumber->setText(QString::number(THIS_SIDECHAIN));
+    ui->labelAddressBytes->setText(QString::fromStdString(SIDECHAIN_ADDRESS_BYTES));
+    ui->labelHashID1->setText(QString::fromStdString(SIDECHAIN_BUILD_COMMIT_HASH));
+    ui->labelHashID2->setText(QString::fromStdString(SIDECHAIN_BUILD_TAR_HASH));
 }
 
 RPCConsole::~RPCConsole()
