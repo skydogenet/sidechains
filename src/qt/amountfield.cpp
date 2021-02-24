@@ -152,10 +152,13 @@ void AmountField::ValidateAmount()
 void AmountField::setDisplayMode()
 {
     ui->lineEditAmount->setReadOnly(true);
+    this->ensurePolished();
     this->setStyleSheet("QLineEdit[readOnly=\"true\"] {"
                         "background: rgba(0, 0, 0, 0%);"
                         "border-width: 2px;"
                         "border-style: solid;"
                         "border-color: rgba(0, 0, 0, 0%);"
                         "}");
+    this->updateGeometry();
+    this->ensurePolished();
 }
