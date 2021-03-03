@@ -5,6 +5,7 @@
 #include <qt/bitcoinunits.h>
 
 #include <primitives/transaction.h>
+#include <sidechain.h>
 
 #include <QStringList>
 
@@ -40,9 +41,9 @@ QString BitcoinUnits::longName(int unit)
 {
     switch(unit)
     {
-    case BTC: return QString("SC1");
-    case mBTC: return QString("mSC1");
-    case uBTC: return QString::fromUtf8("µSC1 (bits)");
+    case BTC: return QString("SC" + QString::number(THIS_SIDECHAIN));
+    case mBTC: return QString("mSC" + QString::number(THIS_SIDECHAIN));
+    case uBTC: return QString(QString::fromUtf8("µSC") + QString::number(THIS_SIDECHAIN) + " (bits)");
     default: return QString("???");
     }
 }
