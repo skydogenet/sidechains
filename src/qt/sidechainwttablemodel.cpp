@@ -157,7 +157,7 @@ void SidechainWTTableModel::UpdateModel()
     endResetModel();
 
     std::vector<SidechainWT> vWT;
-    vWT = psidechaintree->GetWTs(SIDECHAIN_TEST);
+    vWT = psidechaintree->GetWTs(THIS_SIDECHAIN);
 
     SelectUnspentWT(vWT);
 

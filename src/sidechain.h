@@ -17,7 +17,6 @@
 #include <string>
 #include <vector>
 
-
 //
 //
 //
@@ -69,11 +68,6 @@ struct Sidechain {
 
     std::string ToString() const;
     std::string GetSidechainName() const;
-};
-
-enum Sidechains {
-    // This sidechain
-    SIDECHAIN_TEST = 1,
 };
 
 //! WT status / zone (unspent, included in a WT^, paid out)
