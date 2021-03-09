@@ -46,10 +46,10 @@ static const unsigned int THIS_SIDECHAIN = 2;
 static const std::string SIDECHAIN_ADDRESS_BYTES = "0705ad97d60076757da514293e86a3c5686d2b3e52d2309aee36a13a548e7d30";
 
 //! Sidechain build commit hash
-static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "efe0934d9dd57d149205ed96c3ba0f5d9a798baf";
+static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "25dabab73eb48ff6b04b1203ab736ad7192c1dcb";
 
 //! Sidechain build tar hash
-static const std::string SIDECHAIN_BUILD_TAR_HASH = "f20e1f628c7b6702184b3dce1157ce30cfb47d5988ab13d6d3a6199e8ee31032";
+static const std::string SIDECHAIN_BUILD_TAR_HASH = "2e1b26bec1cd625c21d19b60a72511d8245a8dabbd0d38d528d8a877f65da1ba";
 
 static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 140;
 
