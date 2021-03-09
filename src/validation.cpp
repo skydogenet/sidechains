@@ -5407,13 +5407,10 @@ bool DumpMempool(void)
 void LoadBMMCache()
 {
     fs::path path = GetDataDir() / "bmm.dat";
-    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return;
     }
-
-    // TODO log this
-    uint64_t fileSize = fs::file_size(path);
 
     std::vector<uint256> vHash;
     try {
@@ -5450,8 +5447,8 @@ void DumpBMMCache()
 
     int count = vHash.size();
 
-    fs::path path = GetDataDir() / "bmm.dat";
-    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    fs::path path = GetDataDir() / "bmm.dat.new";
+    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
     }
@@ -5469,18 +5466,21 @@ void DumpBMMCache()
         LogPrintf("%s: Error writing BMM cache: %s", __func__, e.what());
         return;
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "bmm.dat.new", GetDataDir() / "bmm.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 void LoadMainBlockCache()
 {
     fs::path path = GetDataDir() / "mainblockhash.dat";
-    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return;
     }
-
-    // TODO log this
-    uint64_t fileSize = fs::file_size(path);
 
     std::vector<uint256> vHash;
     try {
@@ -5516,8 +5516,8 @@ void DumpMainBlockCache()
 
     int count = vHash.size();
 
-    fs::path path = GetDataDir() / "mainblockhash.dat";
-    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    fs::path path = GetDataDir() / "mainblockhash.dat.new";
+    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
     }
@@ -5535,6 +5535,12 @@ void DumpMainBlockCache()
         LogPrintf("%s: Error writing main block cache: %s", __func__, e.what());
         return;
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "mainblockhash.dat.new", GetDataDir() / "mainblockhash.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 void DumpWTIDCache()
@@ -5545,8 +5551,8 @@ void DumpWTIDCache()
 
     int count = setWTID.size();
 
-    fs::path path = GetDataDir() / "wtid.dat";
-    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    fs::path path = GetDataDir() / "wtid.dat.new";
+    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
     }
@@ -5564,18 +5570,21 @@ void DumpWTIDCache()
         LogPrintf("%s: Error writing WT ID cache: %s", __func__, e.what());
         return;
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "wtid.dat.new", GetDataDir() / "wtid.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 void LoadWTIDCache()
 {
     fs::path path = GetDataDir() / "wtid.dat";
-    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return;
     }
-
-    // TODO log this
-    uint64_t fileSize = fs::file_size(path);
 
     std::vector<uint256> vWTID;
     try {
