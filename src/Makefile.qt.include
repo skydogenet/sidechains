@@ -114,6 +114,7 @@ QT_FORMS_UI = \
   qt/forms/sendcoinsdialog.ui \
   qt/forms/sendcoinsentry.ui \
   qt/forms/sidechainpage.ui \
+  qt/forms/sidechainwtconfirmationdialog.ui \
   qt/forms/sidechainwtprimehistorydialog.ui \
   qt/forms/signverifymessagedialog.ui \
   qt/forms/transactiondescdialog.ui
@@ -157,6 +158,7 @@ QT_MOC_CPP = \
   qt/moc_sendcoinsentry.cpp \
   qt/moc_sidechainpage.cpp \
   qt/moc_sidechainbmmtablemodel.cpp \
+  qt/moc_sidechainwtconfirmationdialog.cpp \
   qt/moc_sidechainwtprimehistorytablemodel.cpp \
   qt/moc_sidechainwttablemodel.cpp \
   qt/moc_sidechainwtprimehistorydialog.cpp \
@@ -236,6 +238,7 @@ BITCOIN_QT_H = \
   qt/sendcoinsentry.h \
   qt/sidechainpage.h \
   qt/sidechainbmmtablemodel.h \
+  qt/sidechainwtconfirmationdialog.h \
   qt/sidechainwtprimehistorytablemodel.h \
   qt/sidechainwttablemodel.h \
   qt/sidechainwtprimehistorydialog.h \
@@ -362,6 +365,7 @@ BITCOIN_QT_WALLET_CPP = \
   qt/sendcoinsentry.cpp \
   qt/sidechainpage.cpp \
   qt/sidechainbmmtablemodel.cpp \
+  qt/sidechainwtconfirmationdialog.cpp \
   qt/sidechainwtprimehistorytablemodel.cpp \
   qt/sidechainwttablemodel.cpp \
   qt/sidechainwtprimehistorydialog.cpp \
