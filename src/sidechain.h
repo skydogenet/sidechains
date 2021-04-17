@@ -51,7 +51,7 @@ static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "a67a177c615cf2e228ab4027
 //! Sidechain build tar hash
 static const std::string SIDECHAIN_BUILD_TAR_HASH = "15eda1257f8efcfded8a2ccbbdd756b29797f2c7f4174c9ef43d5667ac570374";
 
-static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 140;
+static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 75;
 
 static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
 
