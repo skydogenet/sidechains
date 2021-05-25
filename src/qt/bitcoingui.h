@@ -29,6 +29,8 @@ class SendCoinsRecipient;
 class WalletFrame;
 class WalletModel;
 class HelpMessageDialog;
+class HashCalcDialog;
+class BlockExplorer;
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -112,6 +114,8 @@ private:
     QAction *openAction;
     QAction *showHelpMessageAction;
     QAction *sidechainAction;
+    QAction *showHashCalcDialogAction;
+    QAction *showBlockExplorerDialogAction;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -120,6 +124,13 @@ private:
     HelpMessageDialog *helpMessageDialog;
 
     QTimer *pollTimer;
+
+#ifdef ENABLE_WALLET
+    /** Hash calculator dialog */
+    HashCalcDialog *hashCalcDialog;
+    /** Block explorer dialog */
+    BlockExplorer *blockExplorerDialog;
+#endif
 
     /** Keep track of previous number of blocks, to detect progress */
     int prevBlocks;
@@ -207,6 +218,10 @@ private Q_SLOTS:
     void gotoVerifyMessageTab(QString addr = "");
     /** Switch to sidechain page */
     void gotoSidechainPage();
+    /** Show hash calculator dialog */
+    void showHashCalcDialog();
+    /** Show block explorer dialog */
+    void showBlockExplorerDialog();
 
     /** Show open dialog */
     void openClicked();
