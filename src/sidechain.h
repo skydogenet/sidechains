@@ -43,7 +43,7 @@
 static const unsigned int THIS_SIDECHAIN = 0;
 
 //! Sidechain address bytes
-static const std::string SIDECHAIN_ADDRESS_BYTES = "0186ff51f527ffdcf2413d50bdf8fab1feb20e5f82815dad48c73cf462b8b313";
+static const std::string SIDECHAIN_ADDRESS_BYTES = "b9c96c68789efce57fd59318243fd8f87877fcac83555749175bfd476b2e879c";
 
 //! Sidechain build commit hash
 static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "a67a177c615cf2e228ab4027faa48a745e448c38";

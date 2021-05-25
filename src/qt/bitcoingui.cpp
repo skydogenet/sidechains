@@ -153,6 +153,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
 #else
     MacDockIconHandler::instance()->setIcon(networkStyle->getAppIcon());
 #endif
+    windowTitle = "Testchain2 - the replacement";
     setWindowTitle(windowTitle);
 
 #if defined(Q_OS_MAC) && QT_VERSION < 0x050000
