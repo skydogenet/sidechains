@@ -123,6 +123,22 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     if (chainActive.Next(index))
         hashNext = chainActive.Next(index)->GetBlockHash();
 
+    // Main Block Hash
+    ui->labelMainBlockHash->setText(QString::fromStdString(index->hashMainBlock.ToString()));
+
+    // WT^ hash
+    ui->labelHashWTPrime->setText(QString::fromStdString(index->hashWTPrime.ToString()));
+
+    // Critical Tx ID
+    ui->labelBMMTXID->setText(QString::fromStdString(index->criticalTx.GetHash().ToString()));
+
+    // Block blind hash
+    ui->labelHashBlind->setText("? (click \"Load Transactions\")");
+
+    // TODO
+    // Copy tx hex
+    // Copy Proof
+
     ui->labelNextBlockHash->setText(QString::fromStdString(hashNext.ToString()));
 
     pBlockIndex = index;
@@ -199,6 +215,8 @@ void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
     QString strInfo = "#Tx: " + QString::number(nTx);
     strInfo += " Block size: " + strSize;
     ui->labelBlockInfo->setText(strInfo);
+
+    ui->labelHashBlind->setText(QString::fromStdString(cachedBlock.GetBlindHash().ToString()));
 
     ui->pushButtonMerkleTree->setEnabled(true);
     ui->pushButtonCopyHex->setEnabled(true);
