@@ -38,6 +38,7 @@ BlockExplorer::BlockExplorer(const PlatformStyle *_platformStyle, QWidget *paren
     ui->tableViewBlocks->setRowHeight(3, 50);
     ui->tableViewBlocks->setRowHeight(4, 50);
     ui->tableViewBlocks->setRowHeight(5, 50);
+    ui->tableViewBlocks->setRowHeight(6, 50);
 
     // Resize cells (in a backwards compatible way)
 #if QT_VERSION < 0x050000

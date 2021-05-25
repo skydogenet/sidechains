@@ -21,7 +21,7 @@ BlockExplorerTableModel::BlockExplorerTableModel(QObject *parent) :
 
 int BlockExplorerTableModel::rowCount(const QModelIndex & /*parent*/) const
 {
-    return 6;
+    return 7;
 }
 
 int BlockExplorerTableModel::columnCount(const QModelIndex & /*parent*/) const
@@ -70,6 +70,10 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 5) {
             return QString::fromStdString(strprintf("%08x", object.nBits));
         }
+        // hashWTPrime
+        if (row == 6) {
+            return QString::fromStdString(object.hashWTPrime.ToString()).left(32) + "...";
+        }
     }
     case HeightRole:
     {
@@ -105,6 +109,10 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 5) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
+        // nBits
+        if (row == 6) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
     }
     }
     return QVariant();
@@ -127,6 +135,8 @@ QVariant BlockExplorerTableModel::headerData(int section, Qt::Orientation orient
                 return QString("Time");
             case 5:
                 return QString("Bits");
+            case 6:
+                return QString("Hash WT^");
             }
         }
     }
@@ -183,6 +193,8 @@ void BlockExplorerTableModel::UpdateModel()
         object.hashPrev = hashPrev;
         object.nTime = index->nTime;
         object.nBits = index->nBits;
+
+        object.hashWTPrime = index->hashWTPrime;
 
         model.append(QVariant::fromValue(object));
     }
