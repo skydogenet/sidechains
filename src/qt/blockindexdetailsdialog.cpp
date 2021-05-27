@@ -65,8 +65,6 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     cachedBlock.SetNull();
     ui->labelBlockInfo->setText("#Tx: ? Block Size: ? (click \"Load Transactions\")");
     ui->pushButtonMerkleTree->setEnabled(false);
-    ui->pushButtonCopyHex->setEnabled(false);
-    ui->pushButtonCopyHeaderHex->setEnabled(false);
 
     // Show details on dialog
 
@@ -219,8 +217,6 @@ void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
     ui->labelHashBlind->setText(QString::fromStdString(cachedBlock.GetBlindHash().ToString()));
 
     ui->pushButtonMerkleTree->setEnabled(true);
-    ui->pushButtonCopyHex->setEnabled(true);
-    ui->pushButtonCopyHeaderHex->setEnabled(true);
 }
 
 void BlockIndexDetailsDialog::on_tableWidgetTransactions_doubleClicked(const QModelIndex& i)
@@ -251,23 +247,12 @@ void BlockIndexDetailsDialog::on_pushButtonMerkleTree_clicked()
     merkleTreeDialog->show();
 }
 
-void BlockIndexDetailsDialog::on_pushButtonCopyHex_clicked()
-{
-    if (cachedBlock.IsNull())
-        return;
-
-    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-    ss << cachedBlock;
-
-    GUIUtil::setClipboard(QString::fromStdString(HexStr(ss.str())));
-}
-
 void BlockIndexDetailsDialog::on_pushButtonCopyHeaderHex_clicked()
 {
-    if (cachedBlock.IsNull())
+    if (!pBlockIndex)
         return;
 
-    CBlockHeader header = cachedBlock.GetBlockHeader();
+    CBlockHeader header = pBlockIndex->GetBlockHeader();
 
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << header;
