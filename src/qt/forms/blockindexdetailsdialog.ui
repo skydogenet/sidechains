@@ -19,7 +19,7 @@
      <property name="bottomMargin">
       <number>0</number>
      </property>
-     <item row="12" column="2">
+     <item row="10" column="2">
       <widget class="QLabel" name="labelNextBlockHash">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -40,20 +40,7 @@
        </property>
       </widget>
      </item>
-     <item row="8" column="0">
-      <widget class="QLabel" name="label_15">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Nonce</string>
-       </property>
-      </widget>
-     </item>
-     <item row="11" column="2">
+     <item row="9" column="2">
       <widget class="QLabel" name="labelPrevBlockHash">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -95,7 +82,7 @@
        </property>
       </widget>
      </item>
-     <item row="12" column="0">
+     <item row="10" column="0">
       <widget class="QLabel" name="label_20">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
@@ -163,7 +150,7 @@
        </property>
       </widget>
      </item>
-     <item row="10" column="2">
+     <item row="8" column="2">
       <widget class="QLabel" name="labelChainWork">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -184,7 +171,7 @@
        </property>
       </widget>
      </item>
-     <item row="10" column="0">
+     <item row="8" column="0">
       <widget class="QLabel" name="label_18">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
@@ -207,27 +194,6 @@
        </property>
        <property name="text">
         <string>Confirmations</string>
-       </property>
-      </widget>
-     </item>
-     <item row="8" column="2">
-      <widget class="QLabel" name="labelNonce">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="font">
-        <font>
-         <family>Noto Mono</family>
-        </font>
-       </property>
-       <property name="text">
-        <string>0</string>
-       </property>
-       <property name="textInteractionFlags">
-        <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
        </property>
       </widget>
      </item>
@@ -262,6 +228,19 @@
        </property>
        <property name="textInteractionFlags">
         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="0">
+      <widget class="QLabel" name="label_19">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Previous Block Hash</string>
        </property>
       </widget>
      </item>
@@ -320,27 +299,6 @@
        </property>
       </widget>
      </item>
-     <item row="9" column="2">
-      <widget class="QLabel" name="labelBits">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="font">
-        <font>
-         <family>Noto Mono</family>
-        </font>
-       </property>
-       <property name="text">
-        <string>00000000000000000000000000000000</string>
-       </property>
-       <property name="textInteractionFlags">
-        <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-       </property>
-      </widget>
-     </item>
      <item row="7" column="0">
       <widget class="QLabel" name="label_14">
        <property name="sizePolicy">
@@ -367,16 +325,18 @@
        </property>
       </widget>
      </item>
-     <item row="9" column="0">
-      <widget class="QLabel" name="label_16">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
+     <item row="11" column="2">
+      <widget class="QLabel" name="labelHashWTPrime">
+       <property name="font">
+        <font>
+         <family>Noto Mono</family>
+        </font>
        </property>
        <property name="text">
-        <string>Bits</string>
+        <string>00000000000000000000000000000000</string>
+       </property>
+       <property name="textInteractionFlags">
+        <set>Qt::TextSelectableByMouse</set>
        </property>
       </widget>
      </item>
@@ -401,7 +361,7 @@
        </property>
       </widget>
      </item>
-     <item row="13" column="0">
+     <item row="11" column="0">
       <widget class="QLabel" name="label">
        <property name="text">
         <string>Hash WT^ </string>
@@ -418,34 +378,6 @@
        </property>
        <property name="text">
         <string>Hash</string>
-       </property>
-      </widget>
-     </item>
-     <item row="11" column="0">
-      <widget class="QLabel" name="label_19">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Previous Block Hash</string>
-       </property>
-      </widget>
-     </item>
-     <item row="13" column="2">
-      <widget class="QLabel" name="labelHashWTPrime">
-       <property name="font">
-        <font>
-         <family>Noto Mono</family>
-        </font>
-       </property>
-       <property name="text">
-        <string>00000000000000000000000000000000</string>
-       </property>
-       <property name="textInteractionFlags">
-        <set>Qt::TextSelectableByMouse</set>
        </property>
       </widget>
      </item>

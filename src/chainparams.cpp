@@ -14,11 +14,9 @@
 
 #include <chainparamsseeds.h>
 
-#include <iostream>
-#include <pow.h>
 #include <arith_uint256.h>
 
-static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
+static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, int32_t nVersion, const CAmount& genesisReward)
 {
     CMutableTransaction txNew;
     txNew.nVersion = 1;
@@ -29,9 +27,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     txNew.vout[0].scriptPubKey = genesisOutputScript;
 
     CBlock genesis;
-    genesis.nTime    = nTime;
-    genesis.nBits    = nBits;
-    genesis.nNonce   = nNonce;
+    genesis.nTime = nTime;
     genesis.criticalProof = "MainchainBlockHeight:MainchainBlockHash";
     genesis.criticalTx = txNew;
     genesis.hashWTPrime.SetNull(); // This could be some useful hash
@@ -48,13 +44,13 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
  * database.
  *
  */
-static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
+static CBlock CreateGenesisBlock(uint32_t nTime, int32_t nVersion, const CAmount& genesisReward)
 {
     // Note: For sidechains the timestamp should be:
     // "mainchainBlockHeight:mainchainBlockHash"
     const char* pszTimestamp = "nnnnnn:0xnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn";
     const CScript genesisOutputScript = CScript() << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f") << OP_CHECKSIG;
-    return CreateGenesisBlock(pszTimestamp, genesisOutputScript, nTime, nNonce, nBits, nVersion, genesisReward);
+    return CreateGenesisBlock(pszTimestamp, genesisOutputScript, nTime, nVersion, genesisReward);
 }
 
 void CChainParams::UpdateVersionBitsParameters(Consensus::DeploymentPos d, int64_t nStartTime, int64_t nTimeout)
@@ -124,7 +120,7 @@ public:
         nDefaultPort = 2751;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1618186644, 9, 0x207fffff, 1, 0);
+        genesis = CreateGenesisBlock(1618186644, 1, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
 
         assert(consensus.hashGenesisBlock == uint256S("0x04dc255a261746f813e352d9fe3aeaf5f73c700a15e8f0849a2a15ca419f1e34"));
@@ -209,7 +205,7 @@ public:
         nDefaultPort = 12444;
         nPruneAfterHeight = 1000;
 
-        genesis = CreateGenesisBlock(1562799448, 256, 0x207fffff, 1, 0);
+        genesis = CreateGenesisBlock(1562799448, 1, 0);
 
         consensus.hashGenesisBlock = genesis.GetHash();
 

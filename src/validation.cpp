@@ -25,7 +25,6 @@
 #include <policy/policy.h>
 #include <policy/rbf.h>
 #include <policy/wtprime.h>
-#include <pow.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>

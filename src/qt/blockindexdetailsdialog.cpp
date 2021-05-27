@@ -96,16 +96,6 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     // Median Time
     ui->labelMedianTime->setText(QString::number((int64_t)index->GetMedianTimePast()));
 
-    // Nonce
-    ui->labelNonce->setText(QString::number((int64_t)index->nNonce));
-
-    // Bits
-    ui->labelBits->setText(QString::fromStdString(strprintf("%08x", index->nBits)));
-
-    // TODO should we calculate the difficulty?
-    // Diff
-    //ui->labelDiff->setText(QString::number(GetDifficulty(chainActive, index)));
-
     // Chain Work
     ui->labelChainWork->setText(QString::fromStdString(index->nChainWork.ToString()));
 
