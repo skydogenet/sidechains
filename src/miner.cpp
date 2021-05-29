@@ -21,7 +21,6 @@
 #include <policy/feerate.h>
 #include <policy/policy.h>
 #include <policy/wtprime.h>
-#include <pow.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
 #include <sidechain.h>
@@ -66,10 +65,6 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
 
     if (nOldTime < nNewTime)
         pblock->nTime = nNewTime;
-
-    // Updating time can change work required on testnet:
-    if (consensusParams.fPowAllowMinDifficultyBlocks)
-        pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
 
     return nNewTime - nOldTime;
 }
@@ -322,8 +317,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // Fill in header
     pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
     UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
-    pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
-    pblock->nNonce         = 0;
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
 
     // We have to skip BMM checks when first creating a block as we haven't
@@ -1011,29 +1004,6 @@ bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, CAmo
     {
         LOCK(cs_main);
         IncrementExtraNonce(pblock, prevBlock, nExtraNonce);
-    }
-
-    int nMaxTries = 1000;
-    while (true) {
-        if (pblock->nNonce == 0)
-            pblock->nTime++;
-
-        if (CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
-            break;
-        }
-
-        if (nMaxTries == 0) {
-            strError = "Couldn't generate PoW, try again!\n";
-            break;
-        }
-
-        pblock->nNonce++;
-        nMaxTries--;
-    }
-
-    if (!CheckProofOfWork(pblock->GetBlindHash(), pblock->nBits, Params().GetConsensus())) {
-        strError = "Invalid PoW!\n";
-        return false;
     }
 
     block = *pblock;

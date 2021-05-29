@@ -6,9 +6,9 @@
 #include <txdb.h>
 
 #include <chainparams.h>
+#include <consensus/params.h>
 #include <hash.h>
 #include <random.h>
-#include <pow.h>
 #include <sidechain.h>
 #include <uint256.h>
 #include <util.h>
@@ -286,8 +286,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nVersion       = diskindex.nVersion;
                 pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
                 pindexNew->nTime          = diskindex.nTime;
-                pindexNew->nBits          = diskindex.nBits;
-                pindexNew->nNonce         = diskindex.nNonce;
                 pindexNew->criticalProof  = diskindex.criticalProof;
                 pindexNew->criticalTx     = diskindex.criticalTx;
                 pindexNew->hashMainBlock  = diskindex.hashMainBlock;
