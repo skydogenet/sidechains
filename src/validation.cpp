@@ -3548,14 +3548,14 @@ bool VerifyCriticalHashProof(const CBlock& block)
             continue;
 
         // Check h* commit header
-        if (scriptPubKey[0] != OP_RETURN || scriptPubKey[1] != 0x24 ||
-                scriptPubKey[2] != 0xD1 ||
-                scriptPubKey[3] != 0x61 ||
-                scriptPubKey[4] != 0x73 ||
-                scriptPubKey[5] != 0x68)
+        if (scriptPubKey[0] != OP_RETURN ||
+                scriptPubKey[1] != 0xD1 ||
+                scriptPubKey[2] != 0x61 ||
+                scriptPubKey[3] != 0x73 ||
+                scriptPubKey[4] != 0x68)
             continue;
 
-        std::vector<unsigned char> vch(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38);
+        std::vector<unsigned char> vch(scriptPubKey.begin() + 5, scriptPubKey.begin() + 37);
         uint256 hashFound(vch);
 
         if (hashFound == hashBlindBlock)
