@@ -59,6 +59,7 @@
         <file alias="network_disabled">res/icons/network_disabled.png</file>
         <file alias="calculator">res/icons/calculator.png</file>
         <file alias="search">res/icons/search.png</file>
+        <file alias="flip">res/icons/flip.png</file>
     </qresource>
     <qresource prefix="/movies">
         <file alias="spinner-000">res/movies/spinner-000.png</file>
