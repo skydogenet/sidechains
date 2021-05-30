@@ -571,7 +571,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Merkle Root (H*)</string>
+         <string>H*</string>
         </property>
        </widget>
       </item>
