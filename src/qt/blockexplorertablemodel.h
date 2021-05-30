@@ -20,7 +20,7 @@ struct BlockExplorerTableObject
     uint256 hashPrev;
     uint256 hashMerkleRoot;
     int nTime;
-    int nBits;
+    uint256 hashMainchainBlock;
     uint256 hashWTPrime;
 };
 

@@ -130,9 +130,6 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     // Critical Tx ID
     ui->labelBMMTXID->setText(QString::fromStdString(index->criticalTx.GetHash().ToString()));
 
-    // Block blind hash
-    ui->labelHashBlind->setText("? (click \"Load Transactions\")");
-
     // TODO
     // Copy tx hex
     // Copy Proof
@@ -213,8 +210,6 @@ void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
     QString strInfo = "#Tx: " + QString::number(nTx);
     strInfo += " Block size: " + strSize;
     ui->labelBlockInfo->setText(strInfo);
-
-    ui->labelHashBlind->setText(QString::fromStdString(cachedBlock.GetBlindHash().ToString()));
 
     ui->pushButtonMerkleTree->setEnabled(true);
 }

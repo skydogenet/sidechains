@@ -66,9 +66,9 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 4) {
             return QDateTime::fromTime_t((int64_t)object.nTime).toString("dd MMMM yyyy hh:mm");
         }
-        // nBits
+        // hashMainchainBlock
         if (row == 5) {
-            return QString::fromStdString(strprintf("%08x", object.nBits));
+            return QString::fromStdString(object.hashMainchainBlock.ToString()).left(32) + "...";
         }
         // hashWTPrime
         if (row == 6) {
@@ -105,9 +105,9 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 4) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // nBits
+        // hashMainchainBlock
         if (row == 5) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
         // nBits
         if (row == 6) {
@@ -134,7 +134,7 @@ QVariant BlockExplorerTableModel::headerData(int section, Qt::Orientation orient
             case 4:
                 return QString("Time");
             case 5:
-                return QString("Bits");
+                return QString("Hash MC Block");
             case 6:
                 return QString("Hash WT^");
             }
@@ -192,7 +192,7 @@ void BlockExplorerTableModel::UpdateModel()
 
         object.hashPrev = hashPrev;
         object.nTime = index->nTime;
-        object.nBits = index->nBits;
+        object.hashMainchainBlock = index->hashMainBlock;
 
         object.hashWTPrime = index->hashWTPrime;
 
