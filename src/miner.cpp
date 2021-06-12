@@ -974,7 +974,6 @@ bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, CAmo
             return false;
         }
         pblocktemplate = BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, true, hashPrevBlock, nFeesOut);
-
     } else {
         pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true, hashPrevBlock, nFeesOut);
     }

@@ -96,9 +96,6 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     // Median Time
     ui->labelMedianTime->setText(QString::number((int64_t)index->GetMedianTimePast()));
 
-    // Chain Work
-    ui->labelChainWork->setText(QString::fromStdString(index->nChainWork.ToString()));
-
     // prevBlockHash
     uint256 hashPrev = uint256();
     if (index->pprev)
@@ -122,10 +119,6 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
 
     // Block blind hash
     ui->labelHashBlind->setText("? (click \"Load Transactions\")");
-
-    // TODO
-    // Copy tx hex
-    // Copy Proof
 
     ui->labelNextBlockHash->setText(QString::fromStdString(hashNext.ToString()));
 
