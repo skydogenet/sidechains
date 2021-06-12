@@ -3220,7 +3220,7 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
     }
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
-    if (pindexBestHeader == nullptr || pindexBestHeader->nHeight < pindexNew->nHeight) {
+    if (pindexBestHeader == nullptr || pindexBestHeader->nHeight < pindexNew->nHeight)
         pindexBestHeader = pindexNew;
 
     // Add to index of blocks tracked by their mainchain commitment block hash
