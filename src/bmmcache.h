@@ -23,7 +23,7 @@ public:
 
     bool StoreBMMBlock(const CBlock& block);
 
-    bool GetBMMBlock(const uint256& hashBlock, CBlock& block);
+    bool GetBMMBlock(const uint256& hashMerkleRoot, CBlock& block);
 
     std::vector<CBlock> GetBMMBlockCache() const;
 
@@ -41,9 +41,11 @@ public:
 
     bool HaveBroadcastedWTPrime(const uint256& hashWTPrime) const;
 
-    bool HaveBMMProof(const uint256& hashBlock, const uint256& hashCritical) const;
+    // Check if we already verified BMM for this sidechain block
+    bool HaveVerifiedBMM(const uint256& hashBlock) const;
 
-    void CacheBMMProof(const uint256& hashBlock, const uint256& hashCritical);
+    // Cache that we verified BMM for this sidechain block
+    void CacheVerifiedBMM(const uint256& hashBlock);
 
     void CacheMainBlockHash(const uint256& hash);
 
@@ -72,12 +74,13 @@ public:
     bool IsMyWT(const uint256& wtid);
 
 private:
-    // BMM blocks (without proof) that we have created with the intention of
-    // adding to the side blockchain once proof is aquired from the main chain.
-    std::map<uint256, CBlock> mapBMMBlocks;
+    // BMM blocks that we have created with the intention of connecting to the
+    // side blockchain once the BMM h* hash is included on the mainchain
+    std::map<uint256 /* hashMerkleRoot */, CBlock> mapBMMBlocks;
 
-    // Cache of BMM proof(s) which we have already verified with the main chain.
-    std::map<uint256 /* hashBlock */, uint256 /* hashCriticalTx */> mapBMMCache;
+    // Cache of sidechain block hashes which we have already verified with the
+    // mainchain as having the BMM h* hash included.
+    std::set<uint256 /* hashBlock */> setBMMVerified;
 
     // WT^(s) that we have already broadcasted to the mainchain.
     std::set<uint256> setWTPrimeBroadcasted;
