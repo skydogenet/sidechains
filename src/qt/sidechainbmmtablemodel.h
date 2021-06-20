@@ -31,20 +31,19 @@ struct BMMTableObject
     bool fFailed = false;
 
     // Not currently displayed on table
-    uint256 hashBlind;
-    uint256 hashBlock;
+    uint256 hashMerkleRoot;
 };
 
 enum ColumnWidth
 {
-    COLUMN_BMM_TXID = 100,
-    COLUMN_MAINCHAIN_HEIGHT = 80,
-    COLUMN_SIDECHAIN_HEIGHT = 80,
+    COLUMN_BMM_TXID = 120,
+    COLUMN_MAINCHAIN_HEIGHT = 110,
+    COLUMN_SIDECHAIN_HEIGHT = 110,
     COLUMN_TXNS = 45,
-    COLUMN_FEES = 130,
-    COLUMN_BMM_AMOUNT = 130,
-    COLUMN_PROFIT = 130,
-    COLUMN_STATUS = 80,
+    COLUMN_FEES = 160,
+    COLUMN_BMM_AMOUNT = 160,
+    COLUMN_PROFIT = 160,
+    COLUMN_STATUS = 110,
 };
 
 class SidechainBMMTableModel : public QAbstractTableModel
@@ -63,7 +62,7 @@ public:
     void setWalletModel(WalletModel *model);
 
     void AddAttempt(const BMMTableObject& object);
-    void UpdateForConnected(const BMMTableObject& object);
+    void UpdateForConnected(const uint256& hashMerkleRoot);
 
 private:
     QList<BMMTableObject> model;

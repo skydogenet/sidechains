@@ -114,12 +114,7 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     // WT^ hash
     ui->labelHashWTPrime->setText(QString::fromStdString(index->hashWTPrime.ToString()));
 
-    // Critical Tx ID
-    ui->labelBMMTXID->setText(QString::fromStdString(index->criticalTx.GetHash().ToString()));
-
-    // Block blind hash
-    ui->labelHashBlind->setText("? (click \"Load Transactions\")");
-
+    // Hash of the block that came after this one if any
     ui->labelNextBlockHash->setText(QString::fromStdString(hashNext.ToString()));
 
     pBlockIndex = index;
@@ -196,8 +191,6 @@ void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
     QString strInfo = "#Tx: " + QString::number(nTx);
     strInfo += " Block size: " + strSize;
     ui->labelBlockInfo->setText(strInfo);
-
-    ui->labelHashBlind->setText(QString::fromStdString(cachedBlock.GetBlindHash().ToString()));
 
     ui->pushButtonMerkleTree->setEnabled(true);
 }

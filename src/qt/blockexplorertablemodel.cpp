@@ -70,6 +70,10 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 5) {
             return QString::fromStdString(object.hashWTPrime.ToString()).left(32) + "...";
         }
+        // hashMainchainBlock
+        if (row == 6) {
+            return QString::fromStdString(object.hashMainBlock.ToString()).left(32) + "...";
+        }
     }
     case HeightRole:
     {
@@ -105,6 +109,10 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 5) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
+        // hashMainchainBlock
+        if (row == 6) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
     }
     }
     return QVariant();
@@ -127,6 +135,8 @@ QVariant BlockExplorerTableModel::headerData(int section, Qt::Orientation orient
                 return QString("Time");
             case 5:
                 return QString("Hash WT^");
+            case 6:
+                return QString("Hash Main Block");
             }
         }
     }
@@ -182,8 +192,8 @@ void BlockExplorerTableModel::UpdateModel()
 
         object.hashPrev = hashPrev;
         object.nTime = index->nTime;
-
         object.hashWTPrime = index->hashWTPrime;
+        object.hashMainBlock = index->hashMainBlock;
 
         model.append(QVariant::fromValue(object));
     }
