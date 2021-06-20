@@ -26,8 +26,6 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
 
     CBlock genesis;
     genesis.nTime    = nTime;
-    genesis.criticalProof = "MainchainBlockHeight:MainchainBlockHash";
-    genesis.criticalTx = txNew;
     genesis.hashWTPrime.SetNull(); // This could be some useful hash
     genesis.nVersion = nVersion;
     genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
@@ -101,7 +99,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0xc398db9ccf649d7bf88c33e4161e735ae22549fe7f6fbb659c8e72067c640df3");
+        consensus.defaultAssumeValid = uint256S("0x14d9aa5f9fbaa70eb702a64e5e9d1684ad38bf31737c17bd19b5b49705444774");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -115,10 +113,10 @@ public:
         nDefaultPort = 2751;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1622935315, 1, 0);
+        genesis = CreateGenesisBlock(1624147757, 1, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        assert(consensus.hashGenesisBlock == uint256S("0xc398db9ccf649d7bf88c33e4161e735ae22549fe7f6fbb659c8e72067c640df3"));
+        assert(consensus.hashGenesisBlock == uint256S("0x14d9aa5f9fbaa70eb702a64e5e9d1684ad38bf31737c17bd19b5b49705444774"));
         assert(genesis.hashMerkleRoot == uint256S("0x8eb1364f43885edf1322b2d32095e57abb03c32a61a80ac25c8db3de58e16b8a"));
 
         vSeeds.clear();
@@ -142,7 +140,7 @@ public:
 
         checkpointData = {
             {
-                { 0, uint256S("0xc398db9ccf649d7bf88c33e4161e735ae22549fe7f6fbb659c8e72067c640df3")},
+                { 0, uint256S("0x14d9aa5f9fbaa70eb702a64e5e9d1684ad38bf31737c17bd19b5b49705444774")},
             }
         };
 
@@ -188,7 +186,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x70450f4370581ca6f5d1f70661530087c74ce94dab7262d43303ec204369914a");
+        consensus.defaultAssumeValid = uint256S("0x14d9aa5f9fbaa70eb702a64e5e9d1684ad38bf31737c17bd19b5b49705444774");
 
         pchMessageStart[0] = 0xfa;
         pchMessageStart[1] = 0xbf;
@@ -197,12 +195,10 @@ public:
         nDefaultPort = 12444;
         nPruneAfterHeight = 1000;
 
-        genesis = CreateGenesisBlock(1622935773, 1, 0);
-
-
+        genesis = CreateGenesisBlock(1624147757, 1, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        assert(consensus.hashGenesisBlock == uint256S("0x70450f4370581ca6f5d1f70661530087c74ce94dab7262d43303ec204369914a"));
+        assert(consensus.hashGenesisBlock == uint256S("0x14d9aa5f9fbaa70eb702a64e5e9d1684ad38bf31737c17bd19b5b49705444774"));
         assert(genesis.hashMerkleRoot == uint256S("0x8eb1364f43885edf1322b2d32095e57abb03c32a61a80ac25c8db3de58e16b8a"));
 
         vFixedSeeds.clear(); //!< Regtest mode doesn't have any fixed seeds.

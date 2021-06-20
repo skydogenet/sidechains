@@ -247,18 +247,6 @@ struct SidechainDeposit : public SidechainObj {
     }
 };
 
-struct SidechainBMMProof
-{
-    uint256 hashBMMBlock;
-    std::string txOutProof;
-    std::string coinbaseHex;
-
-    bool HasProof()
-    {
-        return (txOutProof.size() && coinbaseHex.size());
-    }
-};
-
 /**
  * Parse sidechain object from a sidechain object script
  */

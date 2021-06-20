@@ -188,16 +188,16 @@ bool SidechainClient::VerifyCriticalHashProof(const std::string& criticalProof, 
     return true;
 }
 
-bool SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock, SidechainBMMProof& proof)
+bool SidechainClient::GetBMM(const uint256& hashMainBlock, const uint256& hashBMM, uint256& txid, uint32_t& nTime)
 {
     // JSON for requesting BMM proof via mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"getbmmproof\", \"params\": ");
+    json.append("\"method\": \"getbmm\", \"params\": ");
     json.append("[\"");
     json.append(hashMainBlock.ToString());
     json.append("\",\"");
-    json.append(hashBMMBlock.ToString());
+    json.append(hashBMM.ToString());
     json.append("\"");
     json.append("] }");
 
@@ -210,40 +210,43 @@ bool SidechainClient::RequestBMMProof(const uint256& hashMainBlock, const uint25
     }
 
     // Process result
+    bool fFoundTx = false;
+    bool fFoundTime = false;
     BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
         BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
-            // Looping through members
-            if (v.first == "coinbasehex") {
-                // Read coinbase hex
+            if (v.first == "txid") {
+                // Read BMM txid
                 std::string data = v.second.data();
                 if (!data.length())
                     continue;
 
-                proof.coinbaseHex = data;
+                txid = uint256S(data);
+                fFoundTx = true;
             }
             else
-            if (v.first == "proof") {
-                // Read TxOut proof
+            if (v.first == "time") {
+                // Read mainchain block time
                 std::string data = v.second.data();
                 if (!data.length())
                     continue;
 
-                proof.txOutProof = data;
+                nTime = std::stoi(data);
+                fFoundTime = true;
             }
         }
     }
 
-    if (proof.HasProof()) {
-        LogPrintf("Sidechain client received BMM proof for: %s\n", hashBMMBlock.ToString());
+    if (fFoundTx && fFoundTime) {
+        LogPrintf("Sidechain client found BMM for h*: %s\n", hashBMM.ToString());
         return true;
     } else {
-        LogPrintf("Sidechain client received no BMM proof.\n");
+        // Can be enabled for debug -- too noisy
+        // LogPrintf("Sidechain client found no BMM.\n");
         return false;
     }
 }
 
-// TODO rename
-uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight, CAmount amount)
+uint256 SidechainClient::SendBMMRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight, CAmount amount)
 {
     uint256 txid = uint256();
     std::string strPrevHash = hashBlockMain.ToString();
@@ -256,7 +259,6 @@ uint256 SidechainClient::SendBMMCriticalDataRequest(const uint256& hashCritical,
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
     json.append("\"method\": \"createbmmcriticaldatatx\", \"params\": ");
     json.append("[\"");
-    // TODO use amount
     json.append(ValueFromAmount(amount).write());
     json.append("\",");
     json.append(UniValue(nHeight).write());
@@ -343,7 +345,7 @@ bool SidechainClient::GetCTIP(std::pair<uint256, uint32_t>& ctip)
     return true;
 }
 
-bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreated, uint256& hashConnected, uint256& hashConnectedBlind, uint256& txid, int& nTxn, CAmount& nFees, bool fCreateNew, const uint256& hashPrevBlock)
+bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreatedMerkleRoot, uint256& hashConnected, uint256& hashConnectedMerkleRoot, uint256& txid, int& nTxn, CAmount& nFees, bool fCreateNew, const uint256& hashPrevBlock)
 {
     //
     // A cache of recent mainchain block hashes and the mainchain tip is created
@@ -378,50 +380,55 @@ bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, u
 
     // Get our cached BMM blocks
     std::vector<CBlock> vBMMCache = bmmCache.GetBMMBlockCache();
+
+    // If we don't have any existing BMM requests cached, create our first
     if (vBMMCache.empty() && fCreateNew) {
-        // If we don't have any existing BMM requests cached, create our first
         CBlock block;
         if (CreateBMMBlock(block, strError, nFees, hashPrevBlock)) {
             nTxn = block.vtx.size();
-            hashCreated = block.GetBlindHash();
-            txid = SendBMMCriticalDataRequest(hashCreated, vHashMainBlock.back(), 0, amount);
+            hashCreatedMerkleRoot = block.hashMerkleRoot;
+            txid = SendBMMRequest(block.hashMerkleRoot, vHashMainBlock.back(), 0, amount);
             bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
             return true;
         } else {
+            strError = "Failed to create new BMM block!";
             return false;
         }
     }
 
-    // TODO this could be more efficient
-    // Check new main:blocks for our bmm requests
+    // Check new main:blocks for our BMM requests
     for (const uint256& u : vHashMainBlock) {
         // Skip if we've already checked this block
         if (bmmCache.MainBlockChecked(u))
             continue;
-        // Record that we are going to check this mainchain block
-        bmmCache.AddCheckedMainBlock(u);
 
         // Check main:block for any of our current BMM requests
         for (const CBlock& b : vBMMCache) {
-            const uint256& hashBMMBlock = b.GetBlindHash();
-            // Send 'getbmmproof' rpc request to mainchain
-            SidechainBMMProof proof;
-            proof.hashBMMBlock = hashBMMBlock;
-            if (RequestBMMProof(u, hashBMMBlock, proof)) {
+            // Send 'getbmm' rpc request to mainchain
+            const uint256& hashMerkleRoot = b.hashMerkleRoot;
+            uint256 txid;
+            uint32_t nTime = 0;
+            if (GetBMM(u, hashMerkleRoot, txid, nTime)) {
                 CBlock block = b;
 
-                block.criticalProof = proof.txOutProof;
-
-                if (!DecodeHexTx(block.criticalTx, proof.coinbaseHex))
-                    continue;
+                // Copy the block time and hash from the mainchain block into
+                // our new sidechain block.
+                block.nTime = nTime;
+                block.hashMainchainBlock = u;
 
                 // Submit BMM block
                 if (SubmitBMMBlock(block)) {
                     hashConnected = block.GetHash();
-                    hashConnectedBlind = block.GetBlindHash();
+                    hashConnectedMerkleRoot = hashMerkleRoot;
+                } else {
+                    strError = "Failed to submit block with valid BMM!";
+                    return false;
                 }
             }
         }
+
+        // Record that we checked this mainchain block
+        bmmCache.AddCheckedMainBlock(u);
     }
 
     // Was there a new mainchain block since the last request we made?
@@ -430,24 +437,25 @@ bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, u
         // were created for the old mainchain tip.
         bmmCache.ClearBMMBlocks();
 
-        // Create a new BMM request (old ones have expired)
-        CBlock block;
-        if (fCreateNew && CreateBMMBlock(block, strError, nFees, hashPrevBlock)) {
-            // Create BMM critical data request
-            nTxn = block.vtx.size();
-            hashCreated = block.GetBlindHash();
-            txid = SendBMMCriticalDataRequest(block.GetBlindHash(), vHashMainBlock.back(), 0, amount);
-            bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
-        } else {
-            if (fCreateNew) {
+        // Create a new BMM request
+        if (fCreateNew) {
+            CBlock block;
+            if (CreateBMMBlock(block, strError, nFees, hashPrevBlock)) {
+                // Send BMM request to mainchain
+                nTxn = block.vtx.size();
+                hashCreatedMerkleRoot = block.hashMerkleRoot;
+                txid = SendBMMRequest(block.hashMerkleRoot, vHashMainBlock.back(), 0, amount);
+                bmmCache.StorePrevBlockBMMCreated(vHashMainBlock.back());
+            } else {
                 strError = "Failed to create a new BMM request!";
                 return false;
             }
         }
     } else {
         if (fCreateNew)
-            strError = "Can't create new BMM request - already created for current mainchain tip!";
+            strError = "Can't create new BMM request - already created for mainchain tip!";
     }
+
     return true;
 }
 

@@ -15,11 +15,8 @@
 #include <boost/property_tree/json_parser.hpp>
 
 class SidechainDeposit;
-class SidechainBMMProof;
 
-// TODO if this class doesn't end up needing to track data or become a global
-// object, consider making it not a class anymore.
-
+// TODO refactor: Move BMM validation cache code here, or remove class status.
 class SidechainClient
 {
 public:
@@ -43,14 +40,14 @@ public:
     bool VerifyCriticalHashProof(const std::string& criticalProof, uint256& txid);
 
     /*
-     * Request BMM proof for a block
+     * Search for BMM in a mainchain block
      */
-    bool RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock, SidechainBMMProof& proof);
+    bool GetBMM(const uint256& hashMainBlock, const uint256& hashBMM, uint256& txid, uint32_t& nTime);
 
     /*
      * Send BMM critical data request
      */
-    uint256 SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight = 0, CAmount amount = CAmount(0));
+    uint256 SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain, int nHeight = 0, CAmount amount = CAmount(0));
 
     /*
      * Request the CTIP - Critical Transaction Index Pair for this sidechain
@@ -61,7 +58,7 @@ public:
      * Automatically check our BMM requests on the mainchain and create new BMM
      * requests if needed.
      */
-    bool RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreated, uint256& hashConnected, uint256& hashConnectedBlind, uint256& txid, int& nTxn, CAmount& nFees, bool fCreateNew = true, const uint256& hashPrevBlock = uint256());
+    bool RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreatedMerkleRoot, uint256& hashConnected, uint256& hashConnectedMerkleRoot, uint256& txid, int& nTxn, CAmount& nFees, bool fCreateNew = true, const uint256& hashPrevBlock = uint256());
 
     bool CreateBMMBlock(CBlock& block, std::string& strError, CAmount& nFees, const uint256& hashPrevBlock = uint256());
 

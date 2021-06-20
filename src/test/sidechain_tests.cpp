@@ -110,8 +110,8 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_valid)
     BOOST_CHECK(!VerifyCriticalHashProof(block));
 
     // Cache the validation of this BMM proof
-    bmmCache.CacheBMMProof(block.GetHash(), block.criticalTx.GetHash());
-    BOOST_CHECK(bmmCache.HaveBMMProof(block.GetHash(), block.criticalTx.GetHash()));
+    bmmCache.CacheVerifiedBMM(block.GetHash());
+    BOOST_CHECK(bmmCache.HaveVerifiedBMM(block.GetHash(), block.criticalTx.GetHash()));
 
     // It should pass now that we have added the BMM proof to the block and
     // cached the validation of that BMM proof.
@@ -168,33 +168,27 @@ BOOST_AUTO_TEST_CASE(sidechain_bmm_cache)
     uint256 hashRand = GetRandHash();
 
     // Reject null block hash
-    bmmCache.CacheBMMProof(uint256(), hashRand);
-    BOOST_CHECK(!bmmCache.HaveBMMProof(uint256(), hashRand));
-
-    // Reject null critical tx hash
-    bmmCache.CacheBMMProof(hashRand, uint256());
-    BOOST_CHECK(!bmmCache.HaveBMMProof(hashRand, uint256()));
+    bmmCache.CacheVerifiedBMM(uint256());
+    BOOST_CHECK(!bmmCache.HaveVerifiedBMM(uint256()));
 
     // Accept valid
     uint256 hash1 = GetRandHash();
-    uint256 hash2 = GetRandHash();
-    bmmCache.CacheBMMProof(hash1, hash2);
-    BOOST_CHECK(bmmCache.HaveBMMProof(hash1, hash2));
+    bmmCache.CacheVerifiedBMM(hash1);
+    BOOST_CHECK(bmmCache.HaveVerifiedBMM(hash1));
 
     // Reject another
-    bmmCache.CacheBMMProof(uint256(), hash1);
-    BOOST_CHECK(!bmmCache.HaveBMMProof(uint256(), hashRand));
+    bmmCache.CacheVerifiedBMM(uint256());
+    BOOST_CHECK(!bmmCache.HaveVerifiedBMM(uint256()));
 
     // Accept many & check that they have been cached
     for (int i = 0; i <= 1776; i++) {
-        uint256 hashRand1 = GetRandHash();
-        uint256 hashRand2 = GetRandHash();
-        bmmCache.CacheBMMProof(hashRand1, hashRand2);
-        BOOST_CHECK(bmmCache.HaveBMMProof(hashRand1, hashRand2));
+        uint256 hash = GetRandHash();
+        bmmCache.CacheVerifiedBMM(hash);
+        BOOST_CHECK(bmmCache.HaveVerifiedBMM(hash));
     }
 
     // Check that the first cached item still can be looked up
-    BOOST_CHECK(bmmCache.HaveBMMProof(hash1, hash2));
+    BOOST_CHECK(bmmCache.HaveVerifiedBMM(hash1));
 }
 
 

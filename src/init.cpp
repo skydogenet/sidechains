@@ -1478,7 +1478,7 @@ bool AppInitMain()
                 // (otherwise we use the one already on disk).
                 // This is called again in ThreadImport after the reindex completes.
                 if (!fReindex && !LoadGenesisBlock(chainparams)) {
-                    strLoadError = _("Error initializing block database");
+                    strLoadError = _("Error initializing block database - failed to load genesis block");
                     break;
                 }
 
@@ -1508,7 +1508,7 @@ bool AppInitMain()
                 if (!is_coinsview_empty) {
                     // LoadChainTip sets chainActive based on pcoinsTip's best block
                     if (!LoadChainTip(chainparams)) {
-                        strLoadError = _("Error initializing block database");
+                        strLoadError = _("Error initializing block database - failed to load chain tip");
                         break;
                     }
                     assert(chainActive.Tip() != nullptr);

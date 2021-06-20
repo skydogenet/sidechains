@@ -22,9 +22,8 @@ public:
     uint32_t nTime;
 
     // BMM header contents
-    std::string criticalProof;
-    CMutableTransaction criticalTx;
     uint256 hashWTPrime;
+    uint256 hashMainchainBlock;
 
     CBlockHeader()
     {
@@ -39,9 +38,8 @@ public:
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
-        READWRITE(criticalProof);
-        READWRITE(criticalTx);
         READWRITE(hashWTPrime);
+        READWRITE(hashMainchainBlock);
     }
 
     void SetNull()
@@ -49,25 +47,16 @@ public:
         nVersion = 0;
         hashPrevBlock.SetNull();
         hashMerkleRoot.SetNull();
+        hashMainchainBlock.SetNull();
         nTime = 0;
-        Blind();
-    }
-
-    void Blind()
-    {
-        criticalProof = "";
-        criticalTx = CMutableTransaction();
-        hashWTPrime.SetNull();
     }
 
     bool IsNull() const
     {
-        return (criticalProof.empty() && criticalTx.IsEmpty() && hashWTPrime.IsNull());
+        return (hashMainchainBlock.IsNull() && hashWTPrime.IsNull());
     }
 
     uint256 GetHash() const;
-
-    uint256 GetBlindHash() const;
 
     int64_t GetBlockTime() const
     {
@@ -114,13 +103,12 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader block;
-        block.nVersion       = nVersion;
-        block.hashPrevBlock  = hashPrevBlock;
-        block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.criticalProof  = criticalProof;
-        block.criticalTx     = criticalTx;
-        block.hashWTPrime    = hashWTPrime;
+        block.nVersion              = nVersion;
+        block.hashPrevBlock         = hashPrevBlock;
+        block.hashMerkleRoot        = hashMerkleRoot;
+        block.nTime                 = nTime;
+        block.hashWTPrime           = hashWTPrime;
+        block.hashMainchainBlock    = hashMainchainBlock;
         return block;
     }
 

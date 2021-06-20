@@ -16,14 +16,6 @@ uint256 CBlockHeader::GetHash() const
     return SerializeHash(*this);
 }
 
-uint256 CBlockHeader::GetBlindHash() const
-{
-    CBlock copy = *this;
-    copy.Blind();
-
-    return SerializeHash(copy);
-}
-
 std::string CBlock::ToString() const
 {
     std::stringstream s;

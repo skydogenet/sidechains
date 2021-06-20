@@ -418,8 +418,8 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 
 /** Functions for validating blocks and updating the block tree */
 
-/** Verify BMM h* proof for this block */
-bool VerifyCriticalHashProof(const CBlock& block);
+/** Verify BMM for this block with the mainchain */
+bool VerifyBMM(const CBlock& block);
 
 /** Context-independent validity checks */
 bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true, bool fSkipBMMChecks = false);

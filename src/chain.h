@@ -209,11 +209,7 @@ public:
     uint32_t nTime;
 
     //! BMM
-    std::string criticalProof;
-    CMutableTransaction criticalTx;
     uint256 hashMainBlock;
-
-    //! The current / most recent WT^ hash is part of sidechain block headers
     uint256 hashWTPrime;
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
@@ -241,8 +237,6 @@ public:
         hashMerkleRoot = uint256();
         nTime          = 0;
 
-        criticalProof = "";
-        criticalTx = CMutableTransaction();
         hashWTPrime = uint256();
         hashMainBlock = uint256();
     }
@@ -260,8 +254,6 @@ public:
         hashMerkleRoot = block.hashMerkleRoot;
         nTime          = block.nTime;
 
-        criticalProof = block.criticalProof;
-        criticalTx = block.criticalTx;
         hashWTPrime = block.hashWTPrime;
     }
 
@@ -291,8 +283,6 @@ public:
             block.hashPrevBlock = pprev->GetBlockHash();
         block.hashMerkleRoot = hashMerkleRoot;
         block.nTime          = nTime;
-        block.criticalProof  = criticalProof;
-        block.criticalTx     = criticalTx;
         block.hashWTPrime    = hashWTPrime;
         return block;
     }
@@ -300,13 +290,6 @@ public:
     uint256 GetBlockHash() const
     {
         return *phashBlock;
-    }
-
-    uint256 GetBlindBlockHash() const
-    {
-        CBlockHeader header =  GetBlockHeader();
-        header.Blind();
-        return header.GetHash();
     }
 
     int64_t GetBlockTime() const
@@ -415,25 +398,19 @@ public:
         READWRITE(hashPrev);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
-
-        // BMM part of block header
-        READWRITE(criticalProof);
-        READWRITE(criticalTx);
         READWRITE(hashMainBlock);
-
         READWRITE(hashWTPrime);
     }
 
     uint256 GetBlockHash() const
     {
         CBlockHeader block;
-        block.nVersion        = nVersion;
-        block.hashPrevBlock   = hashPrev;
-        block.hashMerkleRoot  = hashMerkleRoot;
-        block.nTime           = nTime;
-        block.criticalProof   = criticalProof;
-        block.criticalTx      = criticalTx;
-        block.hashWTPrime     = hashWTPrime;
+        block.nVersion           = nVersion;
+        block.hashPrevBlock      = hashPrev;
+        block.hashMerkleRoot     = hashMerkleRoot;
+        block.nTime              = nTime;
+        block.hashWTPrime        = hashWTPrime;
+        block.hashMainchainBlock = hashMainBlock;
         return block.GetHash();
     }
 

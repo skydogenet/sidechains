@@ -1196,8 +1196,8 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Verify that block has a valid h* proof
-    if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
-        return error("%s: ReadBlockFromDisk: bad-critical-hash", __func__);
+    if (fVerifyBMM && !VerifyBMM(block)) {
+        return error("%s: ReadBlockFromDisk: invalid BMM", __func__);
     }
 
     return true;
@@ -3202,7 +3202,7 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
     CBlockIndex* pindexNew = new CBlockIndex(block);
 
     // Add mainchain block hash to index
-    uint256 hashMainBlock = GetMainBlockHash(block);
+    uint256 hashMainBlock = block.hashMainchainBlock;
     pindexNew->hashMainBlock = hashMainBlock;
 
     // We assign the sequence id to blocks only when the full data is available,
@@ -3448,68 +3448,35 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         block.fChecked = true;
 
     // Check h* for BMM block
-    if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
-        return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof B");
+    if (fVerifyBMM && !VerifyBMM(block)) {
+        return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "invalid bmm / failed to verify BMM for block");
     }
 
     return true;
 }
 
-bool VerifyCriticalHashProof(const CBlock& block)
+bool VerifyBMM(const CBlock& block)
 {
+    // Skip genesis block
     if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
         return true;
 
-    const CTransaction& criticalTx(block.criticalTx);
-    if (!criticalTx.IsCoinBase() || criticalTx.vout.empty())
-        return false;
-
-    if (block.criticalProof.empty())
-        return false;
-
-    // h*
-    const uint256 hashBlindBlock = block.GetBlindHash();
-
-    // Loop through the coinbase and look for h*
-    uint256 hashCommitted;
-    for (const CTxOut& out : criticalTx.vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
-
-        if (scriptPubKey.size() < sizeof(uint256) + 6)
-            continue;
-
-        // Check h* commit header
-        if (scriptPubKey[0] != OP_RETURN ||
-                scriptPubKey[1] != 0xD1 ||
-                scriptPubKey[2] != 0x61 ||
-                scriptPubKey[3] != 0x73 ||
-                scriptPubKey[4] != 0x68)
-            continue;
-
-        std::vector<unsigned char> vch(scriptPubKey.begin() + 5, scriptPubKey.begin() + 37);
-        uint256 hashFound(vch);
-
-        if (hashFound == hashBlindBlock)
-            hashCommitted = hashFound;
-    }
-
-    // Check that we found the h* commit
-    if (hashBlindBlock != hashCommitted)
-        return false;
-
-    // Check if we have cached the validation of this BMM
-    if (bmmCache.HaveBMMProof(block.GetHash(), criticalTx.GetHash()))
+    // Have we already verified BMM for this block?
+    if (bmmCache.HaveVerifiedBMM(block.GetHash()))
         return true;
 
-    // Verify critical hash proof with local mainchain node
+    // h*
+    const uint256 hashMerkleRoot = block.hashMerkleRoot;
+
+    // Verify BMM with local mainchain node
     uint256 txid;
+    uint32_t nTime;
     SidechainClient client;
-    client.VerifyCriticalHashProof(block.criticalProof, txid);
-    if (txid != criticalTx.GetHash())
+    if (!client.GetBMM(block.hashMainchainBlock, hashMerkleRoot, txid, nTime))
         return false;
 
-    // Cache the valid BMM proof
-    bmmCache.CacheBMMProof(block.GetHash(), criticalTx.GetHash());
+    // Cache that we have verified BMM for this block
+    bmmCache.CacheVerifiedBMM(block.GetHash());
 
     return true;
 }
@@ -3855,8 +3822,8 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
         if (!CheckBlockHeader(block, state, chainparams.GetConsensus()))
             return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
 
-        if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
-            return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof A");
+        if (fVerifyBMM && !VerifyBMM(block)) {
+            return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "Invalid BMM in block header!");
         }
 
         // Get prev block index
@@ -5946,22 +5913,6 @@ void SetNetworkActive(bool fActive, const std::string& strReason)
         LogPrintf("If you are running the daemon check mainchain & sidechain configuration files.\n");
         LogPrintf("To retry connection, use the 'refreshbmm' RPC command.\n");
     }
-}
-
-uint256 GetMainBlockHash(const CBlockHeader& block)
-{
-    if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
-        return uint256();
-
-    if (!block.criticalProof.size())
-        return uint256();
-
-    // Get the mainchain block header from the BMM critical proof
-    CDataStream ssMB(ParseHex(block.criticalProof), SER_NETWORK, PROTOCOL_VERSION);
-    CMainchainMerkleBlock mb;
-    ssMB >> mb;
-
-    return mb.header.GetHash();
 }
 
 bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)
