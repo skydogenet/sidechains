@@ -611,6 +611,8 @@ BOOST_AUTO_TEST_CASE(LoadReceiveRequests)
     BOOST_CHECK_EQUAL(values[1], "val_rr1");
 }
 
+// TODO make functional with PrevBlockCommit
+/*
 class ListCoinsTestingSetup : public TestChain100Setup
 {
 public:
@@ -662,11 +664,12 @@ public:
 
     std::unique_ptr<CWallet> wallet;
 };
+*/
 
+/*
 BOOST_FIXTURE_TEST_CASE(ListCoins, ListCoinsTestingSetup)
 {
     // TODO update to work without block subsidy
-    /*
     std::string coinbaseAddress = coinbaseKey.GetPubKey().GetID().ToString();
 
     // Confirm ListCoins initially returns 1 coin grouped under coinbaseKey
@@ -714,7 +717,7 @@ BOOST_FIXTURE_TEST_CASE(ListCoins, ListCoinsTestingSetup)
     BOOST_CHECK_EQUAL(list.size(), 1);
     BOOST_CHECK_EQUAL(boost::get<CKeyID>(list.begin()->first).ToString(), coinbaseAddress);
     BOOST_CHECK_EQUAL(list.begin()->second.size(), 2);
-    */
 }
+*/
 
 BOOST_AUTO_TEST_SUITE_END()

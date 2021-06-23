@@ -3448,9 +3448,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         block.fChecked = true;
 
     // Check h* for BMM block
-    if (fVerifyBMM && !VerifyBMM(block)) {
+    if (fVerifyBMM && !VerifyBMM(block))
         return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "invalid bmm / failed to verify BMM for block");
-    }
 
     return true;
 }
@@ -3609,6 +3608,29 @@ CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned 
 
     // Add vchSig
     memcpy(&scriptPubKey[37], vchSig.data(), 65);
+
+    return scriptPubKey;
+}
+
+CScript GeneratePrevBlockCommit(const uint256& hashPrevMain, const uint256& hashPrevSide)
+{
+    /*
+     * Generate a script commit of previous mainchain & sidechain block hashes
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(69);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xFD;
+    scriptPubKey[2] = 0x7A;
+    scriptPubKey[3] = 0xD1;
+    scriptPubKey[4] = 0xEF;
+
+    // Add previous mainchain & previous sidechain block hash
+    memcpy(&scriptPubKey[5], hashPrevMain.begin(), 32);
+    memcpy(&scriptPubKey[37], hashPrevSide.begin(), 32);
 
     return scriptPubKey;
 }
@@ -3783,6 +3805,26 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
     if (GetBlockWeight(block) > MAX_BLOCK_WEIGHT) {
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-weight", false, strprintf("%s : weight limit failed", __func__));
     }
+
+    // Check required PrevBlockCommit
+    bool fPrevCommitFound = false;
+    for (const CTxOut& out : block.vtx[0]->vout) {
+        uint256 hashPrevMain;
+        uint256 hashPrevSide;
+        if (out.scriptPubKey.IsPrevBlockCommit(hashPrevMain, hashPrevSide)) {
+            if (hashPrevMain != pindexPrev->hashMainBlock) {
+                return state.DoS(100, false, REJECT_INVALID, "invalid-prev-main-block-commit", true, "invalid prev main block commit");
+            }
+            if (hashPrevSide != block.hashPrevBlock) {
+                return state.DoS(100, false, REJECT_INVALID, "invalid-prev-side-block-commit", true, "invalid prev side block commit");
+            }
+            fPrevCommitFound = true;
+            break;
+        }
+    }
+    uint256 hashGenesis = Params().GetConsensus().hashGenesisBlock;
+    if (pindexPrev && pindexPrev->GetBlockHash() != hashGenesis && !fPrevCommitFound)
+        return state.DoS(100, false, REJECT_INVALID, "missing-prev-block-commit", true, "missing prev block commit");
 
     return true;
 }

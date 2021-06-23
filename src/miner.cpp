@@ -229,6 +229,11 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         }
     }
 
+    // Add previous sidechain block hash & previous mainchain block hash to
+    // the coinbase.
+    CScript scriptPrev = GeneratePrevBlockCommit(pindexPrev->hashMainBlock, pindexPrev->GetBlockHash());
+    coinbaseTx.vout.push_back(CTxOut(0, scriptPrev));
+
     // Add WT^ to block if one was created earlier
     if (fCreatedWTPrime) {
         for (const CTxOut& out : wtPrimeDataTx->vout)

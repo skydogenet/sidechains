@@ -307,6 +307,30 @@ bool CScript::IsWTRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSi
     return true;
 }
 
+bool CScript::IsPrevBlockCommit(uint256& hashPrevMain, uint256& hashPrevSide) const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size != 69) // sha256 hash x 2 + opcodes
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xFD ||
+            (*this)[2] != 0x7A ||
+            (*this)[3] != 0xD1 ||
+            (*this)[4] != 0xEF)
+        return false;
+
+    hashPrevMain = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    hashPrevSide = uint256(std::vector<unsigned char>(this->begin() + 37, this->end()));
+
+    if (hashPrevMain.IsNull() || hashPrevSide.IsNull())
+        return false;
+
+    return true;
+}
+
 bool CScript::IsSidechainObj(std::vector<unsigned char>& vch) const
 {
     // Check script size
