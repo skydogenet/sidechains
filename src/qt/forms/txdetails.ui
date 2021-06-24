@@ -143,6 +143,11 @@
    </item>
    <item row="8" column="0" colspan="2">
     <widget class="QTreeWidget" name="treeWidgetDecoded">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
      <attribute name="headerMinimumSectionSize">
       <number>50</number>
      </attribute>
