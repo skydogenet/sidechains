@@ -280,10 +280,11 @@ public:
         CBlockHeader block;
         block.nVersion       = nVersion;
         if (pprev)
-            block.hashPrevBlock = pprev->GetBlockHash();
-        block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.hashWTPrime    = hashWTPrime;
+            block.hashPrevBlock  = pprev->GetBlockHash();
+        block.hashMerkleRoot     = hashMerkleRoot;
+        block.nTime              = nTime;
+        block.hashWTPrime        = hashWTPrime;
+        block.hashMainchainBlock = hashMainBlock;
         return block;
     }
 
