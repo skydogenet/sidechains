@@ -226,11 +226,6 @@ static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc5911528596b7d7f49";
 static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
 
-/** Blind merged mining */
-static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = false;
-static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = true;
-static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = true;
-
 static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
 
 extern BMMCache bmmCache;
@@ -422,10 +417,10 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 bool VerifyBMM(const CBlock& block);
 
 /** Context-independent validity checks */
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true, bool fSkipBMMChecks = false);
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckMerkleRoot = true, bool fCheckBMM = true);
 
 /** Check a block is completely valid from start to finish (only works on top of our current best block, with cs_main held) */
-bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true, bool fSkipBMMChecks = false, bool fReorg = false);
+bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckMerkleRoot = true, bool fChekBMM = false, bool fReorg = false);
 
 /** Check whether witness commitments are required for block. */
 bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params);

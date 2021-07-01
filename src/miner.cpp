@@ -115,10 +115,16 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool fSkipBMMChecks, const uint256& hashPrevBlock, CAmount* nFeesOut)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool fCheckBMM, const uint256& hashPrevBlock, CAmount* nFeesOut)
 {
-    if (!fSkipBMMChecks && !CheckMainchainConnection()) {
-        LogPrintf("%s: Error: Cannot generate without mainchain connection!\n", __func__);
+    // TODO
+    // Usually this is called via RefreshBMM of the SidechainPage. SidechainPage
+    // will call UpdateMainBlockHashCache right before calling this, but maybe
+    // we should update it here instead / also as we will use the mainchain tip
+    // when generating the prevBlock commit.
+
+    if (fCheckBMM && !CheckMainchainConnection()) {
+        LogPrintf("%s: Error: Cannot generate new BMM block without mainchain connection!\n", __func__);
         return nullptr;
     }
 
@@ -231,7 +237,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Add previous sidechain block hash & previous mainchain block hash to
     // the coinbase.
-    CScript scriptPrev = GeneratePrevBlockCommit(pindexPrev->hashMainBlock, pindexPrev->GetBlockHash());
+    CScript scriptPrev = GeneratePrevBlockCommit(bmmCache.GetLastMainBlockHash(), pindexPrev->GetBlockHash());
     coinbaseTx.vout.push_back(CTxOut(0, scriptPrev));
 
     // Add WT^ to block if one was created earlier
@@ -328,7 +334,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // received BMM proof from the mainchain yet.
     CValidationState state;
     if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false,
-                false, fSkipBMMChecks, hashPrevBlock.IsNull() ? false : true)) {
+                fCheckBMM, hashPrevBlock.IsNull() ? false : true)) {
         throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
     }
     int64_t nTime2 = GetTimeMicros();
@@ -978,9 +984,9 @@ bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, CAmo
             strError = "Failed to get script for mining!\n";
             return false;
         }
-        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, true, hashPrevBlock, nFeesOut);
+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, false, hashPrevBlock, nFeesOut);
     } else {
-        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, true, hashPrevBlock, nFeesOut);
+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, false, hashPrevBlock, nFeesOut);
     }
 
     if (!pblocktemplate.get()) {

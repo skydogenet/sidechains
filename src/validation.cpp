@@ -165,7 +165,7 @@ public:
     // Block (dis)connection on a given view:
     DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view);
     bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,
-                    CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck = false, bool fSkipBMMChecks = false);
+                    CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck = false, bool fCheckBMM = true);
 
     // Block disconnection on our pcoinsTip:
     bool DisconnectTip(CValidationState& state, const CChainParams& chainparams, DisconnectedBlockTransactions *disconnectpool);
@@ -1185,21 +1185,6 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
         return error("%s: Deserialize or I/O error - %s at %s", __func__, e.what(), pos.ToString());
     }
 
-    bool fGenesis = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
-
-    // Do we want to verify BMM in this context?
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmreadblock", DEFAULT_VERIFY_BMM_READ_BLOCK);
-
-    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
-        SetNetworkActive(false, "Failed to connect to mainchain when reading block from disk!");
-        return error("%s: Failed due to lack of mainchain connection required to verify BMM!\n", __func__);
-    }
-
-    // Verify that block has a valid h* proof
-    if (fVerifyBMM && !VerifyBMM(block)) {
-        return error("%s: ReadBlockFromDisk: invalid BMM", __func__);
-    }
-
     return true;
 }
 
@@ -1931,7 +1916,7 @@ static int64_t nBlocksTotal = 0;
  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()
  *  can fail if those validity checks fail (among other reasons). */
 bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,
-                  CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck, bool fSkipBMMChecks)
+                  CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck, bool fCheckBMM)
 {
     AssertLockHeld(cs_main);
     assert(pindex);
@@ -1953,7 +1938,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     // is enforced in ContextualCheckBlockHeader(); we wouldn't want to
     // re-enforce that rule here (at least until we make it impossible for
     // GetAdjustedTime() to go backward).
-    if (!CheckBlock(block, state, chainparams.GetConsensus(), !fJustCheck, !fJustCheck, fSkipBMMChecks))
+    if (!CheckBlock(block, state, chainparams.GetConsensus(), !fJustCheck /* fCheckMerkleRoot */, fCheckBMM))
         return error("%s: Consensus::CheckBlock: %s", __func__, FormatStateMessage(state));
 
     // verify that the view's current state corresponds to the previous block
@@ -2268,8 +2253,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             bool fFailCommit = scriptPubKey.IsWTPrimeFailCommit(hashWTPrime);
 
             if (fFailCommit || scriptPubKey.IsWTPrimeSpentCommit(hashWTPrime)) {
-                // Verify commit state with the mainchain
-                if (!fSkipBMMChecks) {
+                // Verify with the mainchain when we are also checking BMM
+                if (fCheckBMM) {
                     bool fVerified = fFailCommit ?
                         client.HaveFailedWTPrime(hashWTPrime) :
                         client.HaveSpentWTPrime(hashWTPrime);
@@ -2401,7 +2386,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             uint256 hashWTPrimeID;
 
             // This will also return a list of wt(s) from the WT^
-            if (!VerifyWTPrimes(strFail, pindex->nHeight, block.vtx, vWT, hashWTPrime, hashWTPrimeID, !fSkipBMMChecks /* fReplicate */))
+            if (!VerifyWTPrimes(strFail, pindex->nHeight, block.vtx, vWT, hashWTPrime, hashWTPrimeID, fCheckBMM /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
@@ -3368,25 +3353,14 @@ static bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, 
     return true;
 }
 
-static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
-{
-    // TODO delete function or perform BMM checks here
-    return true;
-}
-
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW, bool fCheckMerkleRoot, bool fSkipBMMChecks)
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckMerkleRoot, bool fCheckBMM)
 {
     // These are checks that are independent of context.
 
     bool fGenesis = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
 
-    // Do we want to verify BMM in this context?
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
-    if (fSkipBMMChecks)
-        fVerifyBMM = false;
-
     // Check for mainchain connection
-    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
+    if (!fGenesis && !CheckMainchainConnection()) {
         SetNetworkActive(false, "Failed to connect to mainchain when checking block!");
         return false;
     }
@@ -3394,10 +3368,9 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (block.fChecked)
         return true;
 
-    // Check that the header is valid (particularly PoW).  This is mostly
-    // redundant with the call in AcceptBlockHeader.
-    if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW))
-        return false;
+    // Verify BMM with mainchain
+    if (fCheckBMM && !VerifyBMM(block))
+        return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "invalid bmm / failed to verify BMM for block");
 
     // Check the merkle root.
     if (fCheckMerkleRoot) {
@@ -3430,6 +3403,31 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         if (block.vtx[i]->IsCoinBase())
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-multiple", false, "more than one coinbase");
 
+    if (!fGenesis && fCheckBMM) {
+        // Check required PrevBlockCommit
+        bool fPrevCommitFound = false;
+        for (const CTxOut& out : block.vtx[0]->vout) {
+            uint256 hashPrevMain;
+            uint256 hashPrevSide;
+            if (out.scriptPubKey.IsPrevBlockCommit(hashPrevMain, hashPrevSide)) {
+                if (hashPrevMain != bmmCache.GetMainPrevBlockHash(block.hashMainchainBlock)) {
+                    LogPrintf("%s: Invalid mainchain prevBlock commit: %s != %s\n", __func__, hashPrevMain.ToString(), bmmCache.GetMainPrevBlockHash(block.hashMainchainBlock).ToString());
+                    return state.DoS(25, false, REJECT_INVALID, "bad-mc-prev", false, "invalid mainchin prevBlock commit");
+                }
+                if (hashPrevSide != block.hashPrevBlock) {
+                    LogPrintf("%s: Invalid sidechain prevBlock commit: %s != %s\n", __func__, hashPrevSide.ToString(), block.hashPrevBlock.ToString());
+                    return state.DoS(25, false, REJECT_INVALID, "bad-sc-prev", false, "invalid sidechain prevBlock commit");
+                }
+                fPrevCommitFound = true;
+                break;
+            }
+        }
+        if (!fPrevCommitFound) {
+            LogPrintf("%s: Missing prevBlock commit!\n", __func__);
+            return state.DoS(100, false, REJECT_INVALID, "no-prev-commit", false, "PrevBlockCommit not found!");
+        }
+    }
+
     // Check transactions
     for (const auto& tx : block.vtx)
         if (!CheckTransaction(*tx, state, true))
@@ -3444,12 +3442,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (nSigOps * WITNESS_SCALE_FACTOR > MAX_BLOCK_SIGOPS_COST)
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-sigops", false, "out-of-bounds SigOpCount");
 
-    if (fCheckPOW && fCheckMerkleRoot)
+    if (fCheckBMM && fCheckMerkleRoot)
         block.fChecked = true;
-
-    // Check h* for BMM block
-    if (fVerifyBMM && !VerifyBMM(block))
-        return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "invalid bmm / failed to verify BMM for block");
 
     return true;
 }
@@ -3467,19 +3461,23 @@ bool VerifyBMM(const CBlock& block)
     // h*
     const uint256 hashMerkleRoot = block.hashMerkleRoot;
 
+    // TODO
+    // Return results from client to help decide on DoS score
+
     // Verify BMM with local mainchain node
     uint256 txid;
     uint32_t nTime;
     SidechainClient client;
-    if (!client.GetBMM(block.hashMainchainBlock, hashMerkleRoot, txid, nTime))
+    if (!client.GetBMM(block.hashMainchainBlock, hashMerkleRoot, txid, nTime)) {
+        LogPrintf("%s: Did not find BMM h*: %s in mainchain block: %s!\n", __func__, hashMerkleRoot.ToString(), block.hashMainchainBlock.ToString());
         return false;
+    }
 
     // Cache that we have verified BMM for this block
     bmmCache.CacheVerifiedBMM(block.GetHash());
 
     return true;
 }
-
 
 bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params)
 {
@@ -3806,26 +3804,6 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-weight", false, strprintf("%s : weight limit failed", __func__));
     }
 
-    // Check required PrevBlockCommit
-    bool fPrevCommitFound = false;
-    for (const CTxOut& out : block.vtx[0]->vout) {
-        uint256 hashPrevMain;
-        uint256 hashPrevSide;
-        if (out.scriptPubKey.IsPrevBlockCommit(hashPrevMain, hashPrevSide)) {
-            if (hashPrevMain != pindexPrev->hashMainBlock) {
-                return state.DoS(100, false, REJECT_INVALID, "invalid-prev-main-block-commit", true, "invalid prev main block commit");
-            }
-            if (hashPrevSide != block.hashPrevBlock) {
-                return state.DoS(100, false, REJECT_INVALID, "invalid-prev-side-block-commit", true, "invalid prev side block commit");
-            }
-            fPrevCommitFound = true;
-            break;
-        }
-    }
-    uint256 hashGenesis = Params().GetConsensus().hashGenesisBlock;
-    if (pindexPrev && pindexPrev->GetBlockHash() != hashGenesis && !fPrevCommitFound)
-        return state.DoS(100, false, REJECT_INVALID, "missing-prev-block-commit", true, "missing prev block commit");
-
     return true;
 }
 
@@ -3837,11 +3815,8 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
 
     bool fGenesis = (hash == Params().GetConsensus().hashGenesisBlock);
 
-    // Do we want to verify BMM in this context?
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER);
-
     // Check for mainchain connection
-    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
+    if (!fGenesis && !CheckMainchainConnection()) {
         SetNetworkActive(false, "Failed to connect to mainchain when checking block header!");
         return false;
     }
@@ -3849,8 +3824,7 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
     // Check for duplicate
     BlockMap::iterator miSelf = mapBlockIndex.find(hash);
     CBlockIndex *pindex = nullptr;
-    if (hash != chainparams.GetConsensus().hashGenesisBlock) {
-
+    if (!fGenesis) {
         if (miSelf != mapBlockIndex.end()) {
             // Block header is already known.
             pindex = miSelf->second;
@@ -3861,12 +3835,8 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
             return true;
         }
 
-        if (!CheckBlockHeader(block, state, chainparams.GetConsensus()))
-            return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
-
-        if (fVerifyBMM && !VerifyBMM(block)) {
+        if (!VerifyBMM(block))
             return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "Invalid BMM in block header!");
-        }
 
         // Get prev block index
         CBlockIndex* pindexPrev = nullptr;
@@ -4090,7 +4060,7 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
     return true;
 }
 
-bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot, bool fSkipBMMChecks, bool fReorg)
+bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckMerkleRoot, bool fCheckBMM, bool fReorg)
 {
     AssertLockHeld(cs_main);
     assert(pindexPrev);
@@ -4101,16 +4071,15 @@ bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams,
     indexDummy.pprev = pindexPrev;
     indexDummy.nHeight = pindexPrev->nHeight + 1;
 
-    // NOTE: CheckBlockHeader is called by CheckBlock
     if (!ContextualCheckBlockHeader(block, state, chainparams, pindexPrev, GetAdjustedTime()))
         return error("%s: Consensus::ContextualCheckBlockHeader: %s", __func__, FormatStateMessage(state));
-    if (!CheckBlock(block, state, chainparams.GetConsensus(), fCheckPOW, fCheckMerkleRoot, fSkipBMMChecks))
+    if (!CheckBlock(block, state, chainparams.GetConsensus(), fCheckMerkleRoot, fCheckBMM))
         return error("%s: Consensus::CheckBlock: %s", __func__, FormatStateMessage(state));
     if (!ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindexPrev))
         return error("%s: Consensus::ContextualCheckBlock: %s", __func__, FormatStateMessage(state));
 
     if (!fReorg) {
-        if (!g_chainstate.ConnectBlock(block, state, &indexDummy, viewNew, chainparams, true, fSkipBMMChecks))
+        if (!g_chainstate.ConnectBlock(block, state, &indexDummy, viewNew, chainparams, true, fCheckBMM))
             return false;
     }
 
@@ -4530,7 +4499,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
         if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus(),
-                    true /* fCheckPow */, true /* fCheckMerkleRoot */, true /* fSkipBMMChecks */))
+                    true /* fCheckMerkleRoot */, false /* fCheckBMM */))
             return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__,
                          pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         // check level 2: verify undo validity
@@ -4574,7 +4543,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
                 return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
             if (!g_chainstate.ConnectBlock(block, state, pindex, coins,
-                        chainparams, false /* fJustCheck */, true /* fSkipBMMChecks */))
+                        chainparams, false /* fJustCheck */, false /* fCheckBMM */))
                 return error("VerifyDB(): *** found unconnectable block at %d, hash=%s.\n Error: %s\n", pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         }
     }
