@@ -130,7 +130,7 @@ QVariant BlockExplorerTableModel::headerData(int section, Qt::Orientation orient
             case 2:
                 return QString("Hash Prev");
             case 3:
-                return QString("Merkle Root");
+                return QString("Merkle Root (h*)");
             case 4:
                 return QString("Time");
             case 5:
