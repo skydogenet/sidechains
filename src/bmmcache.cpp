@@ -195,9 +195,40 @@ uint256 BMMCache::GetLastMainBlockHash() const
     return vMainBlockHash.back();
 }
 
+uint256 BMMCache::GetMainPrevBlockHash(const uint256& hashBlock) const
+{
+    if (vMainBlockHash.size() < 2)
+        return uint256();
+
+    if (!mapMainBlock.count(hashBlock))
+        return uint256();
+
+    const MainBlockIndex index = mapMainBlock.at(hashBlock);
+
+    size_t indexPrev = index.index;
+    if (indexPrev == 0)
+        return uint256();
+
+    indexPrev -= 1;
+    if (indexPrev >= vMainBlockHash.size())
+        return uint256();
+
+    return vMainBlockHash[indexPrev];
+}
+
 int BMMCache::GetCachedBlockCount() const
 {
     return vMainBlockHash.size();
+}
+
+int BMMCache::GetMainchainBlockHeight(const uint256& hash) const
+{
+    if (!mapMainBlock.count(hash))
+        return -1;
+
+    const MainBlockIndex index = mapMainBlock.at(hash);
+
+    return index.index - 1;
 }
 
 bool BMMCache::HaveMainBlock(const uint256& hash) const

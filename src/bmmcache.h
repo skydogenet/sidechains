@@ -55,7 +55,11 @@ public:
 
     uint256 GetLastMainBlockHash() const;
 
+    uint256 GetMainPrevBlockHash(const uint256& hashBlock) const;
+
     int GetCachedBlockCount() const;
+
+    int GetMainchainBlockHeight(const uint256& hash) const;
 
     bool HaveMainBlock(const uint256& hash) const;
 

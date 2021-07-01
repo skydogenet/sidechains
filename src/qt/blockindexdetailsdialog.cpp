@@ -11,6 +11,7 @@
 
 #include <QMessageBox>
 
+#include <bmmcache.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <consensus/merkle.h>
@@ -113,6 +114,9 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
 
     // WT^ hash
     ui->labelHashWTPrime->setText(QString::fromStdString(index->hashWTPrime.ToString()));
+
+    // Mainchain block height
+    ui->labelMainBlockHeight->setText(QString::number(bmmCache.GetMainchainBlockHeight(index->hashMainBlock)));
 
     // Hash of the block that came after this one if any
     ui->labelNextBlockHash->setText(QString::fromStdString(hashNext.ToString()));

@@ -417,29 +417,8 @@
       <string>BMM</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="1">
-       <widget class="QLabel" name="labelMerkleRoot">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="font">
-         <font>
-          <family>Noto Mono</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>00000000000000000000000000000000</string>
-        </property>
-        <property name="textInteractionFlags">
-         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLabel" name="labelMainBlockHash">
+      <item row="2" column="1">
+       <widget class="QLabel" name="labelHashWTPrime">
         <property name="font">
          <font>
           <family>Noto Mono</family>
@@ -473,15 +452,8 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>WT^ Hash</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLabel" name="labelHashWTPrime">
+      <item row="1" column="1">
+       <widget class="QLabel" name="labelMainBlockHash">
         <property name="font">
          <font>
           <family>Noto Mono</family>
@@ -492,6 +464,53 @@
         </property>
         <property name="textInteractionFlags">
          <set>Qt::TextSelectableByMouse</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>WT^ Hash</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="labelMerkleRoot">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <family>Noto Mono</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>00000000000000000000000000000000</string>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Mainchain Height</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="labelMainBlockHeight">
+        <property name="font">
+         <font>
+          <family>Noto Mono</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>-1</string>
         </property>
        </widget>
       </item>
