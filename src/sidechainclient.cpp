@@ -276,7 +276,7 @@ uint256 SidechainClient::SendBMMRequest(const uint256& hashCritical, const uint2
     // Try to send critical data request to mainchain
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
-        LogPrintf("ERROR Sidechain client failed to send critical data request!\n");
+        LogPrintf("ERROR Sidechain client failed to create BMM request on mainchain!\n");
         return txid; // TODO
     }
 
