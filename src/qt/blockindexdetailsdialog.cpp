@@ -69,8 +69,10 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
 
     // Show details on dialog
 
-    // Height
-    ui->labelHeight->setText(QString::number(nHeight));
+    // Height (Sidechain & Mainchain)
+    QString strHeight = "Sidechain: " + QString::number(nHeight);
+    strHeight += "   |   Mainchain: " + QString::number(bmmCache.GetMainchainBlockHeight(index->hashMainBlock));
+    ui->labelHeight->setText(strHeight);
 
     // Hash
     ui->labelHash->setText(QString::fromStdString(hashBlock.ToString()));
@@ -114,9 +116,6 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
 
     // WT^ hash
     ui->labelHashWTPrime->setText(QString::fromStdString(index->hashWTPrime.ToString()));
-
-    // Mainchain block height
-    ui->labelMainBlockHeight->setText(QString::number(bmmCache.GetMainchainBlockHeight(index->hashMainBlock)));
 
     // Hash of the block that came after this one if any
     ui->labelNextBlockHash->setText(QString::fromStdString(hashNext.ToString()));

@@ -849,17 +849,14 @@ void SidechainPage::RefreshBMM()
     UpdateNetworkActive(true /* fMainchainConnected */);
 
     if (txid.IsNull() && !hashCreatedMerkleRoot.IsNull()) {
-        StopBMM();
-
-        messageBox.setWindowTitle("Automated BMM failed!");
+        messageBox.setWindowTitle("Failed to create mainchain BMM request!");
         std::string str;
-        str = "The sidechain has failed to create a BMM request.\n\n";
+        str = "The sidechain failed to create a BMM request.\n\n";
         str += "Please check that you have sufficient mainchain funds and ";
-        str += "confirm that this sidechain is active on the mainchain.\n\n";
-        str += "Automated BMM will be stopped.\n";
+        str += "confirm that this sidechain is active on the mainchain.\n";
+        str += "Automated BMM will continue.\n";
         messageBox.setText(QString::fromStdString(str));
         messageBox.exec();
-        return;
     }
 
     // Update GUI
