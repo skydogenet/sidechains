@@ -30,22 +30,21 @@ public:
     /*
      * Ask for an updated list of recent deposits
      */
-    std::vector<SidechainDeposit> UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, const uint32_t n);
+    std::vector<SidechainDeposit> UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, const uint32_t nLastBurnIndex);
 
     /*
-     * Note: true return value indicates the request to verify the
-     * txout proof went through. However, txid (returned by reference)
-     * must also be verified to match the txCritical hash.
+     * Verify deposit with mainchain node
      */
-    bool VerifyCriticalHashProof(const std::string& criticalProof, uint256& txid);
+    bool VerifyDeposit(const uint256& hashMainBlock, const uint256& txid, const int nTx);
 
     /*
-     * Search for BMM in a mainchain block
+     * Search for BMM in a mainchain block and get mainchain block time
      */
-    bool GetBMM(const uint256& hashMainBlock, const uint256& hashBMM, uint256& txid, uint32_t& nTime);
+    bool VerifyBMM(const uint256& hashMainBlock, const uint256& hashBMM, uint256& txid, uint32_t& nTime);
 
     /*
-     * Send BMM critical data request
+     * Send BMM commitment request to mainchain node, create mainchain BMM
+     * request transaction.
      */
     uint256 SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain, int nHeight = 0, CAmount amount = CAmount(0));
 

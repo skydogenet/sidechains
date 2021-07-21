@@ -3468,7 +3468,7 @@ bool VerifyBMM(const CBlock& block)
     uint256 txid;
     uint32_t nTime;
     SidechainClient client;
-    if (!client.GetBMM(block.hashMainchainBlock, hashMerkleRoot, txid, nTime)) {
+    if (!client.VerifyBMM(block.hashMainchainBlock, hashMerkleRoot, txid, nTime)) {
         LogPrintf("%s: Did not find BMM h*: %s in mainchain block: %s!\n", __func__, hashMerkleRoot.ToString(), block.hashMainchainBlock.ToString());
         return false;
     }
@@ -5815,7 +5815,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
             const SidechainDeposit dy = vDeposit[y];
 
             // The CTIP output of the deposit that might be the input
-            const COutPoint prevout(dy.dtx.GetHash(), dy.n);
+            const COutPoint prevout(dy.dtx.GetHash(), dy.nBurnIndex);
 
             // Look for the CTIP output
             for (const CTxIn& in : dx.dtx.vin) {
@@ -5853,7 +5853,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
     }
 
     // Track the CTIP output of the latest deposit we have sorted
-    COutPoint prevout(vDepositSorted.back().dtx.GetHash(), vDepositSorted.back().n);
+    COutPoint prevout(vDepositSorted.back().dtx.GetHash(), vDepositSorted.back().nBurnIndex);
 
     // Look for the deposit that spends the last sorted CTIP output and sort it.
     // If we cannot find a deposit spending the CTIP, that should mean we
@@ -5868,7 +5868,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
 
                 // Update the CTIP output we are looking for
                 const SidechainDeposit deposit = vDepositSorted.back();
-                prevout = COutPoint(deposit.dtx.GetHash(), deposit.n);
+                prevout = COutPoint(deposit.dtx.GetHash(), deposit.nBurnIndex);
 
                 // Start from begin() again
                 fFound = true;

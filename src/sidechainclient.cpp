@@ -51,7 +51,7 @@ bool SidechainClient::BroadcastWTPrime(const std::string& hex)
 }
 
 // TODO return bool & state / fail string
-std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, uint32_t n)
+std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, uint32_t nLastBurnIndex)
 {
     // List of deposits in sidechain format for DB
     std::vector<SidechainDeposit> incoming;
@@ -69,7 +69,7 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
         json.append("\"");
         json.append(hashLastDeposit.ToString());
         json.append("\",");
-        json.append(UniValue(uint64_t(n)).write());
+        json.append(UniValue(uint64_t(nLastBurnIndex)).write());
         json.append("] }");
     }
 
@@ -77,14 +77,13 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
         LogPrintf("ERROR Sidechain client failed to request new deposits\n");
-        return incoming;  // TODO return false
+        return incoming;
     }
 
     // Process deposits
     BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
         // Looping through list of deposits
         SidechainDeposit deposit;
-        uint32_t n = 0;
         BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
             // Looping through this deposit's members
             if (v.first == "nsidechain") {
@@ -119,36 +118,43 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
                     continue;
             }
             else
-            if (v.first == "n") {
+            if (v.first == "nburnindex") {
                 // Read deposit output index
                 std::string data = v.second.data();
                 if (!data.length())
                     continue;
 
-                n = (unsigned int)std::stoi(data);
+                deposit.nBurnIndex = std::stoi(data);
             }
             else
-            if (v.first == "proofhex") {
-                // Read serialized merkleblock txout proof
+            if (v.first == "ntx") {
+                // Read mainchain block hash
                 std::string data = v.second.data();
                 if (!data.length())
                     continue;
-                if (!IsHex(data))
+
+                deposit.nTx = std::stoi(data);
+            }
+            else
+            if (v.first == "hashblock") {
+                // Read mainchain block hash
+                std::string data = v.second.data();
+                if (!data.length())
                     continue;
 
-                CDataStream ssMB(ParseHex(data), SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS);
-                ssMB >> deposit.proof;
+                deposit.hashMainchainBlock = uint256S(data);
             }
         }
 
-        if (!(deposit.dtx.vout.size() > n)) {
+        if (deposit.nBurnIndex >= deposit.dtx.vout.size()) {
             LogPrintf("%s: Error invalid deposit output index!\n", __func__);
             continue;
         }
 
-        // Get the user payout amount from the deposit output
-        deposit.amtUserPayout = deposit.dtx.vout[n].nValue;
-        deposit.n = n;
+        // Get the user payout amount from the deposit output. At this point the
+        // amount is the total CTIP, and the real payout will be calculated
+        // later.
+        deposit.amtUserPayout = deposit.dtx.vout[deposit.nBurnIndex].nValue;
 
         // TODO check the deposit output 'N' scriptPubKey (compare to THIS_SIDECHAIN)
 
@@ -165,35 +171,39 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
     return incoming;
 }
 
-bool SidechainClient::VerifyCriticalHashProof(const std::string& criticalProof, uint256 &txid)
+bool SidechainClient::VerifyDeposit(const uint256& hashMainBlock, const uint256& txid, const int nTx)
 {
-    // JSON for verifying critical hash
+    // JSON for requesting deposit verification via mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"verifytxoutproof\", \"params\": ");
+    json.append("\"method\": \"verifydeposit\", \"params\": ");
     json.append("[\"");
-    json.append(criticalProof);
-    json.append("\"] }");
+    json.append(hashMainBlock.ToString());
+    json.append("\",\"");
+    json.append(txid.ToString());
+    json.append("\",");
+    json.append(UniValue(nTx).write());
+    json.append("] }");
 
+    // Ask mainchain node to verify deposit
     boost::property_tree::ptree ptree;
-    if (!SendRequestToMainchain(json, ptree))
+    if (!SendRequestToMainchain(json, ptree)) {
+        // Can be enabled for debug -- too noisy
+        // LogPrintf("ERROR Sidechain client failed to verify deposit!\n");
         return false;
-
-    BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
-        std::string data = value.second.data();
-        if (data.size() != 64)
-            continue;
-        txid = uint256S(data);
     }
-    return true;
+
+    // Process result
+    uint256 txidRet = uint256S(ptree.get("result", ""));
+    return (txid == txidRet);
 }
 
-bool SidechainClient::GetBMM(const uint256& hashMainBlock, const uint256& hashBMM, uint256& txid, uint32_t& nTime)
+bool SidechainClient::VerifyBMM(const uint256& hashMainBlock, const uint256& hashBMM, uint256& txid, uint32_t& nTime)
 {
     // JSON for requesting BMM proof via mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"getbmm\", \"params\": ");
+    json.append("\"method\": \"verifybmm\", \"params\": ");
     json.append("[\"");
     json.append(hashMainBlock.ToString());
     json.append("\",\"");
@@ -404,11 +414,11 @@ bool SidechainClient::RefreshBMM(const CAmount& amount, std::string& strError, u
 
         // Check main:block for any of our current BMM requests
         for (const CBlock& b : vBMMCache) {
-            // Send 'getbmm' rpc request to mainchain
+            // Send 'verifybmm' rpc request to mainchain
             const uint256& hashMerkleRoot = b.hashMerkleRoot;
             uint256 txid;
             uint32_t nTime = 0;
-            if (GetBMM(u, hashMerkleRoot, txid, nTime)) {
+            if (VerifyBMM(u, hashMerkleRoot, txid, nTime)) {
                 CBlock block = b;
 
                 // Copy the block time and hash from the mainchain block into

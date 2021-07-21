@@ -707,13 +707,13 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
 
     SidechainDeposit lastDeposit;
     uint256 hashLastDeposit;
-    uint32_t n = 0;
+    uint32_t nBurnIndex = 0;
     bool fHaveDeposits = psidechaintree->GetLastDeposit(lastDeposit);
     if (fHaveDeposits) {
         hashLastDeposit = lastDeposit.dtx.GetHash();
-        n = lastDeposit.n;
+        nBurnIndex = lastDeposit.nBurnIndex;
     }
-    vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES, hashLastDeposit, n);
+    vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES, hashLastDeposit, nBurnIndex);
 
     if (!vDeposit.size())
         return false;
@@ -733,11 +733,10 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
     if (!vDepositNew.size())
         return false;
 
-    // Sidechain client already checked the deposit output index 'n' but we will
-    // check it again here.
+    // Sidechain client checked deposit burn index but we will check it again
     for (const SidechainDeposit& d : vDepositNew) {
-        if (!(d.dtx.vout.size() > d.n)) {
-            LogPrintf("%s: Error: new deposit has invalid n:\n%s\n", __func__, d.ToString());
+        if (d.nBurnIndex >= d.dtx.vout.size()) {
+            LogPrintf("%s: Error: new deposit has invalid burn index:\n%s\n", __func__, d.ToString());
             return false;
         }
     }
@@ -795,7 +794,7 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
             for (const CTxIn& in : prev.dtx.vin) {
                 if (in.prevout.hash == rit->dtx.GetHash()
                     && rit->dtx.vout.size() > in.prevout.n
-                    && rit->n == in.prevout.n) {
+                    && rit->nBurnIndex == in.prevout.n) {
                     fFound = true;
                     break;
                 }
@@ -816,9 +815,9 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
         for (const CTxIn& in : first.dtx.vin) {
             if (in.prevout.hash == lastDeposit.dtx.GetHash()
                     && lastDeposit.dtx.vout.size() > in.prevout.n
-                    && lastDeposit.n == in.prevout.n) {
+                    && lastDeposit.nBurnIndex == in.prevout.n) {
                 // Calculate payout amount
-                CAmount ctipAmount = lastDeposit.dtx.vout[lastDeposit.n].nValue;
+                CAmount ctipAmount = lastDeposit.dtx.vout[lastDeposit.nBurnIndex].nValue;
                 if (first.amtUserPayout > ctipAmount)
                     vDepositSorted.front().amtUserPayout -= ctipAmount;
                 else
@@ -854,9 +853,9 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
         for (const CTxIn& in : it->dtx.vin) {
             if (in.prevout.hash == itPrev->dtx.GetHash()
                     && itPrev->dtx.vout.size() > in.prevout.n
-                    && itPrev->n == in.prevout.n) {
+                    && itPrev->nBurnIndex == in.prevout.n) {
                 // Calculate payout amount
-                CAmount ctipAmount = itPrev->dtx.vout[itPrev->n].nValue;
+                CAmount ctipAmount = itPrev->dtx.vout[itPrev->nBurnIndex].nValue;
                 if (it->amtUserPayout > ctipAmount)
                     it->amtUserPayout -= ctipAmount;
                 else
@@ -933,9 +932,6 @@ bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages)
 
         // Payout
         if (deposit.amtUserPayout >= SIDECHAIN_DEPOSIT_FEE) {
-            // TODO detect destination from strDest.
-            // Decode keyID from strDest
-            // Pay KeyID.
             CTxDestination dest = DecodeDestination(deposit.strDest);
             if (IsValidDestination(dest)) {
                 // Pay deposit if destination is valid and amount isn't dust

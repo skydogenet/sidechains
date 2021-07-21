@@ -203,9 +203,10 @@ struct SidechainDeposit : public SidechainObj {
     uint8_t nSidechain;
     std::string strDest;
     CAmount amtUserPayout;
-    CMutableTransaction dtx;
-    CMainchainMerkleBlock proof;
-    uint32_t n;
+    CMutableTransaction dtx; // Mainchain deposit transaction
+    uint32_t nBurnIndex; // Deposit burn output index
+    uint32_t nTx; // Deposit transaction number in mainchain block
+    uint256 hashMainchainBlock;
 
     SidechainDeposit(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_DEPOSIT_OP; }
     virtual ~SidechainDeposit(void) { }
@@ -219,8 +220,9 @@ struct SidechainDeposit : public SidechainObj {
         READWRITE(strDest);
         READWRITE(amtUserPayout);
         READWRITE(dtx);
-        READWRITE(proof);
-        READWRITE(n);
+        READWRITE(nBurnIndex);
+        READWRITE(nTx);
+        READWRITE(hashMainchainBlock);
     }
 
     std::string ToString(void) const;
@@ -232,8 +234,9 @@ struct SidechainDeposit : public SidechainObj {
                 strDest == d.strDest &&
                 amtUserPayout == d.amtUserPayout &&
                 dtx == d.dtx &&
-                proof == d.proof &&
-                n == d.n) {
+                nBurnIndex == d.nBurnIndex &&
+                nTx == d.nTx &&
+                hashMainchainBlock == d.hashMainchainBlock) {
             return true;
         }
         return false;

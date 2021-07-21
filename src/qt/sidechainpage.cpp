@@ -1225,8 +1225,9 @@ void SidechainPage::UpdateSidechainWealth()
 
     SidechainDeposit deposit;
     if (psidechaintree->GetLastDeposit(deposit)) {
-        if (deposit.n < deposit.dtx.vout.size())
-            amountCTIP = deposit.dtx.vout[deposit.n].nValue;
+        if (deposit.nBurnIndex >= deposit.dtx.vout.size())
+            return;
+        amountCTIP = deposit.dtx.vout[deposit.nBurnIndex].nValue;
     }
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();

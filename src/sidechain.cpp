@@ -102,7 +102,9 @@ std::string SidechainDeposit::ToString() const
     str << "strDest=" << strDest << std::endl;
     str << "payout=" << FormatMoney(amtUserPayout) << std::endl;
     str << "mainchaintxid=" << dtx.GetHash().ToString() << std::endl;
-    str << "n=" << std::to_string(n) << std::endl;
+    str << "nBurnIndex=" << std::to_string(nBurnIndex) << std::endl;
+    str << "nTx=" << std::to_string(nTx) << std::endl;
+    str << "hashMainchainBlock=" << hashMainchainBlock.ToString() << std::endl;
     str << "inputs:\n";
     for (const CTxIn& in : dtx.vin) {
         str << in.prevout.ToString() << std::endl;
