@@ -516,9 +516,6 @@ bool DumpMempool();
 /** Load the mempool from disk. */
 bool LoadMempool();
 
-//
-// TODO finish
-// Right now this is only storing the broadcasted WT^ hashes
 /** Dump the BMM caches to disk. */
 void DumpBMMCache();
 

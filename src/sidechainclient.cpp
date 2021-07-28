@@ -156,12 +156,10 @@ std::vector<SidechainDeposit> SidechainClient::UpdateDeposits(const std::string&
         // later.
         deposit.amtUserPayout = deposit.dtx.vout[deposit.nBurnIndex].nValue;
 
-        // TODO check the deposit output 'N' scriptPubKey (compare to THIS_SIDECHAIN)
-
         // Add this deposit to the list
         incoming.push_back(deposit);
     }
-    // TODO LogPrintf("Sidechain client received %d deposits\n", incoming.size());
+    // LogPrintf("Sidechain client received %d deposits\n", incoming.size());
 
     // The deposits are sent in reverse order. Putting the deposits back in
     // order should make sorting faster.

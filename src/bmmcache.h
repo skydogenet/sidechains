@@ -47,6 +47,16 @@ public:
     // Cache that we verified BMM for this sidechain block
     void CacheVerifiedBMM(const uint256& hashBlock);
 
+    // Check if we already verified deposit
+    bool HaveVerifiedDeposit(const uint256& txid) const;
+
+    // Cache that we verified a deposit with the mainchain
+    void CacheVerifiedDeposit(const uint256& txid);
+
+    std::vector<uint256> GetVerifiedBMMCache() const;
+
+    std::vector<uint256> GetVerifiedDepositCache() const;
+
     void CacheMainBlockHash(const uint256& hash);
 
     void CacheMainBlockHash(const std::vector<uint256>& vHash);
@@ -85,6 +95,9 @@ private:
     // Cache of sidechain block hashes which we have already verified with the
     // mainchain as having the BMM h* hash included.
     std::set<uint256 /* hashBlock */> setBMMVerified;
+
+    // Cache of deposit txid which we have already verified with the mainchain
+    std::set<uint256 /* txid */> setDepositVerified;
 
     // WT^(s) that we have already broadcasted to the mainchain.
     std::set<uint256> setWTPrimeBroadcasted;

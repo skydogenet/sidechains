@@ -171,7 +171,6 @@ void SelectUnspentWT(std::vector<SidechainWT>& vWT)
 {
     vWT.erase(std::remove_if(vWT.begin(), vWT.end(),[](const SidechainWT& wt)
                 {return wt.status != WT_UNSPENT;}), vWT.end());
-
 }
 
 CScript SidechainObj::GetScript(void) const

@@ -113,6 +113,40 @@ void BMMCache::CacheVerifiedBMM(const uint256& hashBlock)
     setBMMVerified.insert(hashBlock);
 }
 
+bool BMMCache::HaveVerifiedDeposit(const uint256& txid) const
+{
+    if (txid.IsNull())
+        return false;
+
+    return (setDepositVerified.count(txid));
+}
+
+void BMMCache::CacheVerifiedDeposit(const uint256& txid)
+{
+    if (txid.IsNull())
+        return;
+
+    setDepositVerified.insert(txid);
+}
+
+std::vector<uint256> BMMCache::GetVerifiedBMMCache() const
+{
+    std::vector<uint256> vHash;
+    for (const auto& u : setBMMVerified) {
+        vHash.push_back(u);
+    }
+    return vHash;
+}
+
+std::vector<uint256> BMMCache::GetVerifiedDepositCache() const
+{
+    std::vector<uint256> vHash;
+    for (const auto& u : setDepositVerified) {
+        vHash.push_back(u);
+    }
+    return vHash;
+}
+
 void BMMCache::CacheMainBlockHash(const uint256& hash)
 {
     // Don't re-cache the genesis block

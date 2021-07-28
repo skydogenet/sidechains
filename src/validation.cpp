@@ -5307,7 +5307,9 @@ void LoadBMMCache()
         return;
     }
 
-    std::vector<uint256> vHash;
+    std::vector<uint256> vHashWT;
+    std::vector<uint256> vHashBMM;
+    std::vector<uint256> vDepositTXID;
     try {
         int nVersionRequired, nVersionThatWrote;
         filein >> nVersionRequired;
@@ -5316,12 +5318,26 @@ void LoadBMMCache()
             return;
         }
 
-        int count = 0;
-        filein >> count;
-        for (int i = 0; i < count; i++) {
+        int nWT = 0;
+        filein >> nWT;
+        for (int i = 0; i < nWT; i++) {
             uint256 hash;
             filein >> hash;
-            vHash.push_back(hash);
+            vHashWT.push_back(hash);
+        }
+        int nBMM = 0;
+        filein >> nBMM;
+        for (int i = 0; i < nBMM; i++) {
+            uint256 hash;
+            filein >> hash;
+            vHashBMM.push_back(hash);
+        }
+        int nDeposit = 0;
+        filein >> nDeposit;
+        for (int i = 0; i < nDeposit; i++) {
+            uint256 hash;
+            filein >> hash;
+            vDepositTXID.push_back(hash);
         }
     }
     catch (const std::exception& e) {
@@ -5329,18 +5345,26 @@ void LoadBMMCache()
         return;
     }
 
-    for (const uint256& u : vHash) {
+    for (const uint256& u : vHashWT) {
         bmmCache.StoreBroadcastedWTPrime(u);
+    }
+    for (const uint256& u : vHashBMM) {
+        bmmCache.CacheVerifiedBMM(u);
+    }
+    for (const uint256& u : vDepositTXID) {
+        bmmCache.CacheVerifiedDeposit(u);
     }
 }
 
 void DumpBMMCache()
 {
-    std::vector<uint256> vHash = bmmCache.GetBroadcastedWTPrimeCache();
-    if (vHash.empty())
-        return;
+    std::vector<uint256> vHashWT = bmmCache.GetBroadcastedWTPrimeCache();
+    std::vector<uint256> vHashBMM = bmmCache.GetVerifiedBMMCache();
+    std::vector<uint256> vDepositTXID = bmmCache.GetVerifiedDepositCache();
 
-    int count = vHash.size();
+    int nWT = vHashWT.size();
+    int nBMM = vHashBMM.size();
+    int nDeposit = vDepositTXID.size();
 
     fs::path path = GetDataDir() / "bmm.dat.new";
     CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
@@ -5351,11 +5375,24 @@ void DumpBMMCache()
     try {
         fileout << 160000; // version required to read: 0.16.00 or later
         fileout << CLIENT_VERSION; // version that wrote the file
-        fileout << count; // Number of WT^ hashes in file
 
-        for (const uint256& u : vHash) {
+        // Broadcasted WT^ hash cache
+        fileout << nWT; // Number of WT^ hashes in file
+        for (const uint256& u : vHashWT) {
             fileout << u;
         }
+        // Verified BMM hash cache
+        fileout << nBMM; // Number of WT^ hashes in file
+        for (const uint256& u : vHashBMM) {
+            fileout << u;
+        }
+
+        // Verified deposit txid cache
+        fileout << nDeposit; // Number of WT^ hashes in file
+        for (const uint256& u : vDepositTXID) {
+            fileout << u;
+        }
+
     }
     catch (const std::exception& e) {
         LogPrintf("%s: Error writing BMM cache: %s", __func__, e.what());
@@ -5366,7 +5403,7 @@ void DumpBMMCache()
     fileout.fclose();
     RenameOver(GetDataDir() / "bmm.dat.new", GetDataDir() / "bmm.dat");
 
-    LogPrintf("%s: Wrote %u\n", __func__, count);
+    LogPrintf("%s: Wrote BMM cache.\n", __func__);
 }
 
 void LoadMainBlockCache()
