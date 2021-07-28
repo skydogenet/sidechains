@@ -341,8 +341,7 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
 
             // Also index the deposit by the non amount hash
             uint256 hashNonAmount = ptr->GetID();
-            std::pair<char, uint256> keyNonAmount = std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, hashNonAmount);
-            batch.Write(keyNonAmount, *ptr);
+            batch.Write(std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, hashNonAmount), *ptr);
 
             // Update DB_LAST_SIDECHAIN_DEPOSIT
             batch.Write(DB_LAST_SIDECHAIN_DEPOSIT, hashNonAmount);
