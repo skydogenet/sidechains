@@ -5924,6 +5924,36 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
         return false;
     }
 
+    // Double check proper CTIP UTXO ordering.
+    // Loop backwards keeping track of the previous value and verify that the
+    // r-next item in the vector is the CTIP input for the previous value.
+    std::vector<SidechainDeposit>::const_reverse_iterator rit;
+    rit = vDepositSorted.rbegin();
+    SidechainDeposit prev;
+    for (; rit != vDepositSorted.rend(); rit++) {
+        // For the last element in the list we track the value and move on
+        if (rit == vDepositSorted.rbegin())  {
+            prev = *rit;
+            continue;
+        }
+
+        // Check if the r-next item is the CTIP for the previous deposit
+        bool fFound = false;
+        for (const CTxIn& in : prev.dtx.vin) {
+            if (in.prevout.hash == rit->dtx.GetHash()
+                && rit->dtx.vout.size() > in.prevout.n
+                && rit->nBurnIndex == in.prevout.n) {
+                fFound = true;
+                break;
+            }
+        }
+        if (!fFound) {
+            LogPrintf("%s: Error: Deposit in sorted list (not first) missing CTIP! Deposit: \n%s\n", __func__, rit->ToString());
+            return false;
+        }
+        // Update the previous object to this index before moving to r-next
+        prev = *rit;
+    }
     return true;
 }
 
