@@ -416,6 +416,9 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 /** Verify BMM for this block with the mainchain */
 bool VerifyBMM(const CBlock& block);
 
+/** Verify deposit with the mainchain */
+bool VerifyDeposit(const uint256& hashMainBlock, const uint256& txid, const int nTx);
+
 /** Context-independent validity checks */
 bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckMerkleRoot = true, bool fCheckBMM = true);
 

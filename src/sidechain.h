@@ -51,8 +51,10 @@ static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "a67a177c615cf2e228ab4027
 //! Sidechain build tar hash
 static const std::string SIDECHAIN_BUILD_TAR_HASH = "15eda1257f8efcfded8a2ccbbdd756b29797f2c7f4174c9ef43d5667ac570374";
 
+//! Required WT^ workscore for mainchain payout
 static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 131;
 
+//! Minimum number of pooled WT to create new WT^
 static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
 
 // Temporary testnet value
@@ -210,6 +212,17 @@ struct SidechainDeposit : public SidechainObj {
 
     SidechainDeposit(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_DEPOSIT_OP; }
     virtual ~SidechainDeposit(void) { }
+
+    SidechainDeposit(const SidechainDeposit* d) {
+        sidechainop = d->sidechainop;
+        nSidechain = d->nSidechain;
+        strDest = d->strDest;
+        amtUserPayout = d->amtUserPayout;
+        dtx = d->dtx;
+        nBurnIndex = d->nBurnIndex;
+        nTx = d->nTx;
+        hashMainchainBlock = d->hashMainchainBlock;
+    }
 
     ADD_SERIALIZE_METHODS
 

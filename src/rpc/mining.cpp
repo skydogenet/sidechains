@@ -106,26 +106,6 @@ UniValue prioritisetransaction(const JSONRPCRequest& request)
     return true;
 }
 
-
-// NOTE: Assumes a conclusive result; if result is inconclusive, it must be handled by caller
-static UniValue BIP22ValidationResult(const CValidationState& state)
-{
-    if (state.IsValid())
-        return NullUniValue;
-
-    if (state.IsError())
-        throw JSONRPCError(RPC_VERIFY_ERROR, FormatStateMessage(state));
-    if (state.IsInvalid())
-    {
-        std::string strRejectReason = state.GetRejectReason();
-        if (strRejectReason.empty())
-            return "rejected";
-        return strRejectReason;
-    }
-    // Should be impossible
-    return "valid?";
-}
-
 class submitblock_StateCatcher : public CValidationInterface
 {
 public:

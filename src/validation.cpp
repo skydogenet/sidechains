@@ -2098,7 +2098,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             }
         }
 
-        // Count deposit output amounts
+        // Count deposit output amounts and collect deposits
+        std::vector<SidechainDeposit> vDeposit;
         if (tx.IsCoinBase()) {
             for (const CTxOut& out : tx.vout) {
                 const CScript& scriptPubKey = out.scriptPubKey;
@@ -2119,7 +2120,76 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
                 nDepositPayout += deposit->amtUserPayout;
 
+                vDeposit.push_back(SidechainDeposit(deposit));
+
                 delete obj;
+            }
+        }
+
+        // Verify new deposit payouts
+        //
+        // - Find the previous deposit CTIP (input for first new deposit)
+        //
+        // - Re-calculate the deposit payouts ourselves
+        //
+        // - Loop through all of the rest of the deposits, recalculating
+        // and verifying their deposit payout amounts
+        //
+        // - Check for a coinbase payout output matching each deposit
+        //
+        if (fCheckBMM && vDeposit.size()) {
+            SidechainDeposit prev;
+            bool fHaveDeposits = psidechaintree->GetLastDeposit(prev);
+
+            CAmount amountPrev = CAmount(0);
+            if (fHaveDeposits) {
+                // First deposit should be spending current CTIP, find the
+                // current CTIP in the deposit's inputs
+                bool fFound = false;
+                for (const CTxIn& in : vDeposit.front().dtx.vin) {
+                    if (in.prevout.hash == prev.dtx.GetHash() &&
+                            prev.dtx.vout.size() > in.prevout.n &&
+                            prev.nBurnIndex == in.prevout.n) {
+                        fFound = true;
+                        break;
+                    }
+                }
+                if (!fFound) {
+                    return state.DoS(90, error("%s: invalid sidechain deposit input:\n%s", __func__, vDeposit.front().ToString()), REJECT_INVALID, "invalid-deposit-input");
+                }
+                // Copy the burn amount from CTIP
+                amountPrev = prev.dtx.vout[prev.nBurnIndex].nValue;
+            }
+
+            // Check deposit payout amounts & find coinbase output
+            for (const SidechainDeposit& d : vDeposit) {
+
+                CAmount burn = d.dtx.vout[d.nBurnIndex].nValue;
+                CAmount payout = burn - amountPrev;
+
+                amountPrev = burn;
+
+                if (d.amtUserPayout == 0 && d.strDest == SIDECHAIN_WTPRIME_RETURN_DEST)
+                    continue;
+
+                if (d.amtUserPayout != payout) {
+                    return state.DoS(90, error("%s: invalid sidechain deposit amount:\n%s", __func__, d.ToString()), REJECT_INVALID, "invalid-deposit-amount");
+                }
+
+                // Now check coinbase outputs
+                bool fFound = false;
+                for (const CTxOut& o : block.vtx[0]->vout) {
+                    if (o.nValue == d.amtUserPayout - SIDECHAIN_DEPOSIT_FEE &&
+                            o.scriptPubKey == GetScriptForDestination(
+                                DecodeDestination(d.strDest)))
+                    {
+                        fFound = true;
+                        break;
+                    }
+                }
+                if (!fFound) {
+                    return state.DoS(90, error("%s: sidechain deposit missing output:\n%s", __func__, d.ToString()), REJECT_INVALID, "invalid-deposit-missing-output");
+                }
             }
         }
 
@@ -3368,10 +3438,6 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (block.fChecked)
         return true;
 
-    // Verify BMM with mainchain
-    if (fCheckBMM && !VerifyBMM(block))
-        return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "invalid bmm / failed to verify BMM for block");
-
     // Check the merkle root.
     if (fCheckMerkleRoot) {
         bool mutated;
@@ -3385,7 +3451,6 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         if (mutated)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-duplicate", true, "duplicate transaction");
     }
-
     // All potential-corruption validation must be done before we do any
     // transaction validation, as otherwise we may mark the header as invalid
     // because we receive the wrong transactions for it.
@@ -3402,6 +3467,10 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     for (unsigned int i = 1; i < block.vtx.size(); i++)
         if (block.vtx[i]->IsCoinBase())
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-multiple", false, "more than one coinbase");
+
+    // Verify BMM with mainchain
+    if (fCheckBMM && !VerifyBMM(block))
+        return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "invalid bmm / failed to verify BMM for block");
 
     if (!fGenesis && fCheckBMM) {
         // Check required PrevBlockCommit
@@ -3426,6 +3495,32 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
             LogPrintf("%s: Missing prevBlock commit!\n", __func__);
             return state.DoS(100, false, REJECT_INVALID, "no-prev-commit", false, "PrevBlockCommit not found!");
         }
+    }
+
+    // Find deposits and verify that they exist with mainchain
+    for (const CTxOut& out : block.vtx[0]->vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+
+        std::vector<unsigned char> vch;
+        if (!scriptPubKey.IsSidechainObj(vch))
+            continue;
+
+        SidechainObj *obj = ParseSidechainObj(vch);
+        if (!obj) {
+            return state.DoS(90, error("%s: invalid sidechain deposit obj script", __func__), REJECT_INVALID, "invalid-sidechain-obj-script");
+        }
+
+        if (obj->sidechainop != DB_SIDECHAIN_DEPOSIT_OP)
+            continue;
+
+        const SidechainDeposit* deposit = (const SidechainDeposit *) obj;
+
+        if (!VerifyDeposit(deposit->hashMainchainBlock, deposit->dtx.GetHash(), deposit->nTx)) {
+            delete obj;
+            return state.DoS(1, error("%s: invalid sidechain deposit obj script", __func__), REJECT_INVALID, "invalid-sidechain-deposit-obj-script");
+        }
+
+        delete obj;
     }
 
     // Check transactions
@@ -3475,6 +3570,30 @@ bool VerifyBMM(const CBlock& block)
 
     // Cache that we have verified BMM for this block
     bmmCache.CacheVerifiedBMM(block.GetHash());
+
+    return true;
+}
+
+bool VerifyDeposit(const uint256& hashMainBlock, const uint256& txid, const int nTx)
+{
+    if (hashMainBlock.IsNull()) {
+        return false;
+    }
+    if (txid.IsNull()) {
+        return false;
+    }
+
+    // Have we already verified the deposit?
+    if (bmmCache.HaveVerifiedDeposit(txid))
+        return true;
+
+    SidechainClient client;
+    if (!client.VerifyDeposit(hashMainBlock, txid, nTx)) {
+        return false;
+    }
+
+    // Cache that we have verified the deposit
+    bmmCache.CacheVerifiedDeposit(txid);
 
     return true;
 }
@@ -5954,6 +6073,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
         // Update the previous object to this index before moving to r-next
         prev = *rit;
     }
+
     return true;
 }
 
