@@ -19,6 +19,7 @@ class ClientModel;
 class ConfGeneratorDialog;
 class PlatformStyle;
 class SidechainBMMTableModel;
+class SidechainWTConfirmationDialog;
 class SidechainWTPrimeHistoryDialog;
 class SidechainWTTableModel;
 class WalletModel;
@@ -122,12 +123,13 @@ private:
 
     const PlatformStyle *platformStyle;
 
-    ConfGeneratorDialog *confGeneratorDialog;
-    SidechainBMMTableModel *bmmModel;
-    SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog;
-    SidechainWTTableModel *unspentWTModel;
+    ConfGeneratorDialog *confGeneratorDialog = nullptr;
+    SidechainBMMTableModel *bmmModel = nullptr;
+    SidechainWTConfirmationDialog *wtConfDialog = nullptr;
+    SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog = nullptr;
+    SidechainWTTableModel *unspentWTModel = nullptr;
 
-    QMessageBox* connectionErrorMessage;
+    QMessageBox* connectionErrorMessage = nullptr;
 
     QAction *wtRefundAction;
     QAction *copyWTIDAction;

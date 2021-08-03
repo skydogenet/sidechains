@@ -4,10 +4,12 @@
 
 #include <qt/bitcoingui.h>
 
+#include <qt/blockexplorer.h>
 #include <qt/bitcoinunits.h>
 #include <qt/clientmodel.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
+#include <qt/hashcalcdialog.h>
 #include <qt/networkstyle.h>
 #include <qt/notificator.h>
 #include <qt/openuridialog.h>
@@ -116,6 +118,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     openRPCConsoleAction(0),
     openAction(0),
     showHelpMessageAction(0),
+    showHashCalcDialogAction(0),
+    showBlockExplorerDialogAction(0),
     sidechainAction(0),
     trayIcon(0),
     trayIconMenu(0),
@@ -165,6 +169,12 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         /** Create wallet frame and make it the central widget */
         walletFrame = new WalletFrame(_platformStyle, this);
         setCentralWidget(walletFrame);
+
+        hashCalcDialog = new HashCalcDialog(platformStyle);
+        hashCalcDialog->setParent(this, Qt::Window);
+
+        blockExplorerDialog = new BlockExplorer(platformStyle);
+        blockExplorerDialog->setParent(this, Qt::Window);
     } else
 #endif // ENABLE_WALLET
     {
@@ -387,6 +397,13 @@ void BitcoinGUI::createActions()
     showHelpMessageAction->setMenuRole(QAction::NoRole);
     showHelpMessageAction->setStatusTip(tr("Show the %1 help message to get a list with possible Bitcoin command-line options").arg(tr(PACKAGE_NAME)));
 
+    showHashCalcDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/calculator"), tr("&Hash Calculator"), this);
+    showHashCalcDialogAction->setStatusTip(tr("Show hash calculator window"));
+
+    showBlockExplorerDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/search"), tr("&Block Explorer"), this);
+    showBlockExplorerDialogAction->setStatusTip(tr("Show block explorer window"));
+
+
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
     connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
@@ -408,6 +425,8 @@ void BitcoinGUI::createActions()
         connect(usedSendingAddressesAction, SIGNAL(triggered()), walletFrame, SLOT(usedSendingAddresses()));
         connect(usedReceivingAddressesAction, SIGNAL(triggered()), walletFrame, SLOT(usedReceivingAddresses()));
         connect(openAction, SIGNAL(triggered()), this, SLOT(openClicked()));
+        connect(showHashCalcDialogAction, SIGNAL(triggered()), this, SLOT(showHashCalcDialog()));
+        connect(showBlockExplorerDialogAction, SIGNAL(triggered()), this, SLOT(showBlockExplorerDialog()));
     }
 #endif // ENABLE_WALLET
 
@@ -439,6 +458,13 @@ void BitcoinGUI::createMenuBar()
         file->addSeparator();
     }
     file->addAction(quitAction);
+
+    QMenu *tools = appMenuBar->addMenu(tr("&Tools"));
+    if (walletFrame)
+    {
+        tools->addAction(showHashCalcDialogAction);
+        tools->addAction(showBlockExplorerDialogAction);
+    }
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
     if(walletFrame)
@@ -509,6 +535,8 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
         {
             walletFrame->setClientModel(_clientModel);
         }
+
+        blockExplorerDialog->setClientModel(_clientModel);
 #endif // ENABLE_WALLET
 
         OptionsModel* optionsModel = _clientModel->getOptionsModel();
@@ -626,6 +654,8 @@ void BitcoinGUI::createTrayIconMenu()
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(optionsAction);
     trayIconMenu->addAction(openRPCConsoleAction);
+    trayIconMenu->addAction(showHashCalcDialogAction);
+    trayIconMenu->addAction(showBlockExplorerDialogAction);
 #ifndef Q_OS_MAC // This is built-in on Mac
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(quitAction);
@@ -729,6 +759,17 @@ void BitcoinGUI::gotoSidechainPage()
 {
     sidechainAction->setChecked(true);
     if (walletFrame) walletFrame->gotoSidechainPage();
+}
+
+void BitcoinGUI::showHashCalcDialog()
+{
+    hashCalcDialog->show();
+}
+
+void BitcoinGUI::showBlockExplorerDialog()
+{
+    blockExplorerDialog->show();
+    blockExplorerDialog->scrollRight();
 }
 #endif // ENABLE_WALLET
 

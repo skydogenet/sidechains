@@ -126,7 +126,7 @@ QVariant SidechainBMMTableModel::data(const QModelIndex &index, int role) const
         }
         // Status
         if (col == 7) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
         break;
     }
@@ -213,16 +213,15 @@ void SidechainBMMTableModel::AddAttempt(const BMMTableObject& object)
     }
 }
 
-void SidechainBMMTableModel::UpdateForConnected(const BMMTableObject& object)
+void SidechainBMMTableModel::UpdateForConnected(const uint256& hashMerkleRoot)
 {
     auto it = std::find_if(model.begin(), model.end(),
-                           [ object ](BMMTableObject a) { return a.hashBlind == object.hashBlind; });
+                           [ hashMerkleRoot ](BMMTableObject a) { return a.hashMerkleRoot == hashMerkleRoot; });
 
     if (it != model.end()) {
         // Update object & signal to update background colors
         it->fFailed = false;
         it->fConnected = true;
-        it->hashBlock = object.hashBlock;
 
         QModelIndex topLeft = index(it - model.begin(), 0);
         QModelIndex topRight = index(it - model.begin(), columnCount() - 1);
