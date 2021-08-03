@@ -13,23 +13,23 @@ bool BMMCache::StoreBMMBlock(const CBlock& block)
     if (!block.vtx.size())
         return false;
 
-    uint256 hashBlock = block.GetBlindHash();
+    uint256 hashMerkleRoot = block.hashMerkleRoot;
 
     // Already have block stored
-    if (mapBMMBlocks.find(hashBlock) != mapBMMBlocks.end())
+    if (mapBMMBlocks.find(hashMerkleRoot) != mapBMMBlocks.end())
         return false;
 
-    mapBMMBlocks[hashBlock] = block;
+    mapBMMBlocks[hashMerkleRoot] = block;
 
     return true;
 }
 
-bool BMMCache::GetBMMBlock(const uint256& hashBlock, CBlock& block)
+bool BMMCache::GetBMMBlock(const uint256& hashMerkleRoot, CBlock& block)
 {
-    if (mapBMMBlocks.find(hashBlock) == mapBMMBlocks.end())
+    if (mapBMMBlocks.find(hashMerkleRoot) == mapBMMBlocks.end())
         return false;
 
-    block = mapBMMBlocks[hashBlock];
+    block = mapBMMBlocks[hashMerkleRoot];
 
     return true;
 }
@@ -97,27 +97,54 @@ bool BMMCache::HaveBroadcastedWTPrime(const uint256& hashWTPrime) const
     return false;
 }
 
-bool BMMCache::HaveBMMProof(const uint256& hashBlock, const uint256& hashCritical) const
+bool BMMCache::HaveVerifiedBMM(const uint256& hashBlock) const
 {
-    if (hashBlock.IsNull() || hashCritical.IsNull())
+    if (hashBlock.IsNull())
         return false;
 
-    const auto it = mapBMMCache.find(hashBlock);
-    if (it == mapBMMCache.end())
-        return false;
-
-    if (hashCritical == it->second)
-        return true;
-
-    return false;
+    return (setBMMVerified.count(hashBlock));
 }
 
-void BMMCache::CacheBMMProof(const uint256& hashBlock, const uint256& hashCritical)
+void BMMCache::CacheVerifiedBMM(const uint256& hashBlock)
 {
-    if (hashBlock.IsNull() || hashCritical.IsNull())
+    if (hashBlock.IsNull())
         return;
 
-    mapBMMCache.insert(std::make_pair(hashBlock, hashCritical));
+    setBMMVerified.insert(hashBlock);
+}
+
+bool BMMCache::HaveVerifiedDeposit(const uint256& txid) const
+{
+    if (txid.IsNull())
+        return false;
+
+    return (setDepositVerified.count(txid));
+}
+
+void BMMCache::CacheVerifiedDeposit(const uint256& txid)
+{
+    if (txid.IsNull())
+        return;
+
+    setDepositVerified.insert(txid);
+}
+
+std::vector<uint256> BMMCache::GetVerifiedBMMCache() const
+{
+    std::vector<uint256> vHash;
+    for (const auto& u : setBMMVerified) {
+        vHash.push_back(u);
+    }
+    return vHash;
+}
+
+std::vector<uint256> BMMCache::GetVerifiedDepositCache() const
+{
+    std::vector<uint256> vHash;
+    for (const auto& u : setDepositVerified) {
+        vHash.push_back(u);
+    }
+    return vHash;
 }
 
 void BMMCache::CacheMainBlockHash(const uint256& hash)
@@ -202,9 +229,40 @@ uint256 BMMCache::GetLastMainBlockHash() const
     return vMainBlockHash.back();
 }
 
+uint256 BMMCache::GetMainPrevBlockHash(const uint256& hashBlock) const
+{
+    if (vMainBlockHash.size() < 2)
+        return uint256();
+
+    if (!mapMainBlock.count(hashBlock))
+        return uint256();
+
+    const MainBlockIndex index = mapMainBlock.at(hashBlock);
+
+    size_t indexPrev = index.index;
+    if (indexPrev == 0)
+        return uint256();
+
+    indexPrev -= 1;
+    if (indexPrev >= vMainBlockHash.size())
+        return uint256();
+
+    return vMainBlockHash[indexPrev];
+}
+
 int BMMCache::GetCachedBlockCount() const
 {
     return vMainBlockHash.size();
+}
+
+int BMMCache::GetMainchainBlockHeight(const uint256& hash) const
+{
+    if (!mapMainBlock.count(hash))
+        return -1;
+
+    const MainBlockIndex index = mapMainBlock.at(hash);
+
+    return index.index - 1;
 }
 
 bool BMMCache::HaveMainBlock(const uint256& hash) const

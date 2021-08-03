@@ -15,11 +15,8 @@
 #include <boost/property_tree/json_parser.hpp>
 
 class SidechainDeposit;
-class SidechainBMMProof;
 
-// TODO if this class doesn't end up needing to track data or become a global
-// object, consider making it not a class anymore.
-
+// TODO refactor: Move BMM validation cache code here, or remove class status.
 class SidechainClient
 {
 public:
@@ -33,24 +30,23 @@ public:
     /*
      * Ask for an updated list of recent deposits
      */
-    std::vector<SidechainDeposit> UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, const uint32_t n);
+    std::vector<SidechainDeposit> UpdateDeposits(const std::string& strAddressBytes, const uint256& hashLastDeposit, const uint32_t nLastBurnIndex);
 
     /*
-     * Note: true return value indicates the request to verify the
-     * txout proof went through. However, txid (returned by reference)
-     * must also be verified to match the txCritical hash.
+     * Verify deposit with mainchain node
      */
-    bool VerifyCriticalHashProof(const std::string& criticalProof, uint256& txid);
+    bool VerifyDeposit(const uint256& hashMainBlock, const uint256& txid, const int nTx);
 
     /*
-     * Request BMM proof for a block
+     * Search for BMM in a mainchain block and get mainchain block time
      */
-    bool RequestBMMProof(const uint256& hashMainBlock, const uint256& hashBMMBlock, SidechainBMMProof& proof);
+    bool VerifyBMM(const uint256& hashMainBlock, const uint256& hashBMM, uint256& txid, uint32_t& nTime);
 
     /*
-     * Send BMM critical data request
+     * Send BMM commitment request to mainchain node, create mainchain BMM
+     * request transaction.
      */
-    uint256 SendBMMCriticalDataRequest(const uint256& hashCritical, const uint256& hashBlockMain, int nHeight = 0, CAmount amount = CAmount(0));
+    uint256 SendBMMRequest(const uint256& hashBMM, const uint256& hashBlockMain, int nHeight = 0, CAmount amount = CAmount(0));
 
     /*
      * Request the CTIP - Critical Transaction Index Pair for this sidechain
@@ -61,7 +57,7 @@ public:
      * Automatically check our BMM requests on the mainchain and create new BMM
      * requests if needed.
      */
-    bool RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreated, uint256& hashConnected, uint256& hashConnectedBlind, uint256& txid, int& nTxn, CAmount& nFees, bool fCreateNew = true, const uint256& hashPrevBlock = uint256());
+    bool RefreshBMM(const CAmount& amount, std::string& strError, uint256& hashCreatedMerkleRoot, uint256& hashConnected, uint256& hashConnectedMerkleRoot, uint256& txid, int& nTxn, CAmount& nFees, bool fCreateNew = true, const uint256& hashPrevBlock = uint256());
 
     bool CreateBMMBlock(CBlock& block, std::string& strError, CAmount& nFees, const uint256& hashPrevBlock = uint256());
 

@@ -43,13 +43,13 @@ void ManualBMMDialog::on_pushButtonCreateBlock_clicked()
     }
 
     std::stringstream ss;
-    ss << "BMM blinded block hash (h*):\n" << block.GetBlindHash().ToString();
+    ss << "BMM hashMerkleRoot (h*):\n" << block.hashMerkleRoot.ToString();
     ss << std::endl;
     ss << std::endl;
     ss << "BMM Block:\n" << block.ToString() << std::endl;
 
     ui->textBrowser->setText(QString::fromStdString(ss.str()));
-    ui->lineEditManualBMMHash->setText(QString::fromStdString(block.GetBlindHash().ToString()));
+    ui->lineEditManualBMMHash->setText(QString::fromStdString(block.hashMerkleRoot.ToString()));
 }
 
 void ManualBMMDialog::on_pushButtonSendCriticalRequest_clicked()
@@ -103,13 +103,15 @@ void ManualBMMDialog::on_pushButtonSendCriticalRequest_clicked()
 
 void ManualBMMDialog::on_pushButtonSubmitBlock_clicked()
 {
+    // TODO fix this code to work with new BMM rules
+
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
 
-    uint256 hashBlock = uint256S(ui->lineEditBMMHash->text().toStdString());
+    uint256 hashMerkleRoot = uint256S(ui->lineEditBMMHash->text().toStdString());
     CBlock block;
 
-    if (!bmmCache.GetBMMBlock(hashBlock, block)) {
+    if (!bmmCache.GetBMMBlock(hashMerkleRoot, block)) {
         // Block not stored message box
         messageBox.setWindowTitle("Block not found!");
         messageBox.setText("You do not have this BMM block cached.");
@@ -128,18 +130,14 @@ void ManualBMMDialog::on_pushButtonSubmitBlock_clicked()
         return;
     }
 
-    CTransaction criticalTx(mtx);
-    block.criticalProof = strProof;
-    block.criticalTx = criticalTx;
-
     if (SubmitBMMBlock(block)) {
         // Block submitted message box
         messageBox.setWindowTitle("Block Submitted!");
-        QString result = "BMM Block hash:\n";
+        QString result = "Block hash:\n";
         result += QString::fromStdString(block.GetHash().ToString());
         result += "\n\n";
-        result += "BMM (Blinded) hash: \n";
-        result += QString::fromStdString(block.GetBlindHash().ToString());
+        result += "BMM (merkle root) hash: \n";
+        result += QString::fromStdString(block.hashMerkleRoot.ToString());
         result += "\n";
         messageBox.setText(result);
         messageBox.exec();
@@ -173,6 +171,5 @@ uint256 ManualBMMDialog::SendBMMRequest(const uint256& hashBMM, const uint256& h
 {
     // TODO use user input bmm amount
     SidechainClient client;
-    uint256 hashTXID = client.SendBMMCriticalDataRequest(hashBMM, hashBlockMain, 0, 0);
-    return hashTXID;
+    return client.SendBMMRequest(hashBMM, hashBlockMain, 0, 0);
 }

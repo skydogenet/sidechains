@@ -8,7 +8,6 @@
 #include <keystore.h>
 #include <net.h>
 #include <net_processing.h>
-#include <pow.h>
 #include <script/sign.h>
 #include <serialize.h>
 #include <util.h>
@@ -43,54 +42,6 @@ static NodeId id = 0;
 void UpdateLastBlockAnnounceTime(NodeId node, int64_t time_in_seconds);
 
 BOOST_FIXTURE_TEST_SUITE(DoS_tests, TestingSetup)
-
-// Test eviction of an outbound peer whose chain never advances
-// Mock a node connection, and use mocktime to simulate a peer
-// which never sends any headers messages.  PeerLogic should
-// decide to evict that outbound peer, after the appropriate timeouts.
-// Note that we protect 4 outbound nodes from being subject to
-// this logic; this test takes advantage of that protection only
-// being applied to nodes which send headers with sufficient
-// work.
-BOOST_AUTO_TEST_CASE(outbound_slow_chain_eviction)
-{
-    std::atomic<bool> interruptDummy(false);
-
-    // Mock an outbound peer
-    CAddress addr1(ip(0xa0b0c001), NODE_NONE);
-    CNode dummyNode1(id++, ServiceFlags(NODE_NETWORK|NODE_WITNESS), 0, INVALID_SOCKET, addr1, 0, 0, CAddress(), "", /*fInboundIn=*/ false);
-    dummyNode1.SetSendVersion(PROTOCOL_VERSION);
-
-    peerLogic->InitializeNode(&dummyNode1);
-    dummyNode1.nVersion = 1;
-    dummyNode1.fSuccessfullyConnected = true;
-
-    // This test requires that we have a chain with non-zero work.
-    LOCK(cs_main);
-    BOOST_CHECK(chainActive.Tip() != nullptr);
-    BOOST_CHECK(chainActive.Tip()->nChainWork > 0);
-
-    // Test starts here
-    LOCK(dummyNode1.cs_sendProcessing);
-    peerLogic->SendMessages(&dummyNode1, interruptDummy); // should result in getheaders
-    LOCK(dummyNode1.cs_vSend);
-    BOOST_CHECK(dummyNode1.vSendMsg.size() > 0);
-    dummyNode1.vSendMsg.clear();
-
-    int64_t nStartTime = GetTime();
-    // Wait 21 minutes
-    SetMockTime(nStartTime+21*60);
-    peerLogic->SendMessages(&dummyNode1, interruptDummy); // should result in getheaders
-    BOOST_CHECK(dummyNode1.vSendMsg.size() > 0);
-    // Wait 3 more minutes
-    SetMockTime(nStartTime+24*60);
-    peerLogic->SendMessages(&dummyNode1, interruptDummy); // should result in disconnect
-    BOOST_CHECK(dummyNode1.fDisconnect == true);
-    SetMockTime(0);
-
-    bool dummy;
-    peerLogic->FinalizeNode(dummyNode1.GetId(), dummy);
-}
 
 void AddRandomOutboundPeer(std::vector<CNode *> &vNodes, PeerLogicValidation &peerLogic)
 {

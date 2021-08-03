@@ -17,6 +17,7 @@ enum TopLevelIndex {
     INDEX_P2WSH,
     INDEX_WITNESS_PROGRAM,
     INDEX_WITNESS_COMMIT,
+    INDEX_PREV_BLOCK_COMMIT,
     INDEX_UNKNOWN_OPRETURN,
 };
 
@@ -74,12 +75,9 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     // WT^ hash commit
     uint256 hashWTPrime = uint256();
     uint8_t nSidechain = 0;
-    // Sidechain activation commit
-    uint256 hashSidechain = uint256();
-    // Critical hash commit
-    uint256 hashCritical = uint256();
-    // SCDB hash merkle root
-    uint256 hashMT = uint256();
+
+    uint256 hashPrevMain = uint256();
+    uint256 hashPrevSide = uint256();
 
     ui->treeWidgetDecoded->clear();
     // TODO A lot of these output types can only be in the coinbase so we
@@ -89,15 +87,8 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
 
         nWitVersion = -1;
         vWitProgram.clear();
-
-        hashWTPrime.SetNull();
-
-        nSidechain = 0;
-        hashSidechain.SetNull();
-
-        hashCritical.SetNull();
-
-        hashMT.SetNull();
+        hashPrevMain.SetNull();
+        hashPrevSide.SetNull();
 
         const CScript scriptPubKey = tx.vout[i].scriptPubKey;
         if (scriptPubKey.empty())
@@ -129,6 +120,22 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
                         QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
             AddTreeItem(INDEX_WITNESS_PROGRAM, subItem);
         }
+        else
+        if (scriptPubKey.IsPrevBlockCommit(hashPrevMain, hashPrevSide)) {
+            QTreeWidgetItem *subItem = new QTreeWidgetItem();
+            subItem->setText(0, "txout #" + QString::number(i));
+            QString str = "PrevBlock Commit: \n";
+            str += "Previous mainchain block hash: ";
+            str += QString::fromStdString(hashPrevMain.ToString());
+            str += "\n";
+            str += "Previous sidechain block hash: ";
+            str += QString::fromStdString(hashPrevSide.ToString());
+            str += "";
+
+            subItem->setText(1, str);
+            AddTreeItem(INDEX_PREV_BLOCK_COMMIT, subItem);
+        }
+        else
         if (scriptPubKey.front() == OP_RETURN && scriptPubKey.size() == 38) {
             // Check for witness commitment. There is no IsWitnessCommit script
             // function so we have to check ourselves here:
@@ -174,6 +181,9 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
         else
         if (index == INDEX_WITNESS_COMMIT)
             topItem->setText(0, "Witness Commit");
+        else
+        if (index == INDEX_PREV_BLOCK_COMMIT)
+            topItem->setText(0, "PrevBlock Commit");
         else
         if (index == INDEX_UNKNOWN_OPRETURN)
             topItem->setText(0, "Unknown OP_RETURN");

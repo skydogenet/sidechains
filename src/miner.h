@@ -170,7 +170,7 @@ public:
 private:
     // Note: Moved to private, should always use GenerateBMMBlock().
     /** Construct a new block template with coinbase to scriptPubKeyIn */
-    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true, bool fSkipBMMChecks = false, const uint256& hashPrevBlock = uint256(), CAmount* nFeesOut = nullptr);
+    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true, bool fCheckBMM = true, const uint256& hashPrevBlock = uint256(), CAmount* nFeesOut = nullptr);
 
     // utility functions
     /** Clear the block's state and prepare for assembling a new block */
@@ -213,8 +213,5 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 
 bool CreateDepositTx(CMutableTransaction& depositTx);
-
-/** Create packages of each output for new deposits */
-bool CreateDepositOutputs(std::vector<std::vector<CTxOut>>& vOutPackages);
 
 #endif // BITCOIN_MINER_H

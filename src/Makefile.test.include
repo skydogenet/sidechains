@@ -34,7 +34,6 @@ GENERATED_TEST_FILES = $(JSON_TEST_FILES:.json=.json.h) $(RAW_TEST_FILES:.raw=.r
 
 # test_bitcoin binary #
 BITCOIN_TESTS =\
-  test/arith_uint256_tests.cpp \
   test/scriptnum10.h \
   test/addrman_tests.cpp \
   test/amount_tests.cpp \
@@ -44,7 +43,6 @@ BITCOIN_TESTS =\
   test/bech32_tests.cpp \
   test/bip32_tests.cpp \
   test/bmmcache_tests.cpp \
-  test/blockchain_tests.cpp \
   test/bswap_tests.cpp \
   test/checkqueue_tests.cpp \
   test/coins_tests.cpp \
@@ -63,7 +61,6 @@ BITCOIN_TESTS =\
   test/netbase_tests.cpp \
   test/pmt_tests.cpp \
   test/policyestimator_tests.cpp \
-  test/pow_tests.cpp \
   test/prevector_tests.cpp \
   test/raii_event_tests.cpp \
   test/random_tests.cpp \

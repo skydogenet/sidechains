@@ -822,13 +822,13 @@ void SidechainPage::RefreshBMM()
 
     SidechainClient client;
     std::string strError = "";
-    uint256 hashCreated;
+    uint256 hashCreatedMerkleRoot;
     uint256 hashConnected;
-    uint256 hashConnectedBlind;
+    uint256 hashMerkleRoot;
     uint256 txid;
     CAmount nFees = 0;
     int ntxn = 0;
-    if (!client.RefreshBMM(amount, strError, hashCreated, hashConnected, hashConnectedBlind, txid, ntxn, nFees)) {
+    if (!client.RefreshBMM(amount, strError, hashCreatedMerkleRoot, hashConnected, hashMerkleRoot, txid, ntxn, nFees)) {
         UpdateNetworkActive(false /* fMainchainConnected */);
         StopBMM();
 
@@ -848,11 +848,20 @@ void SidechainPage::RefreshBMM()
 
     UpdateNetworkActive(true /* fMainchainConnected */);
 
-    // Update GUI
-    if (!hashCreated.IsNull()) {
-        BMMTableObject object;
+    if (txid.IsNull() && !hashCreatedMerkleRoot.IsNull()) {
+        messageBox.setWindowTitle("Failed to create mainchain BMM request!");
+        std::string str;
+        str = "The sidechain failed to create a BMM request.\n\n";
+        str += "Please check that you have sufficient mainchain funds and ";
+        str += "confirm that this sidechain is active on the mainchain.\n";
+        str += "Automated BMM will continue.\n";
+        messageBox.setText(QString::fromStdString(str));
+        messageBox.exec();
+    }
 
-        object.hashBlind = hashCreated;
+    // Update GUI
+    if (!hashCreatedMerkleRoot.IsNull()) {
+        BMMTableObject object;
 
         if (amount > 0)
             object.amount = amount;
@@ -874,15 +883,13 @@ void SidechainPage::RefreshBMM()
         // Add total txn fees of the new block.
         object.amountTotalFees = nFees;
 
+        object.hashMerkleRoot = hashCreatedMerkleRoot;
+
         bmmModel->AddAttempt(object);
     }
 
-    if (!hashConnected.IsNull()) {
-        BMMTableObject object;
-        object.hashBlock = hashConnected;
-        object.hashBlind = hashConnectedBlind;
-        bmmModel->UpdateForConnected(object);
-    }
+    if (!hashConnected.IsNull())
+        bmmModel->UpdateForConnected(hashMerkleRoot);
 }
 
 void SidechainPage::on_spinBoxRefreshInterval_valueChanged(int n)
@@ -1218,8 +1225,9 @@ void SidechainPage::UpdateSidechainWealth()
 
     SidechainDeposit deposit;
     if (psidechaintree->GetLastDeposit(deposit)) {
-        if (deposit.n < deposit.dtx.vout.size())
-            amountCTIP = deposit.dtx.vout[deposit.n].nValue;
+        if (deposit.nBurnIndex >= deposit.dtx.vout.size())
+            return;
+        amountCTIP = deposit.dtx.vout[deposit.nBurnIndex].nValue;
     }
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
