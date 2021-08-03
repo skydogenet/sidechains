@@ -14,6 +14,7 @@
 #include <checkqueue.h>
 #include <consensus/consensus.h>
 #include <consensus/merkle.h>
+#include <consensus/params.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <core_io.h>
@@ -25,7 +26,6 @@
 #include <policy/policy.h>
 #include <policy/rbf.h>
 #include <policy/wtprime.h>
-#include <pow.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
@@ -67,9 +67,9 @@ namespace {
     struct CBlockIndexWorkComparator
     {
         bool operator()(const CBlockIndex *pa, const CBlockIndex *pb) const {
-            // First sort by most total work, ...
-            if (pa->nChainWork > pb->nChainWork) return false;
-            if (pa->nChainWork < pb->nChainWork) return true;
+            // First by height
+            if (pa->nHeight < pb->nHeight) return true;
+            if (pa->nHeight > pb->nHeight) return false;
 
             // ... then by earliest time received, ...
             if (pa->nSequenceId < pb->nSequenceId) return false;
@@ -127,8 +127,6 @@ private:
     int32_t nBlockSequenceId = 1;
     /** Decreasing counter (used by subsequent preciousblock calls). */
     int32_t nBlockReverseSequenceId = -1;
-    /** chainwork for the last block that preciousblock has been applied to. */
-    arith_uint256 nLastPreciousChainwork = 0;
 
     /** In order to efficiently track invalidity of headers, we keep the set of
       * blocks which we tried to connect and found to be invalid here (ie which
@@ -167,7 +165,7 @@ public:
     // Block (dis)connection on a given view:
     DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view);
     bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,
-                    CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck = false, bool fSkipBMMChecks = false);
+                    CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck = false, bool fCheckBMM = true);
 
     // Block disconnection on our pcoinsTip:
     bool DisconnectTip(CValidationState& state, const CChainParams& chainparams, DisconnectedBlockTransactions *disconnectpool);
@@ -231,7 +229,6 @@ bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 bool fSidechainIndex = true;
 
 uint256 hashAssumeValid;
-arith_uint256 nMinimumChainWork;
 
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;
@@ -1188,25 +1185,6 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
         return error("%s: Deserialize or I/O error - %s at %s", __func__, e.what(), pos.ToString());
     }
 
-    bool fGenesis = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
-
-    // Do we want to verify BMM in this context?
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmreadblock", DEFAULT_VERIFY_BMM_READ_BLOCK);
-
-    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
-        SetNetworkActive(false, "Failed to connect to mainchain when reading block from disk!");
-        return error("%s: Failed due to lack of mainchain connection required to verify BMM!\n", __func__);
-    }
-
-    // Check the header
-    if (!CheckProofOfWork((fGenesis ? block.GetHash() : block.GetBlindHash()), block.nBits, consensusParams))
-        return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
-
-    // Verify that block has a valid h* proof
-    if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
-        return error("%s: ReadBlockFromDisk: bad-critical-hash", __func__);
-    }
-
     return true;
 }
 
@@ -1245,8 +1223,6 @@ bool IsInitialBlockDownload()
     if (fImporting || fReindex)
         return true;
     if (chainActive.Tip() == nullptr)
-        return true;
-    if (chainActive.Tip()->nChainWork < nMinimumChainWork)
         return true;
     if (chainActive.Tip()->GetBlockTime() < (GetTime() - nMaxTipAge))
         return true;
@@ -1288,14 +1264,8 @@ static void CheckForkWarningConditions()
     if (pindexBestForkTip && chainActive.Height() - pindexBestForkTip->nHeight >= 72)
         pindexBestForkTip = nullptr;
 
-    if (pindexBestForkTip || (pindexBestInvalid && pindexBestInvalid->nChainWork > chainActive.Tip()->nChainWork + (GetBlockProof(*chainActive.Tip()) * 6)))
+    if (pindexBestForkTip)
     {
-        if (!GetfLargeWorkForkFound() && pindexBestForkBase)
-        {
-            std::string warning = std::string("'Warning: Large-work fork detected, forking after block ") +
-                pindexBestForkBase->phashBlock->ToString() + std::string("'");
-            AlertNotify(warning);
-        }
         if (pindexBestForkTip && pindexBestForkBase)
         {
             LogPrintf("%s: Warning: Large valid fork found\n  forking the chain at height %d (%s)\n  lasting to height %d (%s).\nChain state database corruption likely.\n", __func__,
@@ -1339,7 +1309,6 @@ static void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     // We define it this way because it allows us to only store the highest fork tip (+ base) which meets
     // the 7-block condition and from this always have the most-likely-to-cause-warning fork
     if (pfork && (!pindexBestForkTip || pindexNewForkTip->nHeight > pindexBestForkTip->nHeight) &&
-            pindexNewForkTip->nChainWork - pfork->nChainWork > (GetBlockProof(*pfork) * 7) &&
             chainActive.Height() - pindexNewForkTip->nHeight < 72)
     {
         pindexBestForkTip = pindexNewForkTip;
@@ -1351,17 +1320,17 @@ static void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
 
 void static InvalidChainFound(CBlockIndex* pindexNew)
 {
-    if (!pindexBestInvalid || pindexNew->nChainWork > pindexBestInvalid->nChainWork)
+    if (!pindexBestInvalid)
         pindexBestInvalid = pindexNew;
 
-    LogPrintf("%s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
+    LogPrintf("%s: invalid block=%s  height=%d  date=%s\n", __func__,
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight,
-      log(pindexNew->nChainWork.getdouble())/log(2.0), DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
+      DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
       pindexNew->GetBlockTime()));
     CBlockIndex *tip = chainActive.Tip();
     assert (tip);
-    LogPrintf("%s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
-      tip->GetBlockHash().ToString(), chainActive.Height(), log(tip->nChainWork.getdouble())/log(2.0),
+    LogPrintf("%s:  current best=%s  height=%d  date=%s\n", __func__,
+      tip->GetBlockHash().ToString(), chainActive.Height(),
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", tip->GetBlockTime()));
     CheckForkWarningConditions();
 }
@@ -1947,7 +1916,7 @@ static int64_t nBlocksTotal = 0;
  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()
  *  can fail if those validity checks fail (among other reasons). */
 bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,
-                  CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck, bool fSkipBMMChecks)
+                  CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck, bool fCheckBMM)
 {
     AssertLockHeld(cs_main);
     assert(pindex);
@@ -1969,7 +1938,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     // is enforced in ContextualCheckBlockHeader(); we wouldn't want to
     // re-enforce that rule here (at least until we make it impossible for
     // GetAdjustedTime() to go backward).
-    if (!CheckBlock(block, state, chainparams.GetConsensus(), !fJustCheck, !fJustCheck, fSkipBMMChecks))
+    if (!CheckBlock(block, state, chainparams.GetConsensus(), !fJustCheck /* fCheckMerkleRoot */, fCheckBMM))
         return error("%s: Consensus::CheckBlock: %s", __func__, FormatStateMessage(state));
 
     // verify that the view's current state corresponds to the previous block
@@ -1987,30 +1956,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     nBlocksTotal++;
 
     bool fScriptChecks = true;
-    if (!hashAssumeValid.IsNull()) {
-        // We've been configured with the hash of a block which has been externally verified to have a valid history.
-        // A suitable default value is included with the software and updated from time to time.  Because validity
-        //  relative to a piece of software is an objective fact these defaults can be easily reviewed.
-        // This setting doesn't force the selection of any particular chain but makes validating some faster by
-        //  effectively caching the result of part of the verification.
-        BlockMap::const_iterator  it = mapBlockIndex.find(hashAssumeValid);
-        if (it != mapBlockIndex.end()) {
-            if (it->second->GetAncestor(pindex->nHeight) == pindex &&
-                pindexBestHeader->GetAncestor(pindex->nHeight) == pindex &&
-                pindexBestHeader->nChainWork >= nMinimumChainWork) {
-                // This block is a member of the assumed verified chain and an ancestor of the best header.
-                // The equivalent time check discourages hash power from extorting the network via DOS attack
-                //  into accepting an invalid block through telling users they must manually set assumevalid.
-                //  Requiring a software change or burying the invalid block, regardless of the setting, makes
-                //  it hard to hide the implication of the demand.  This also avoids having release candidates
-                //  that are hardly doing any signature verification at all in testing without having to
-                //  artificially set the default assumed verified block further back.
-                // The test against nMinimumChainWork prevents the skipping when denied access to any chain at
-                //  least as good as the expected chain.
-                fScriptChecks = (GetBlockProofEquivalentTime(*pindexBestHeader, *pindex, *pindexBestHeader, chainparams.GetConsensus()) <= 60 * 60 * 24 * 7 * 2);
-            }
-        }
-    }
 
     int64_t nTime1 = GetTimeMicros(); nTimeCheck += nTime1 - nTimeStart;
     LogPrint(BCLog::BENCH, "    - Sanity checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime1 - nTimeStart), nTimeCheck * MICRO, nTimeCheck * MILLI / nBlocksTotal);
@@ -2153,7 +2098,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             }
         }
 
-        // Count deposit output amounts
+        // Count deposit output amounts and collect deposits
+        std::vector<SidechainDeposit> vDeposit;
         if (tx.IsCoinBase()) {
             for (const CTxOut& out : tx.vout) {
                 const CScript& scriptPubKey = out.scriptPubKey;
@@ -2174,7 +2120,76 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
                 nDepositPayout += deposit->amtUserPayout;
 
+                vDeposit.push_back(SidechainDeposit(deposit));
+
                 delete obj;
+            }
+        }
+
+        // Verify new deposit payouts
+        //
+        // - Find the previous deposit CTIP (input for first new deposit)
+        //
+        // - Re-calculate the deposit payouts ourselves
+        //
+        // - Loop through all of the rest of the deposits, recalculating
+        // and verifying their deposit payout amounts
+        //
+        // - Check for a coinbase payout output matching each deposit
+        //
+        if (fCheckBMM && vDeposit.size()) {
+            SidechainDeposit prev;
+            bool fHaveDeposits = psidechaintree->GetLastDeposit(prev);
+
+            CAmount amountPrev = CAmount(0);
+            if (fHaveDeposits) {
+                // First deposit should be spending current CTIP, find the
+                // current CTIP in the deposit's inputs
+                bool fFound = false;
+                for (const CTxIn& in : vDeposit.front().dtx.vin) {
+                    if (in.prevout.hash == prev.dtx.GetHash() &&
+                            prev.dtx.vout.size() > in.prevout.n &&
+                            prev.nBurnIndex == in.prevout.n) {
+                        fFound = true;
+                        break;
+                    }
+                }
+                if (!fFound) {
+                    return state.DoS(90, error("%s: invalid sidechain deposit input:\n%s", __func__, vDeposit.front().ToString()), REJECT_INVALID, "invalid-deposit-input");
+                }
+                // Copy the burn amount from CTIP
+                amountPrev = prev.dtx.vout[prev.nBurnIndex].nValue;
+            }
+
+            // Check deposit payout amounts & find coinbase output
+            for (const SidechainDeposit& d : vDeposit) {
+
+                CAmount burn = d.dtx.vout[d.nBurnIndex].nValue;
+                CAmount payout = burn - amountPrev;
+
+                amountPrev = burn;
+
+                if (d.amtUserPayout == 0 && d.strDest == SIDECHAIN_WTPRIME_RETURN_DEST)
+                    continue;
+
+                if (d.amtUserPayout != payout) {
+                    return state.DoS(90, error("%s: invalid sidechain deposit amount:\n%s", __func__, d.ToString()), REJECT_INVALID, "invalid-deposit-amount");
+                }
+
+                // Now check coinbase outputs
+                bool fFound = false;
+                for (const CTxOut& o : block.vtx[0]->vout) {
+                    if (o.nValue == d.amtUserPayout - SIDECHAIN_DEPOSIT_FEE &&
+                            o.scriptPubKey == GetScriptForDestination(
+                                DecodeDestination(d.strDest)))
+                    {
+                        fFound = true;
+                        break;
+                    }
+                }
+                if (!fFound) {
+                    return state.DoS(90, error("%s: sidechain deposit missing output:\n%s", __func__, d.ToString()), REJECT_INVALID, "invalid-deposit-missing-output");
+                }
             }
         }
 
@@ -2308,8 +2323,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             bool fFailCommit = scriptPubKey.IsWTPrimeFailCommit(hashWTPrime);
 
             if (fFailCommit || scriptPubKey.IsWTPrimeSpentCommit(hashWTPrime)) {
-                // Verify commit state with the mainchain
-                if (!fSkipBMMChecks) {
+                // Verify with the mainchain when we are also checking BMM
+                if (fCheckBMM) {
                     bool fVerified = fFailCommit ?
                         client.HaveFailedWTPrime(hashWTPrime) :
                         client.HaveSpentWTPrime(hashWTPrime);
@@ -2441,7 +2456,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             uint256 hashWTPrimeID;
 
             // This will also return a list of wt(s) from the WT^
-            if (!VerifyWTPrimes(strFail, pindex->nHeight, block.vtx, vWT, hashWTPrime, hashWTPrimeID, !fSkipBMMChecks /* fReplicate */))
+            if (!VerifyWTPrimes(strFail, pindex->nHeight, block.vtx, vWT, hashWTPrime, hashWTPrimeID, fCheckBMM /* fReplicate */))
                 return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
 
             if (hashWTPrime.IsNull())
@@ -2655,9 +2670,9 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
             DoWarning(strWarning);
         }
     }
-    LogPrintf("%s: new best=%s height=%d version=0x%08x log2_work=%.8g tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)", __func__,
+    LogPrintf("%s: new best=%s height=%d version=0x%08x tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)", __func__,
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight, pindexNew->nVersion,
-      log(pindexNew->nChainWork.getdouble())/log(2.0), (unsigned long)pindexNew->nChainTx,
+      (unsigned long)pindexNew->nChainTx,
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexNew->GetBlockTime()),
       GuessVerificationProgress(chainParams.TxData(), pindexNew), pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());
     if (!warningMessages.empty())
@@ -2885,7 +2900,7 @@ CBlockIndex* CChainState::FindMostWorkChain() {
             bool fMissingData = !(pindexTest->nStatus & BLOCK_HAVE_DATA);
             if (fFailedChain || fMissingData) {
                 // Candidate chain is not usable (either invalid or missing data)
-                if (fFailedChain && (pindexBestInvalid == nullptr || pindexNew->nChainWork > pindexBestInvalid->nChainWork))
+                if (fFailedChain && (pindexBestInvalid == nullptr))
                     pindexBestInvalid = pindexNew;
                 CBlockIndex *pindexFailed = pindexNew;
                 // Remove the entire chain from the set.
@@ -2984,7 +2999,7 @@ bool CChainState::ActivateBestChainStep(CValidationState& state, const CChainPar
                 }
             } else {
                 PruneBlockIndexCandidates();
-                if (!pindexOldTip || chainActive.Tip()->nChainWork > pindexOldTip->nChainWork) {
+                if (!pindexOldTip) {
                     // We're in a better position than we were. Return temporarily to release the lock.
                     fContinue = false;
                     break;
@@ -3124,30 +3139,6 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,
 
 bool CChainState::PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex)
 {
-    {
-        LOCK(cs_main);
-        if (pindex->nChainWork < chainActive.Tip()->nChainWork) {
-            // Nothing to do, this block is not at the tip.
-            return true;
-        }
-        if (chainActive.Tip()->nChainWork > nLastPreciousChainwork) {
-            // The chain has been extended since the last call, reset the counter.
-            nBlockReverseSequenceId = -1;
-        }
-        nLastPreciousChainwork = chainActive.Tip()->nChainWork;
-        setBlockIndexCandidates.erase(pindex);
-        pindex->nSequenceId = nBlockReverseSequenceId;
-        if (nBlockReverseSequenceId > std::numeric_limits<int32_t>::min()) {
-            // We can't keep reducing the counter if somebody really wants to
-            // call preciousblock 2**31-1 times on the same set of tips...
-            nBlockReverseSequenceId--;
-        }
-        if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && pindex->nChainTx) {
-            setBlockIndexCandidates.insert(pindex);
-            PruneBlockIndexCandidates();
-        }
-    }
-
     return ActivateBestChain(state, params, std::shared_ptr<const CBlock>());
 }
 bool PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex) {
@@ -3266,7 +3257,7 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
     CBlockIndex* pindexNew = new CBlockIndex(block);
 
     // Add mainchain block hash to index
-    uint256 hashMainBlock = GetMainBlockHash(block);
+    uint256 hashMainBlock = block.hashMainchainBlock;
     pindexNew->hashMainBlock = hashMainBlock;
 
     // We assign the sequence id to blocks only when the full data is available,
@@ -3283,9 +3274,8 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
         pindexNew->BuildSkip();
     }
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
-    pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
-    if (pindexBestHeader == nullptr || pindexBestHeader->nChainWork < pindexNew->nChainWork)
+    if (pindexBestHeader == nullptr || pindexBestHeader->nHeight < pindexNew->nHeight)
         pindexBestHeader = pindexNew;
 
     // Add to index of blocks tracked by their mainchain commitment block hash
@@ -3433,40 +3423,20 @@ static bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, 
     return true;
 }
 
-static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
-{
-    // Check proof of work matches claimed amount
-    bool fCoinbase = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
-    if (fCheckPOW && !CheckProofOfWork((fCoinbase ? block.GetHash() : block.GetBlindHash()), block.nBits, consensusParams))
-        return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
-
-    return true;
-}
-
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW, bool fCheckMerkleRoot, bool fSkipBMMChecks)
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckMerkleRoot, bool fCheckBMM)
 {
     // These are checks that are independent of context.
 
     bool fGenesis = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
 
-    // Do we want to verify BMM in this context?
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmcheckblock", DEFAULT_VERIFY_BMM_CHECK_BLOCK);
-    if (fSkipBMMChecks)
-        fVerifyBMM = false;
-
     // Check for mainchain connection
-    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
+    if (!fGenesis && fCheckBMM && !CheckMainchainConnection()) {
         SetNetworkActive(false, "Failed to connect to mainchain when checking block!");
         return false;
     }
 
     if (block.fChecked)
         return true;
-
-    // Check that the header is valid (particularly PoW).  This is mostly
-    // redundant with the call in AcceptBlockHeader.
-    if (!CheckBlockHeader(block, state, consensusParams, fCheckPOW))
-        return false;
 
     // Check the merkle root.
     if (fCheckMerkleRoot) {
@@ -3481,7 +3451,6 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         if (mutated)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-duplicate", true, "duplicate transaction");
     }
-
     // All potential-corruption validation must be done before we do any
     // transaction validation, as otherwise we may mark the header as invalid
     // because we receive the wrong transactions for it.
@@ -3499,6 +3468,63 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
         if (block.vtx[i]->IsCoinBase())
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-multiple", false, "more than one coinbase");
 
+    // Verify BMM with mainchain
+    if (fCheckBMM && !VerifyBMM(block))
+        return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "invalid bmm / failed to verify BMM for block");
+
+    if (!fGenesis && fCheckBMM) {
+        // Check required PrevBlockCommit
+        bool fPrevCommitFound = false;
+        for (const CTxOut& out : block.vtx[0]->vout) {
+            uint256 hashPrevMain;
+            uint256 hashPrevSide;
+            if (out.scriptPubKey.IsPrevBlockCommit(hashPrevMain, hashPrevSide)) {
+                if (hashPrevMain != bmmCache.GetMainPrevBlockHash(block.hashMainchainBlock)) {
+                    LogPrintf("%s: Invalid mainchain prevBlock commit: %s != %s\n", __func__, hashPrevMain.ToString(), bmmCache.GetMainPrevBlockHash(block.hashMainchainBlock).ToString());
+                    return state.DoS(25, false, REJECT_INVALID, "bad-mc-prev", false, "invalid mainchin prevBlock commit");
+                }
+                if (hashPrevSide != block.hashPrevBlock) {
+                    LogPrintf("%s: Invalid sidechain prevBlock commit: %s != %s\n", __func__, hashPrevSide.ToString(), block.hashPrevBlock.ToString());
+                    return state.DoS(25, false, REJECT_INVALID, "bad-sc-prev", false, "invalid sidechain prevBlock commit");
+                }
+                fPrevCommitFound = true;
+                break;
+            }
+        }
+        if (!fPrevCommitFound) {
+            LogPrintf("%s: Missing prevBlock commit!\n", __func__);
+            return state.DoS(100, false, REJECT_INVALID, "no-prev-commit", false, "PrevBlockCommit not found!");
+        }
+    }
+
+    // Find deposits and verify that they exist with mainchain
+    if (fCheckBMM) {
+        for (const CTxOut& out : block.vtx[0]->vout) {
+            const CScript& scriptPubKey = out.scriptPubKey;
+
+            std::vector<unsigned char> vch;
+            if (!scriptPubKey.IsSidechainObj(vch))
+                continue;
+
+            SidechainObj *obj = ParseSidechainObj(vch);
+            if (!obj) {
+                return state.DoS(90, error("%s: invalid sidechain deposit obj script", __func__), REJECT_INVALID, "invalid-sidechain-obj-script");
+            }
+
+            if (obj->sidechainop != DB_SIDECHAIN_DEPOSIT_OP)
+                continue;
+
+            const SidechainDeposit* deposit = (const SidechainDeposit *) obj;
+
+            if (!VerifyDeposit(deposit->hashMainchainBlock, deposit->dtx.GetHash(), deposit->nTx)) {
+                delete obj;
+                return state.DoS(1, error("%s: invalid sidechain deposit", __func__), REJECT_INVALID, "invalid-sidechain-deposit");
+            }
+
+            delete obj;
+        }
+    }
+
     // Check transactions
     for (const auto& tx : block.vtx)
         if (!CheckTransaction(*tx, state, true))
@@ -3513,76 +3539,66 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (nSigOps * WITNESS_SCALE_FACTOR > MAX_BLOCK_SIGOPS_COST)
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-sigops", false, "out-of-bounds SigOpCount");
 
-    if (fCheckPOW && fCheckMerkleRoot)
+    if (fCheckBMM && fCheckMerkleRoot)
         block.fChecked = true;
-
-    // Check h* for BMM block
-    if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
-        return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof B");
-    }
 
     return true;
 }
 
-bool VerifyCriticalHashProof(const CBlock& block)
+bool VerifyBMM(const CBlock& block)
 {
+    // Skip genesis block
     if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
         return true;
 
-    const CTransaction& criticalTx(block.criticalTx);
-    if (!criticalTx.IsCoinBase() || criticalTx.vout.empty())
-        return false;
-
-    if (block.criticalProof.empty())
-        return false;
-
-    // h*
-    const uint256 hashBlindBlock = block.GetBlindHash();
-
-    // Loop through the coinbase and look for h*
-    uint256 hashCommitted;
-    for (const CTxOut& out : criticalTx.vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
-
-        if (scriptPubKey.size() < sizeof(uint256) + 6)
-            continue;
-
-        // Check h* commit header
-        if (scriptPubKey[0] != OP_RETURN ||
-                scriptPubKey[1] != 0xD1 ||
-                scriptPubKey[2] != 0x61 ||
-                scriptPubKey[3] != 0x73 ||
-                scriptPubKey[4] != 0x68)
-            continue;
-
-        std::vector<unsigned char> vch(scriptPubKey.begin() + 5, scriptPubKey.begin() + 37);
-        uint256 hashFound(vch);
-
-        if (hashFound == hashBlindBlock)
-            hashCommitted = hashFound;
-    }
-
-    // Check that we found the h* commit
-    if (hashBlindBlock != hashCommitted)
-        return false;
-
-    // Check if we have cached the validation of this BMM
-    if (bmmCache.HaveBMMProof(block.GetHash(), criticalTx.GetHash()))
+    // Have we already verified BMM for this block?
+    if (bmmCache.HaveVerifiedBMM(block.GetHash()))
         return true;
 
-    // Verify critical hash proof with local mainchain node
-    uint256 txid;
-    SidechainClient client;
-    client.VerifyCriticalHashProof(block.criticalProof, txid);
-    if (txid != criticalTx.GetHash())
-        return false;
+    // h*
+    const uint256 hashMerkleRoot = block.hashMerkleRoot;
 
-    // Cache the valid BMM proof
-    bmmCache.CacheBMMProof(block.GetHash(), criticalTx.GetHash());
+    // TODO
+    // Return results from client to help decide on DoS score
+
+    // Verify BMM with local mainchain node
+    uint256 txid;
+    uint32_t nTime;
+    SidechainClient client;
+    if (!client.VerifyBMM(block.hashMainchainBlock, hashMerkleRoot, txid, nTime)) {
+        LogPrintf("%s: Did not find BMM h*: %s in mainchain block: %s!\n", __func__, hashMerkleRoot.ToString(), block.hashMainchainBlock.ToString());
+        return false;
+    }
+
+    // Cache that we have verified BMM for this block
+    bmmCache.CacheVerifiedBMM(block.GetHash());
 
     return true;
 }
 
+bool VerifyDeposit(const uint256& hashMainBlock, const uint256& txid, const int nTx)
+{
+    if (hashMainBlock.IsNull()) {
+        return false;
+    }
+    if (txid.IsNull()) {
+        return false;
+    }
+
+    // Have we already verified the deposit?
+    if (bmmCache.HaveVerifiedDeposit(txid))
+        return true;
+
+    SidechainClient client;
+    if (!client.VerifyDeposit(hashMainBlock, txid, nTx)) {
+        return false;
+    }
+
+    // Cache that we have verified the deposit
+    bmmCache.CacheVerifiedDeposit(txid);
+
+    return true;
+}
 
 bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params)
 {
@@ -3715,6 +3731,29 @@ CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned 
     return scriptPubKey;
 }
 
+CScript GeneratePrevBlockCommit(const uint256& hashPrevMain, const uint256& hashPrevSide)
+{
+    /*
+     * Generate a script commit of previous mainchain & sidechain block hashes
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(69);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xFD;
+    scriptPubKey[2] = 0x7A;
+    scriptPubKey[3] = 0xD1;
+    scriptPubKey[4] = 0xEF;
+
+    // Add previous mainchain & previous sidechain block hash
+    memcpy(&scriptPubKey[5], hashPrevMain.begin(), 32);
+    memcpy(&scriptPubKey[37], hashPrevSide.begin(), 32);
+
+    return scriptPubKey;
+}
+
 bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, SidechainWT& wt)
 {
     if (wtID.IsNull()) {
@@ -3771,11 +3810,7 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
 {
     assert(pindexPrev != nullptr);
     const int nHeight = pindexPrev->nHeight + 1;
-
-    // Check proof of work
     const Consensus::Params& consensusParams = params.GetConsensus();
-    if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
-        return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
 
     // Check against checkpoints
     if (fCheckpointsEnabled) {
@@ -3901,11 +3936,8 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
 
     bool fGenesis = (hash == Params().GetConsensus().hashGenesisBlock);
 
-    // Do we want to verify BMM in this context?
-    bool fVerifyBMM = gArgs.GetBoolArg("-verifybmmacceptheader", DEFAULT_VERIFY_BMM_ACCEPT_HEADER);
-
     // Check for mainchain connection
-    if (fVerifyBMM && !fGenesis && !CheckMainchainConnection()) {
+    if (!fGenesis && !CheckMainchainConnection()) {
         SetNetworkActive(false, "Failed to connect to mainchain when checking block header!");
         return false;
     }
@@ -3913,8 +3945,7 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
     // Check for duplicate
     BlockMap::iterator miSelf = mapBlockIndex.find(hash);
     CBlockIndex *pindex = nullptr;
-    if (hash != chainparams.GetConsensus().hashGenesisBlock) {
-
+    if (!fGenesis) {
         if (miSelf != mapBlockIndex.end()) {
             // Block header is already known.
             pindex = miSelf->second;
@@ -3925,12 +3956,8 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
             return true;
         }
 
-        if (!CheckBlockHeader(block, state, chainparams.GetConsensus()))
-            return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
-
-        if (fVerifyBMM && !VerifyCriticalHashProof(block)) {
-            return state.DoS(1, false, REJECT_INVALID, "bad-critical-hash", true, "invalid critical hash proof A");
-        }
+        if (!VerifyBMM(block))
+            return state.DoS(1, false, REJECT_INVALID, "bad-bmm", true, "Invalid BMM in block header!");
 
         // Get prev block index
         CBlockIndex* pindexPrev = nullptr;
@@ -4036,7 +4063,6 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // process an unrequested block if it's new and has enough work to
     // advance our tip, and isn't too many blocks ahead.
     bool fAlreadyHave = pindex->nStatus & BLOCK_HAVE_DATA;
-    bool fHasMoreOrSameWork = (chainActive.Tip() ? pindex->nChainWork >= chainActive.Tip()->nChainWork : true);
     // Blocks that are too out-of-order needlessly limit the effectiveness of
     // pruning, because pruning will not delete block files that contain any
     // blocks which are too close in height to the tip.  Apply this test
@@ -4054,14 +4080,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     if (fAlreadyHave) return true;
     if (!fRequested) {  // If we didn't ask for it:
         if (pindex->nTx != 0) return true;    // This is a previously-processed block that was pruned
-        if (!fHasMoreOrSameWork) return true; // Don't process less-work chains
         if (fTooFarAhead) return true;        // Block height is too high
-
-        // Protect against DoS attacks from low-work chains.
-        // If our tip is behind, a peer could try to send us
-        // low-work blocks on a fake chain that we would never
-        // request; don't process these.
-        if (pindex->nChainWork < nMinimumChainWork) return true;
     }
     if (fNewBlock) *fNewBlock = true;
 
@@ -4162,7 +4181,7 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
     return true;
 }
 
-bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot, bool fSkipBMMChecks, bool fReorg)
+bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckMerkleRoot, bool fCheckBMM, bool fReorg)
 {
     AssertLockHeld(cs_main);
     assert(pindexPrev);
@@ -4173,16 +4192,15 @@ bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams,
     indexDummy.pprev = pindexPrev;
     indexDummy.nHeight = pindexPrev->nHeight + 1;
 
-    // NOTE: CheckBlockHeader is called by CheckBlock
     if (!ContextualCheckBlockHeader(block, state, chainparams, pindexPrev, GetAdjustedTime()))
         return error("%s: Consensus::ContextualCheckBlockHeader: %s", __func__, FormatStateMessage(state));
-    if (!CheckBlock(block, state, chainparams.GetConsensus(), fCheckPOW, fCheckMerkleRoot, fSkipBMMChecks))
+    if (!CheckBlock(block, state, chainparams.GetConsensus(), fCheckMerkleRoot, fCheckBMM))
         return error("%s: Consensus::CheckBlock: %s", __func__, FormatStateMessage(state));
     if (!ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindexPrev))
         return error("%s: Consensus::ContextualCheckBlock: %s", __func__, FormatStateMessage(state));
 
     if (!fReorg) {
-        if (!g_chainstate.ConnectBlock(block, state, &indexDummy, viewNew, chainparams, true, fSkipBMMChecks))
+        if (!g_chainstate.ConnectBlock(block, state, &indexDummy, viewNew, chainparams, true, fCheckBMM))
             return false;
     }
 
@@ -4433,7 +4451,6 @@ bool CChainState::LoadBlockIndex(const Consensus::Params& consensus_params, CBlo
     for (const std::pair<int, CBlockIndex*>& item : vSortedByHeight)
     {
         CBlockIndex* pindex = item.second;
-        pindex->nChainWork = (pindex->pprev ? pindex->pprev->nChainWork : 0) + GetBlockProof(*pindex);
         pindex->nTimeMax = (pindex->pprev ? std::max(pindex->pprev->nTimeMax, pindex->nTime) : pindex->nTime);
         // We can link the chain of blocks for which we've received transactions at some point.
         // Pruned nodes may have deleted the block.
@@ -4455,7 +4472,7 @@ bool CChainState::LoadBlockIndex(const Consensus::Params& consensus_params, CBlo
         }
         if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && (pindex->nChainTx || pindex->pprev == nullptr))
             setBlockIndexCandidates.insert(pindex);
-        if (pindex->nStatus & BLOCK_FAILED_MASK && (!pindexBestInvalid || pindex->nChainWork > pindexBestInvalid->nChainWork))
+        if (pindex->nStatus & BLOCK_FAILED_MASK && (!pindexBestInvalid))
             pindexBestInvalid = pindex;
         if (pindex->pprev)
             pindex->BuildSkip();
@@ -4603,7 +4620,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
         if (nCheckLevel >= 1 && !CheckBlock(block, state, chainparams.GetConsensus(),
-                    true /* fCheckPow */, true /* fCheckMerkleRoot */, true /* fSkipBMMChecks */))
+                    true /* fCheckMerkleRoot */, false /* fCheckBMM */))
             return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__,
                          pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         // check level 2: verify undo validity
@@ -4647,7 +4664,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
                 return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
             if (!g_chainstate.ConnectBlock(block, state, pindex, coins,
-                        chainparams, false /* fJustCheck */, true /* fSkipBMMChecks */))
+                        chainparams, false /* fJustCheck */, false /* fCheckBMM */))
                 return error("VerifyDB(): *** found unconnectable block at %d, hash=%s.\n Error: %s\n", pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         }
     }
@@ -5137,7 +5154,6 @@ void CChainState::CheckBlockIndex(const Consensus::Params& consensusParams)
         assert((pindexFirstNeverProcessed != nullptr) == (pindex->nChainTx == 0)); // nChainTx != 0 is used to signal that all parent blocks have been processed (but may have been pruned).
         assert((pindexFirstNotTransactionsValid != nullptr) == (pindex->nChainTx == 0));
         assert(pindex->nHeight == nHeight); // nHeight must be consistent.
-        assert(pindex->pprev == nullptr || pindex->nChainWork >= pindex->pprev->nChainWork); // For every block except the genesis block, the chainwork must be larger than the parent's.
         assert(nHeight < 2 || (pindex->pskip && (pindex->pskip->nHeight < nHeight))); // The pskip pointer must point back for all but the first 2 blocks.
         assert(pindexFirstNotTreeValid == nullptr); // All mapBlockIndex entries must at least be TREE valid
         if ((pindex->nStatus & BLOCK_VALID_MASK) >= BLOCK_VALID_TREE) assert(pindexFirstNotTreeValid == nullptr); // TREE valid implies all parents are TREE valid
@@ -5412,7 +5428,9 @@ void LoadBMMCache()
         return;
     }
 
-    std::vector<uint256> vHash;
+    std::vector<uint256> vHashWT;
+    std::vector<uint256> vHashBMM;
+    std::vector<uint256> vDepositTXID;
     try {
         int nVersionRequired, nVersionThatWrote;
         filein >> nVersionRequired;
@@ -5421,12 +5439,26 @@ void LoadBMMCache()
             return;
         }
 
-        int count = 0;
-        filein >> count;
-        for (int i = 0; i < count; i++) {
+        int nWT = 0;
+        filein >> nWT;
+        for (int i = 0; i < nWT; i++) {
             uint256 hash;
             filein >> hash;
-            vHash.push_back(hash);
+            vHashWT.push_back(hash);
+        }
+        int nBMM = 0;
+        filein >> nBMM;
+        for (int i = 0; i < nBMM; i++) {
+            uint256 hash;
+            filein >> hash;
+            vHashBMM.push_back(hash);
+        }
+        int nDeposit = 0;
+        filein >> nDeposit;
+        for (int i = 0; i < nDeposit; i++) {
+            uint256 hash;
+            filein >> hash;
+            vDepositTXID.push_back(hash);
         }
     }
     catch (const std::exception& e) {
@@ -5434,18 +5466,26 @@ void LoadBMMCache()
         return;
     }
 
-    for (const uint256& u : vHash) {
+    for (const uint256& u : vHashWT) {
         bmmCache.StoreBroadcastedWTPrime(u);
+    }
+    for (const uint256& u : vHashBMM) {
+        bmmCache.CacheVerifiedBMM(u);
+    }
+    for (const uint256& u : vDepositTXID) {
+        bmmCache.CacheVerifiedDeposit(u);
     }
 }
 
 void DumpBMMCache()
 {
-    std::vector<uint256> vHash = bmmCache.GetBroadcastedWTPrimeCache();
-    if (vHash.empty())
-        return;
+    std::vector<uint256> vHashWT = bmmCache.GetBroadcastedWTPrimeCache();
+    std::vector<uint256> vHashBMM = bmmCache.GetVerifiedBMMCache();
+    std::vector<uint256> vDepositTXID = bmmCache.GetVerifiedDepositCache();
 
-    int count = vHash.size();
+    int nWT = vHashWT.size();
+    int nBMM = vHashBMM.size();
+    int nDeposit = vDepositTXID.size();
 
     fs::path path = GetDataDir() / "bmm.dat.new";
     CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
@@ -5456,11 +5496,24 @@ void DumpBMMCache()
     try {
         fileout << 160000; // version required to read: 0.16.00 or later
         fileout << CLIENT_VERSION; // version that wrote the file
-        fileout << count; // Number of WT^ hashes in file
 
-        for (const uint256& u : vHash) {
+        // Broadcasted WT^ hash cache
+        fileout << nWT; // Number of WT^ hashes in file
+        for (const uint256& u : vHashWT) {
             fileout << u;
         }
+        // Verified BMM hash cache
+        fileout << nBMM; // Number of WT^ hashes in file
+        for (const uint256& u : vHashBMM) {
+            fileout << u;
+        }
+
+        // Verified deposit txid cache
+        fileout << nDeposit; // Number of WT^ hashes in file
+        for (const uint256& u : vDepositTXID) {
+            fileout << u;
+        }
+
     }
     catch (const std::exception& e) {
         LogPrintf("%s: Error writing BMM cache: %s", __func__, e.what());
@@ -5471,7 +5524,7 @@ void DumpBMMCache()
     fileout.fclose();
     RenameOver(GetDataDir() / "bmm.dat.new", GetDataDir() / "bmm.dat");
 
-    LogPrintf("%s: Wrote %u\n", __func__, count);
+    LogPrintf("%s: Wrote BMM cache.\n", __func__);
 }
 
 void LoadMainBlockCache()
@@ -5920,7 +5973,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
             const SidechainDeposit dy = vDeposit[y];
 
             // The CTIP output of the deposit that might be the input
-            const COutPoint prevout(dy.dtx.GetHash(), dy.n);
+            const COutPoint prevout(dy.dtx.GetHash(), dy.nBurnIndex);
 
             // Look for the CTIP output
             for (const CTxIn& in : dx.dtx.vin) {
@@ -5958,7 +6011,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
     }
 
     // Track the CTIP output of the latest deposit we have sorted
-    COutPoint prevout(vDepositSorted.back().dtx.GetHash(), vDepositSorted.back().n);
+    COutPoint prevout(vDepositSorted.back().dtx.GetHash(), vDepositSorted.back().nBurnIndex);
 
     // Look for the deposit that spends the last sorted CTIP output and sort it.
     // If we cannot find a deposit spending the CTIP, that should mean we
@@ -5973,7 +6026,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
 
                 // Update the CTIP output we are looking for
                 const SidechainDeposit deposit = vDepositSorted.back();
-                prevout = COutPoint(deposit.dtx.GetHash(), deposit.n);
+                prevout = COutPoint(deposit.dtx.GetHash(), deposit.nBurnIndex);
 
                 // Start from begin() again
                 fFound = true;
@@ -5990,6 +6043,37 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
         LogPrintf("%s: Error: Invalid result size! In: %u Out: %u\n", __func__,
                 vDeposit.size(), vDepositSorted.size());
         return false;
+    }
+
+    // Double check proper CTIP UTXO ordering.
+    // Loop backwards keeping track of the previous value and verify that the
+    // r-next item in the vector is the CTIP input for the previous value.
+    std::vector<SidechainDeposit>::const_reverse_iterator rit;
+    rit = vDepositSorted.rbegin();
+    SidechainDeposit prev;
+    for (; rit != vDepositSorted.rend(); rit++) {
+        // For the last element in the list we track the value and move on
+        if (rit == vDepositSorted.rbegin())  {
+            prev = *rit;
+            continue;
+        }
+
+        // Check if the r-next item is the CTIP for the previous deposit
+        bool fFound = false;
+        for (const CTxIn& in : prev.dtx.vin) {
+            if (in.prevout.hash == rit->dtx.GetHash()
+                && rit->dtx.vout.size() > in.prevout.n
+                && rit->nBurnIndex == in.prevout.n) {
+                fFound = true;
+                break;
+            }
+        }
+        if (!fFound) {
+            LogPrintf("%s: Error: Deposit in sorted list (not first) missing CTIP! Deposit: \n%s\n", __func__, rit->ToString());
+            return false;
+        }
+        // Update the previous object to this index before moving to r-next
+        prev = *rit;
     }
 
     return true;
@@ -6029,22 +6113,6 @@ void SetNetworkActive(bool fActive, const std::string& strReason)
         LogPrintf("If you are running the daemon check mainchain & sidechain configuration files.\n");
         LogPrintf("To retry connection, use the 'refreshbmm' RPC command.\n");
     }
-}
-
-uint256 GetMainBlockHash(const CBlockHeader& block)
-{
-    if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
-        return uint256();
-
-    if (!block.criticalProof.size())
-        return uint256();
-
-    // Get the mainchain block header from the BMM critical proof
-    CDataStream ssMB(ParseHex(block.criticalProof), SER_NETWORK, PROTOCOL_VERSION);
-    CMainchainMerkleBlock mb;
-    ssMB >> mb;
-
-    return mb.header.GetHash();
 }
 
 bool UpdateMainBlockHashCache(bool& fReorg, std::vector<uint256>& vDisconnected)

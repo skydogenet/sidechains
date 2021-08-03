@@ -11,6 +11,7 @@
 
 #include <QMessageBox>
 
+#include <bmmcache.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <consensus/merkle.h>
@@ -68,8 +69,10 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
 
     // Show details on dialog
 
-    // Height
-    ui->labelHeight->setText(QString::number(nHeight));
+    // Height (Sidechain & Mainchain)
+    QString strHeight = "Sidechain: " + QString::number(nHeight);
+    strHeight += "   |   Mainchain: " + QString::number(bmmCache.GetMainchainBlockHeight(index->hashMainBlock));
+    ui->labelHeight->setText(strHeight);
 
     // Hash
     ui->labelHash->setText(QString::fromStdString(hashBlock.ToString()));
@@ -96,19 +99,6 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     // Median Time
     ui->labelMedianTime->setText(QString::number((int64_t)index->GetMedianTimePast()));
 
-    // Nonce
-    ui->labelNonce->setText(QString::number((int64_t)index->nNonce));
-
-    // Bits
-    ui->labelBits->setText(QString::fromStdString(strprintf("%08x", index->nBits)));
-
-    // TODO should we calculate the difficulty?
-    // Diff
-    //ui->labelDiff->setText(QString::number(GetDifficulty(chainActive, index)));
-
-    // Chain Work
-    ui->labelChainWork->setText(QString::fromStdString(index->nChainWork.ToString()));
-
     // prevBlockHash
     uint256 hashPrev = uint256();
     if (index->pprev)
@@ -127,13 +117,7 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     // WT^ hash
     ui->labelHashWTPrime->setText(QString::fromStdString(index->hashWTPrime.ToString()));
 
-    // Critical Tx ID
-    ui->labelBMMTXID->setText(QString::fromStdString(index->criticalTx.GetHash().ToString()));
-
-    // TODO
-    // Copy tx hex
-    // Copy Proof
-
+    // Hash of the block that came after this one if any
     ui->labelNextBlockHash->setText(QString::fromStdString(hashNext.ToString()));
 
     pBlockIndex = index;

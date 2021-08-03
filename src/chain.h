@@ -7,8 +7,8 @@
 #define BITCOIN_CHAIN_H
 
 #include <arith_uint256.h>
+#include <consensus/params.h>
 #include <primitives/block.h>
-#include <pow.h>
 #include <tinyformat.h>
 #include <uint256.h>
 
@@ -191,9 +191,6 @@ public:
     //! Byte offset within rev?????.dat where this block's undo data is stored
     unsigned int nUndoPos;
 
-    //! (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
-    arith_uint256 nChainWork;
-
     //! Number of transactions in this block.
     //! Note: in a potential headers-first mode, this number cannot be relied upon
     unsigned int nTx;
@@ -210,15 +207,9 @@ public:
     int32_t nVersion;
     uint256 hashMerkleRoot;
     uint32_t nTime;
-    uint32_t nBits;
-    uint32_t nNonce;
 
     //! BMM
-    std::string criticalProof;
-    CMutableTransaction criticalTx;
     uint256 hashMainBlock;
-
-    //! The current / most recent WT^ hash is part of sidechain block headers
     uint256 hashWTPrime;
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
@@ -236,7 +227,6 @@ public:
         nFile = 0;
         nDataPos = 0;
         nUndoPos = 0;
-        nChainWork = arith_uint256();
         nTx = 0;
         nChainTx = 0;
         nStatus = 0;
@@ -246,11 +236,7 @@ public:
         nVersion       = 0;
         hashMerkleRoot = uint256();
         nTime          = 0;
-        nBits          = 0;
-        nNonce         = 0;
 
-        criticalProof = "";
-        criticalTx = CMutableTransaction();
         hashWTPrime = uint256();
         hashMainBlock = uint256();
     }
@@ -267,11 +253,7 @@ public:
         nVersion       = block.nVersion;
         hashMerkleRoot = block.hashMerkleRoot;
         nTime          = block.nTime;
-        nBits          = block.nBits;
-        nNonce         = block.nNonce;
 
-        criticalProof = block.criticalProof;
-        criticalTx = block.criticalTx;
         hashWTPrime = block.hashWTPrime;
     }
 
@@ -298,27 +280,17 @@ public:
         CBlockHeader block;
         block.nVersion       = nVersion;
         if (pprev)
-            block.hashPrevBlock = pprev->GetBlockHash();
-        block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.nBits          = nBits;
-        block.nNonce         = nNonce;
-        block.criticalProof  = criticalProof;
-        block.criticalTx     = criticalTx;
-        block.hashWTPrime    = hashWTPrime;
+            block.hashPrevBlock  = pprev->GetBlockHash();
+        block.hashMerkleRoot     = hashMerkleRoot;
+        block.nTime              = nTime;
+        block.hashWTPrime        = hashWTPrime;
+        block.hashMainchainBlock = hashMainBlock;
         return block;
     }
 
     uint256 GetBlockHash() const
     {
         return *phashBlock;
-    }
-
-    uint256 GetBlindBlockHash() const
-    {
-        CBlockHeader header =  GetBlockHeader();
-        header.Blind();
-        return header.GetHash();
     }
 
     int64_t GetBlockTime() const
@@ -386,9 +358,6 @@ public:
     const CBlockIndex* GetAncestor(int height) const;
 };
 
-arith_uint256 GetBlockProof(const CBlockIndex& block);
-/** Return the time it would take to redo the work difference between from and to, assuming the current hashrate corresponds to the difficulty at tip, in seconds. */
-int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& from, const CBlockIndex& tip, const Consensus::Params&);
 /** Find the forking point between two chain tips. */
 const CBlockIndex* LastCommonAncestor(const CBlockIndex* pa, const CBlockIndex* pb);
 
@@ -430,29 +399,19 @@ public:
         READWRITE(hashPrev);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
-        READWRITE(nBits);
-        READWRITE(nNonce);
-
-        // BMM part of block header
-        READWRITE(criticalProof);
-        READWRITE(criticalTx);
         READWRITE(hashMainBlock);
-
         READWRITE(hashWTPrime);
     }
 
     uint256 GetBlockHash() const
     {
         CBlockHeader block;
-        block.nVersion        = nVersion;
-        block.hashPrevBlock   = hashPrev;
-        block.hashMerkleRoot  = hashMerkleRoot;
-        block.nTime           = nTime;
-        block.nBits           = nBits;
-        block.nNonce          = nNonce;
-        block.criticalProof   = criticalProof;
-        block.criticalTx      = criticalTx;
-        block.hashWTPrime     = hashWTPrime;
+        block.nVersion           = nVersion;
+        block.hashPrevBlock      = hashPrev;
+        block.hashMerkleRoot     = hashMerkleRoot;
+        block.nTime              = nTime;
+        block.hashWTPrime        = hashWTPrime;
+        block.hashMainchainBlock = hashMainBlock;
         return block.GetHash();
     }
 

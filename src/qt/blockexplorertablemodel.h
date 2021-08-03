@@ -22,6 +22,8 @@ struct BlockExplorerTableObject
     int nTime;
     uint256 hashMainchainBlock;
     uint256 hashWTPrime;
+    uint256 hashMainBlock;
+
 };
 
 class BlockExplorerTableModel : public QAbstractTableModel

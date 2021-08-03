@@ -51,8 +51,10 @@ static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "25dabab73eb48ff6b04b1203
 //! Sidechain build tar hash
 static const std::string SIDECHAIN_BUILD_TAR_HASH = "2e1b26bec1cd625c21d19b60a72511d8245a8dabbd0d38d528d8a877f65da1ba";
 
+//! Required WT^ workscore for mainchain payout
 static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 131;
 
+//! Minimum number of pooled WT to create new WT^
 static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
 
 // Temporary testnet value
@@ -203,12 +205,24 @@ struct SidechainDeposit : public SidechainObj {
     uint8_t nSidechain;
     std::string strDest;
     CAmount amtUserPayout;
-    CMutableTransaction dtx;
-    CMainchainMerkleBlock proof;
-    uint32_t n;
+    CMutableTransaction dtx; // Mainchain deposit transaction
+    uint32_t nBurnIndex; // Deposit burn output index
+    uint32_t nTx; // Deposit transaction number in mainchain block
+    uint256 hashMainchainBlock;
 
     SidechainDeposit(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_DEPOSIT_OP; }
     virtual ~SidechainDeposit(void) { }
+
+    SidechainDeposit(const SidechainDeposit* d) {
+        sidechainop = d->sidechainop;
+        nSidechain = d->nSidechain;
+        strDest = d->strDest;
+        amtUserPayout = d->amtUserPayout;
+        dtx = d->dtx;
+        nBurnIndex = d->nBurnIndex;
+        nTx = d->nTx;
+        hashMainchainBlock = d->hashMainchainBlock;
+    }
 
     ADD_SERIALIZE_METHODS
 
@@ -219,8 +233,9 @@ struct SidechainDeposit : public SidechainObj {
         READWRITE(strDest);
         READWRITE(amtUserPayout);
         READWRITE(dtx);
-        READWRITE(proof);
-        READWRITE(n);
+        READWRITE(nBurnIndex);
+        READWRITE(nTx);
+        READWRITE(hashMainchainBlock);
     }
 
     std::string ToString(void) const;
@@ -232,8 +247,9 @@ struct SidechainDeposit : public SidechainObj {
                 strDest == d.strDest &&
                 amtUserPayout == d.amtUserPayout &&
                 dtx == d.dtx &&
-                proof == d.proof &&
-                n == d.n) {
+                nBurnIndex == d.nBurnIndex &&
+                nTx == d.nTx &&
+                hashMainchainBlock == d.hashMainchainBlock) {
             return true;
         }
         return false;
@@ -244,18 +260,6 @@ struct SidechainDeposit : public SidechainObj {
         SidechainDeposit deposit(*this);
         deposit.amtUserPayout = CAmount(0);
         return deposit.GetHash();
-    }
-};
-
-struct SidechainBMMProof
-{
-    uint256 hashBMMBlock;
-    std::string txOutProof;
-    std::string coinbaseHex;
-
-    bool HasProof()
-    {
-        return (txOutProof.size() && coinbaseHex.size());
     }
 };
 

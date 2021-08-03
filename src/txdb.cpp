@@ -6,9 +6,9 @@
 #include <txdb.h>
 
 #include <chainparams.h>
+#include <consensus/params.h>
 #include <hash.h>
 #include <random.h>
-#include <pow.h>
 #include <sidechain.h>
 #include <uint256.h>
 #include <util.h>
@@ -286,11 +286,8 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nVersion       = diskindex.nVersion;
                 pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
                 pindexNew->nTime          = diskindex.nTime;
-                pindexNew->nBits          = diskindex.nBits;
-                pindexNew->nNonce         = diskindex.nNonce;
-                pindexNew->criticalProof  = diskindex.criticalProof;
-                pindexNew->criticalTx     = diskindex.criticalTx;
                 pindexNew->hashMainBlock  = diskindex.hashMainBlock;
+                pindexNew->hashWTPrime    = diskindex.hashWTPrime;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
 
@@ -344,8 +341,7 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
 
             // Also index the deposit by the non amount hash
             uint256 hashNonAmount = ptr->GetID();
-            std::pair<char, uint256> keyNonAmount = std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, hashNonAmount);
-            batch.Write(keyNonAmount, *ptr);
+            batch.Write(std::make_pair(DB_SIDECHAIN_DEPOSIT_OP, hashNonAmount), *ptr);
 
             // Update DB_LAST_SIDECHAIN_DEPOSIT
             batch.Write(DB_LAST_SIDECHAIN_DEPOSIT, hashNonAmount);

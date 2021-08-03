@@ -66,13 +66,13 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 4) {
             return QDateTime::fromTime_t((int64_t)object.nTime).toString("dd MMMM yyyy hh:mm");
         }
-        // hashMainchainBlock
-        if (row == 5) {
-            return QString::fromStdString(object.hashMainchainBlock.ToString()).left(32) + "...";
-        }
         // hashWTPrime
-        if (row == 6) {
+        if (row == 5) {
             return QString::fromStdString(object.hashWTPrime.ToString()).left(32) + "...";
+        }
+        // hashMainchainBlock
+        if (row == 6) {
+            return QString::fromStdString(object.hashMainBlock.ToString()).left(32) + "...";
         }
     }
     case HeightRole:
@@ -105,11 +105,11 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 4) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // hashMainchainBlock
+        // hashWTPrime
         if (row == 5) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // nBits
+        // hashMainchainBlock
         if (row == 6) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
@@ -130,13 +130,13 @@ QVariant BlockExplorerTableModel::headerData(int section, Qt::Orientation orient
             case 2:
                 return QString("Hash Prev");
             case 3:
-                return QString("Merkle Root");
+                return QString("Merkle Root (h*)");
             case 4:
                 return QString("Time");
             case 5:
-                return QString("Hash MC Block");
-            case 6:
                 return QString("Hash WT^");
+            case 6:
+                return QString("Hash Main Block");
             }
         }
     }
@@ -192,9 +192,8 @@ void BlockExplorerTableModel::UpdateModel()
 
         object.hashPrev = hashPrev;
         object.nTime = index->nTime;
-        object.hashMainchainBlock = index->hashMainBlock;
-
         object.hashWTPrime = index->hashWTPrime;
+        object.hashMainBlock = index->hashMainBlock;
 
         model.append(QVariant::fromValue(object));
     }

@@ -191,9 +191,6 @@ extern bool fEnableReplacement;
 /** Block hash whose ancestors we will assume to have valid scripts without checking them. */
 extern uint256 hashAssumeValid;
 
-/** Minimum work we will assume exists on some valid chain. */
-extern arith_uint256 nMinimumChainWork;
-
 /** Best header we've seen so far (used for getheaders queries' starting points). */
 extern CBlockIndex *pindexBestHeader;
 
@@ -228,11 +225,6 @@ static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 /** Sidechain keys */
 static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc5911528596b7d7f49";
 static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
-
-/** Blind merged mining */
-static const bool DEFAULT_VERIFY_BMM_READ_BLOCK = false;
-static const bool DEFAULT_VERIFY_BMM_CHECK_BLOCK = true;
-static const bool DEFAULT_VERIFY_BMM_ACCEPT_HEADER = true;
 
 static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
 
@@ -421,14 +413,17 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 
 /** Functions for validating blocks and updating the block tree */
 
-/** Verify BMM h* proof for this block */
-bool VerifyCriticalHashProof(const CBlock& block);
+/** Verify BMM for this block with the mainchain */
+bool VerifyBMM(const CBlock& block);
+
+/** Verify deposit with the mainchain */
+bool VerifyDeposit(const uint256& hashMainBlock, const uint256& txid, const int nTx);
 
 /** Context-independent validity checks */
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true, bool fSkipBMMChecks = false);
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckMerkleRoot = true, bool fCheckBMM = true);
 
 /** Check a block is completely valid from start to finish (only works on top of our current best block, with cs_main held) */
-bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true, bool fSkipBMMChecks = false, bool fReorg = false);
+bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckMerkleRoot = true, bool fChekBMM = false, bool fReorg = false);
 
 /** Check whether witness commitments are required for block. */
 bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params);
@@ -448,6 +443,9 @@ CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime);
 
 /** Produce WT refund request */
 CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig);
+
+/** Produce prev block commit (prev mainchain & prev sidechain block hash) */
+CScript GeneratePrevBlockCommit(const uint256& hashPrevMain, const uint256& hashPrevSide);
 
 /** Verify the status of WT to refund & check refund signature */
 bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, SidechainWT& wt);
@@ -521,9 +519,6 @@ bool DumpMempool();
 /** Load the mempool from disk. */
 bool LoadMempool();
 
-//
-// TODO finish
-// Right now this is only storing the broadcasted WT^ hashes
 /** Dump the BMM caches to disk. */
 void DumpBMMCache();
 
