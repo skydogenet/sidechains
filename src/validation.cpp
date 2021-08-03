@@ -3430,7 +3430,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     bool fGenesis = (block.GetHash() == Params().GetConsensus().hashGenesisBlock);
 
     // Check for mainchain connection
-    if (!fGenesis && !CheckMainchainConnection()) {
+    if (!fGenesis && fCheckBMM && !CheckMainchainConnection()) {
         SetNetworkActive(false, "Failed to connect to mainchain when checking block!");
         return false;
     }
@@ -3498,29 +3498,31 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     }
 
     // Find deposits and verify that they exist with mainchain
-    for (const CTxOut& out : block.vtx[0]->vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
+    if (fCheckBMM) {
+        for (const CTxOut& out : block.vtx[0]->vout) {
+            const CScript& scriptPubKey = out.scriptPubKey;
 
-        std::vector<unsigned char> vch;
-        if (!scriptPubKey.IsSidechainObj(vch))
-            continue;
+            std::vector<unsigned char> vch;
+            if (!scriptPubKey.IsSidechainObj(vch))
+                continue;
 
-        SidechainObj *obj = ParseSidechainObj(vch);
-        if (!obj) {
-            return state.DoS(90, error("%s: invalid sidechain deposit obj script", __func__), REJECT_INVALID, "invalid-sidechain-obj-script");
-        }
+            SidechainObj *obj = ParseSidechainObj(vch);
+            if (!obj) {
+                return state.DoS(90, error("%s: invalid sidechain deposit obj script", __func__), REJECT_INVALID, "invalid-sidechain-obj-script");
+            }
 
-        if (obj->sidechainop != DB_SIDECHAIN_DEPOSIT_OP)
-            continue;
+            if (obj->sidechainop != DB_SIDECHAIN_DEPOSIT_OP)
+                continue;
 
-        const SidechainDeposit* deposit = (const SidechainDeposit *) obj;
+            const SidechainDeposit* deposit = (const SidechainDeposit *) obj;
 
-        if (!VerifyDeposit(deposit->hashMainchainBlock, deposit->dtx.GetHash(), deposit->nTx)) {
+            if (!VerifyDeposit(deposit->hashMainchainBlock, deposit->dtx.GetHash(), deposit->nTx)) {
+                delete obj;
+                return state.DoS(1, error("%s: invalid sidechain deposit", __func__), REJECT_INVALID, "invalid-sidechain-deposit");
+            }
+
             delete obj;
-            return state.DoS(1, error("%s: invalid sidechain deposit obj script", __func__), REJECT_INVALID, "invalid-sidechain-deposit-obj-script");
         }
-
-        delete obj;
     }
 
     // Check transactions
