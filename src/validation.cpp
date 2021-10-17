@@ -1745,6 +1745,9 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         }
     }
 
+    // Revert the current WT^ hash
+    psidechaintree->WriteLastWTPrimeHash(pindex->pprev->hashWTPrime);
+
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
 
@@ -2315,6 +2318,30 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             LogPrintf("%s: Failed to get latest WT^ from ldb: %s!\n", __func__, hashLatestWTPrime.ToString());
         }
 
+        // Check current WT^ hash in header and coinbase
+        if (!hashLatestWTPrime.IsNull()) {
+            bool fWTPrimeCommitFound = false;
+            for (const CTxOut& out : block.vtx[0]->vout) {
+                uint256 hashWTPrime;
+                if (out.scriptPubKey.IsWTPrimeHashCommit(hashWTPrime)) {
+                    if (hashWTPrime != hashLatestWTPrime) {
+                        LogPrintf("%s: Invalid WT^ hash commit: %s != %s\n", __func__, hashLatestWTPrime.ToString(), hashWTPrime.ToString());
+                        return state.DoS(25, false, REJECT_INVALID, "bad-wtprime-commit", false, "invalid WT^ hash commit");
+                    }
+                    fWTPrimeCommitFound = true;
+                    break;
+                }
+            }
+            if (!fWTPrimeCommitFound) {
+                LogPrintf("%s: Missing WT^ hash commit!\n", __func__);
+                return state.DoS(25, false, REJECT_INVALID, "no-wtprime-commit", false, "WT^ hash commit not found!");
+            }
+
+            if (block.hashWTPrime != hashLatestWTPrime) {
+                LogPrintf("%s: Invalid WT^ hash in block header!\n", __func__);
+                return state.DoS(25, false, REJECT_INVALID, "bad-header-wtprime-commit", false, "WT^ hash in header is invalid!");
+            }
+        }
         // Check for & validate WT^ status updates
         for (const CTxOut& txout : block.vtx[0]->vout) {
             const CScript& scriptPubKey = txout.scriptPubKey;
@@ -3750,6 +3777,28 @@ CScript GeneratePrevBlockCommit(const uint256& hashPrevMain, const uint256& hash
     // Add previous mainchain & previous sidechain block hash
     memcpy(&scriptPubKey[5], hashPrevMain.begin(), 32);
     memcpy(&scriptPubKey[37], hashPrevSide.begin(), 32);
+
+    return scriptPubKey;
+}
+
+CScript GenerateWTPrimeHashCommit(const uint256& hashWTPrime)
+{
+    /*
+     * Generate a script commit of current WT^ hash
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(37);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xEF;
+    scriptPubKey[2] = 0x5D;
+    scriptPubKey[3] = 0x1D;
+    scriptPubKey[4] = 0xFE;
+
+    // Add WT^ hash
+    memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
 
     return scriptPubKey;
 }

@@ -331,6 +331,29 @@ bool CScript::IsPrevBlockCommit(uint256& hashPrevMain, uint256& hashPrevSide) co
     return true;
 }
 
+bool CScript::IsWTPrimeHashCommit(uint256& hashWTPrime) const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size != 37) // sha256 hash + opcodes
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xEF ||
+            (*this)[2] != 0x5D ||
+            (*this)[3] != 0x1D ||
+            (*this)[4] != 0xFE)
+        return false;
+
+    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+
+    if (hashWTPrime.IsNull())
+        return false;
+
+    return true;
+}
+
 bool CScript::IsSidechainObj(std::vector<unsigned char>& vch) const
 {
     // Check script size

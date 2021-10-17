@@ -408,6 +408,11 @@ bool CSidechainTreeDB::WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime)
     return WriteBatch(batch, true);
 }
 
+bool CSidechainTreeDB::WriteLastWTPrimeHash(const uint256& hash)
+{
+    return Write(DB_LAST_SIDECHAIN_WTPRIME, hash);
+}
+
 bool CSidechainTreeDB::GetWT(const uint256& objid, SidechainWT& wt)
 {
     if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WT_OP, objid), wt))
