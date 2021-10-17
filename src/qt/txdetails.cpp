@@ -18,6 +18,7 @@ enum TopLevelIndex {
     INDEX_WITNESS_PROGRAM,
     INDEX_WITNESS_COMMIT,
     INDEX_PREV_BLOCK_COMMIT,
+    INDEX_WTPRIME_HASH_COMMIT,
     INDEX_UNKNOWN_OPRETURN,
 };
 
@@ -98,7 +99,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             // Create a p2sh item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "P2SH: " +
+            subItem->setText(1, "P2SH:\n" +
                         QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
             AddTreeItem(INDEX_P2SH, subItem);
         }
@@ -107,7 +108,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             // Create a p2wsh item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "P2WSH: " +
+            subItem->setText(1, "P2WSH:\n" +
                         QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
             AddTreeItem(INDEX_P2WSH, subItem);
         }
@@ -116,7 +117,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             // Create a witness program item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "Witness Program: " +
+            subItem->setText(1, "Witness Program:\n" +
                         QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
             AddTreeItem(INDEX_WITNESS_PROGRAM, subItem);
         }
@@ -125,15 +126,24 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
             QString str = "PrevBlock Commit: \n";
-            str += "Previous mainchain block hash: ";
+            str += "Previous mainchain block hash:\n";
             str += QString::fromStdString(hashPrevMain.ToString());
             str += "\n";
-            str += "Previous sidechain block hash: ";
+            str += "Previous sidechain block hash:\n";
             str += QString::fromStdString(hashPrevSide.ToString());
-            str += "";
 
             subItem->setText(1, str);
             AddTreeItem(INDEX_PREV_BLOCK_COMMIT, subItem);
+        }
+        else
+        if (scriptPubKey.IsWTPrimeHashCommit(hashWTPrime)) {
+            QTreeWidgetItem *subItem = new QTreeWidgetItem();
+            subItem->setText(0, "txout #" + QString::number(i));
+            QString str = "WT^ Hash Commit: \n";
+            str += QString::fromStdString(hashWTPrime.ToString());
+
+            subItem->setText(1, str);
+            AddTreeItem(INDEX_WTPRIME_HASH_COMMIT, subItem);
         }
         else
         if (scriptPubKey.front() == OP_RETURN && scriptPubKey.size() == 38) {
@@ -148,7 +158,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
                 // Create a witness commit item
                 QTreeWidgetItem *subItem = new QTreeWidgetItem();
                 subItem->setText(0, "txout #" + QString::number(i));
-                subItem->setText(1, "Witness Commitment: " +
+                subItem->setText(1, "Witness Commitment:\n" +
                         QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
                 AddTreeItem(INDEX_WITNESS_COMMIT, subItem);
             }
@@ -184,6 +194,8 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
         else
         if (index == INDEX_PREV_BLOCK_COMMIT)
             topItem->setText(0, "PrevBlock Commit");
+        if (index == INDEX_WTPRIME_HASH_COMMIT)
+            topItem->setText(0, "WT^ Hash Commit");
         else
         if (index == INDEX_UNKNOWN_OPRETURN)
             topItem->setText(0, "Unknown OP_RETURN");
