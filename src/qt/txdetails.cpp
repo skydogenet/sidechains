@@ -19,6 +19,7 @@ enum TopLevelIndex {
     INDEX_WITNESS_COMMIT,
     INDEX_PREV_BLOCK_COMMIT,
     INDEX_WTPRIME_HASH_COMMIT,
+    INDEX_BLOCK_VERSION_COMMIT,
     INDEX_UNKNOWN_OPRETURN,
 };
 
@@ -73,12 +74,10 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     // Witness program
     int nWitVersion = -1;
     std::vector<unsigned char> vWitProgram;
-    // WT^ hash commit
     uint256 hashWTPrime = uint256();
-    uint8_t nSidechain = 0;
-
     uint256 hashPrevMain = uint256();
     uint256 hashPrevSide = uint256();
+    int32_t nVersion = 0;
 
     ui->treeWidgetDecoded->clear();
     // TODO A lot of these output types can only be in the coinbase so we
@@ -144,6 +143,16 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
 
             subItem->setText(1, str);
             AddTreeItem(INDEX_WTPRIME_HASH_COMMIT, subItem);
+        }
+        else
+        if (scriptPubKey.IsBlockVersionCommit(nVersion)) {
+            QTreeWidgetItem *subItem = new QTreeWidgetItem();
+            subItem->setText(0, "txout #" + QString::number(i));
+            QString str = "Block Version Commit: \n";
+            str += QString::number(nVersion);
+
+            subItem->setText(1, str);
+            AddTreeItem(INDEX_BLOCK_VERSION_COMMIT, subItem);
         }
         else
         if (scriptPubKey.front() == OP_RETURN && scriptPubKey.size() == 38) {
