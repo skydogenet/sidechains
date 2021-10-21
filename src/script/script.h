@@ -651,6 +651,7 @@ public:
     bool IsWTRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSig) const;
     bool IsPrevBlockCommit(uint256& hashPrevMain, uint256& hashPrevSide) const;
     bool IsWTPrimeHashCommit(uint256& hashWTPrime) const;
+    bool IsBlockVersionCommit(int32_t& nVersion) const;
     bool IsSidechainObj(std::vector<unsigned char>& vch) const;
 
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */

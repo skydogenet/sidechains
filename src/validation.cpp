@@ -2318,6 +2318,24 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             LogPrintf("%s: Failed to get latest WT^ from ldb: %s!\n", __func__, hashLatestWTPrime.ToString());
         }
 
+        // Check version commit in coinbase
+        bool fVersionCommitFound = false;
+        for (const CTxOut& out : block.vtx[0]->vout) {
+            int32_t nVersion;
+            if (out.scriptPubKey.IsBlockVersionCommit(nVersion)) {
+                if (block.nVersion != nVersion) {
+                    LogPrintf("%s: Invalid block version commit.\n", __func__);
+                    return state.DoS(25, false, REJECT_INVALID, "bad-version-commit", false, "invalid version commit");
+                }
+                fVersionCommitFound = true;
+                break;
+            }
+        }
+        if (!fVersionCommitFound) {
+            LogPrintf("%s: Missing block version commit!\n", __func__);
+            return state.DoS(25, false, REJECT_INVALID, "no-version-commit", false, "Block version commit not found!");
+        }
+
         // Check current WT^ hash in header and coinbase
         if (!hashLatestWTPrime.IsNull()) {
             bool fWTPrimeCommitFound = false;
@@ -3799,6 +3817,31 @@ CScript GenerateWTPrimeHashCommit(const uint256& hashWTPrime)
 
     // Add WT^ hash
     memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
+
+    return scriptPubKey;
+}
+
+CScript GenerateBlockVersionCommit(const int32_t nVersion)
+{
+    /*
+     * Generate a script commit of block version
+     */
+
+    CScript scriptPubKey;
+
+    // Add script header
+    scriptPubKey.resize(9);
+    scriptPubKey[0] = OP_RETURN;
+    scriptPubKey[1] = 0xA7;
+    scriptPubKey[2] = 0xE6;
+    scriptPubKey[3] = 0x7E;
+    scriptPubKey[4] = 0x1F;
+
+    CScriptNum num(nVersion);
+    std::vector<unsigned char> vch = num.getvch();
+
+    // Add version
+    memcpy(&scriptPubKey[5], vch.data(), 4);
 
     return scriptPubKey;
 }

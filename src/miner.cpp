@@ -241,6 +241,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         coinbaseTx.vout.push_back(CTxOut(0, scriptWTPrime));
     }
 
+    // Add block version to coinbase output
+    CScript scriptVersion = GenerateBlockVersionCommit(pblock->nVersion);
+    coinbaseTx.vout.push_back(CTxOut(0, scriptVersion));
+
     // Add WT^ to block if one was created earlier
     if (fCreatedWTPrime) {
         for (const CTxOut& out : wtPrimeDataTx->vout)

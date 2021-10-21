@@ -354,6 +354,28 @@ bool CScript::IsWTPrimeHashCommit(uint256& hashWTPrime) const
     return true;
 }
 
+bool CScript::IsBlockVersionCommit(int32_t& nVersion) const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size != 9) // int32 + opcodes
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xA7 ||
+            (*this)[2] != 0xE6 ||
+            (*this)[3] != 0x7E ||
+            (*this)[4] != 0x1F)
+        return false;
+
+    CScriptNum num(std::vector<unsigned char>(this->begin() + 5, this->begin() + 9), false);
+
+    nVersion = num.getint();
+
+    return true;
+}
+
 bool CScript::IsSidechainObj(std::vector<unsigned char>& vch) const
 {
     // Check script size
