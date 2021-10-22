@@ -139,6 +139,7 @@ public:
     bool WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list);
     bool WriteWTUpdate(const std::vector<SidechainWT>& vWT);
     bool WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime);
+    bool WriteLastWTPrimeHash(const uint256& hash);
 
     bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
     bool GetWTPrime(const uint256 & /* WT^ ID */, SidechainWTPrime &wtPrime);

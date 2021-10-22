@@ -447,6 +447,12 @@ CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned 
 /** Produce prev block commit (prev mainchain & prev sidechain block hash) */
 CScript GeneratePrevBlockCommit(const uint256& hashPrevMain, const uint256& hashPrevSide);
 
+/** Produce current WT^ hash commit */
+CScript GenerateWTPrimeHashCommit(const uint256& hashWTPrime);
+
+/** Produce block version commit */
+CScript GenerateBlockVersionCommit(const int32_t nVersion);
+
 /** Verify the status of WT to refund & check refund signature */
 bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, SidechainWT& wt);
 

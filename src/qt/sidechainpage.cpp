@@ -387,6 +387,13 @@ void SidechainPage::setNumBlocks(const int nBlocksIn)
         return;
     }
 
+    if (hashLatest.IsNull()) {
+        ui->labelNextBundle->setText("Waiting for withdrawals.");
+        QString str = "WT^: None yet. Waiting for withdrawals.";
+        Q_EMIT WTPrimeBannerUpdate(str);
+        return;
+    }
+
     SidechainWTPrime wtPrime;
     if (!psidechaintree->GetWTPrime(hashLatest, wtPrime)) {
         ui->labelNextBundle->setText("Error...");
