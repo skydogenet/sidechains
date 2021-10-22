@@ -235,6 +235,16 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     CScript scriptPrev = GeneratePrevBlockCommit(bmmCache.GetLastMainBlockHash(), pindexPrev->GetBlockHash());
     coinbaseTx.vout.push_back(CTxOut(0, scriptPrev));
 
+    // Add current hashWTPrime to coinbase output
+    if (!hashCurrentWTPrime.IsNull()) {
+        CScript scriptWTPrime = GenerateWTPrimeHashCommit(hashCurrentWTPrime);
+        coinbaseTx.vout.push_back(CTxOut(0, scriptWTPrime));
+    }
+
+    // Add block version to coinbase output
+    CScript scriptVersion = GenerateBlockVersionCommit(pblock->nVersion);
+    coinbaseTx.vout.push_back(CTxOut(0, scriptVersion));
+
     // Add WT^ to block if one was created earlier
     if (fCreatedWTPrime) {
         for (const CTxOut& out : wtPrimeDataTx->vout)
@@ -481,7 +491,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         *nFeesOut = nFees;
 
     // Signal the most recent WT^ created by this sidechain
-    if (!hashCurrentWTPrime.IsNull() && wtPrime.status == WTPRIME_CREATED)
+    if (!hashCurrentWTPrime.IsNull())
         pblock->hashWTPrime = hashCurrentWTPrime;
 
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
