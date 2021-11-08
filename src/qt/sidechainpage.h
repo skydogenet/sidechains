@@ -19,9 +19,9 @@ class ClientModel;
 class ConfGeneratorDialog;
 class PlatformStyle;
 class SidechainBMMTableModel;
-class SidechainWTConfirmationDialog;
-class SidechainWTPrimeHistoryDialog;
-class SidechainWTTableModel;
+class SidechainWithdrawalConfirmationDialog;
+class SidechainWithdrawalBundleHistoryDialog;
+class SidechainWithdrawalTableModel;
 class WalletModel;
 
 QT_BEGIN_NAMESPACE
@@ -63,7 +63,7 @@ private Q_SLOTS:
 
     void on_pushButtonNew_clicked();
 
-    void on_pushButtonWT_clicked();
+    void on_pushButtonWITHDRAWAL_clicked();
 
     void on_addressBookButton_clicked();
 
@@ -81,15 +81,15 @@ private Q_SLOTS:
 
     void on_pushButtonRetryConnection_clicked();
 
-    void on_pushButtonShowLatestWTPrime_clicked();
+    void on_pushButtonShowLatestWithdrawalBundle_clicked();
 
-    void on_pushButtonShowPastWTPrimes_clicked();
+    void on_pushButtonShowPastWithdrawalBundles_clicked();
 
-    void on_checkBoxAutoWTPrimeRefresh_changed(int state);
+    void on_checkBoxAutoWithdrawalBundleRefresh_changed(int state);
 
-    void on_wtPrime_doubleClicked(uint256 hashWTPrime);
+    void on_withdrawalBundle_doubleClicked(uint256 hashWithdrawalBundle);
 
-    void on_lineEditWTPrimeHash_returnPressed();
+    void on_lineEditWithdrawalBundleHash_returnPressed();
 
     void UpdateWTTotal();
 
@@ -107,7 +107,7 @@ private Q_SLOTS:
 
     void WTContextMenu(const QPoint& point);
 
-    void CopyWTID();
+    void CopyWITHDRAWALID();
 
     void RequestRefund();
 
@@ -125,14 +125,14 @@ private:
 
     ConfGeneratorDialog *confGeneratorDialog = nullptr;
     SidechainBMMTableModel *bmmModel = nullptr;
-    SidechainWTConfirmationDialog *wtConfDialog = nullptr;
-    SidechainWTPrimeHistoryDialog *wtPrimeHistoryDialog = nullptr;
-    SidechainWTTableModel *unspentWTModel = nullptr;
+    SidechainWithdrawalConfirmationDialog *wtConfDialog = nullptr;
+    SidechainWithdrawalBundleHistoryDialog *withdrawalBundleHistoryDialog = nullptr;
+    SidechainWithdrawalTableModel *unspentWTModel = nullptr;
 
     QMessageBox* connectionErrorMessage = nullptr;
 
-    QAction *wtRefundAction;
-    QAction *copyWTIDAction;
+    QAction *withdrawalRefundAction;
+    QAction *copyWITHDRAWALIDAction;
     QMenu *wtContextMenu;
 
     QTimer *bmmTimer;
@@ -154,13 +154,13 @@ private:
     // Check if configuration files are setup and connection works
     void CheckConfiguration(bool& fConfig, bool& fConnection);
 
-    void ClearWTPrimeExplorer();
+    void ClearWithdrawalBundleExplorer();
 
     void UpdateSidechainWealth();
 
-    void UpdateToLatestWTPrime(bool fRequested = true);
+    void UpdateToLatestWithdrawalBundle(bool fRequested = true);
 
-    void SetCurrentWTPrime(const std::string& strHash, bool fRequested = true);
+    void SetCurrentWithdrawalBundle(const std::string& strHash, bool fRequested = true);
 
     void StartBMM();
 
@@ -168,7 +168,7 @@ private:
 
 Q_SIGNALS:
     void OnlyMyWTsToggled(bool fChecked);
-    void WTPrimeBannerUpdate(QString str);
+    void WithdrawalBundleBannerUpdate(QString str);
 };
 
 #endif // SIDECHAINPAGE_H

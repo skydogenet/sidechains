@@ -21,7 +21,7 @@ struct BlockExplorerTableObject
     uint256 hashMerkleRoot;
     int nTime;
     uint256 hashMainchainBlock;
-    uint256 hashWTPrime;
+    uint256 hashWithdrawalBundle;
     uint256 hashMainBlock;
 
 };

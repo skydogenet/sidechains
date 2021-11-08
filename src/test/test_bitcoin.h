@@ -101,14 +101,14 @@ struct TestMemPoolEntryHelper
     int64_t nTime;
     unsigned int nHeight;
     bool spendsCoinbase;
-    bool fWTRefund;
+    bool fWithdrawalRefund;
     uint256 wtID;
     unsigned int sigOpCost;
     LockPoints lp;
 
     TestMemPoolEntryHelper() :
         nFee(0), nTime(0), nHeight(1),
-        spendsCoinbase(false), fWTRefund(false), wtID(uint256()), sigOpCost(4) { }
+        spendsCoinbase(false), fWithdrawalRefund(false), wtID(uint256()), sigOpCost(4) { }
 
     CTxMemPoolEntry FromTx(const CMutableTransaction &tx);
     CTxMemPoolEntry FromTx(const CTransaction &tx);

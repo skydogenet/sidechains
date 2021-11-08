@@ -39,7 +39,7 @@
           <string notr="true"/>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>1</number>
          </property>
          <property name="tabBarAutoHide">
           <bool>true</bool>
@@ -618,7 +618,7 @@
                    <number>2</number>
                   </property>
                   <item row="1" column="0">
-                   <widget class="QLineEdit" name="lineEditWTPrimeHash">
+                   <widget class="QLineEdit" name="lineEditWithdrawalBundleHash">
                     <property name="maxLength">
                      <number>64</number>
                     </property>
@@ -631,7 +631,7 @@
                    </widget>
                   </item>
                   <item row="0" column="0">
-                   <widget class="QCheckBox" name="checkBoxAutoWTPrimeRefresh">
+                   <widget class="QCheckBox" name="checkBoxAutoWithdrawalBundleRefresh">
                     <property name="text">
                      <string>Automatically update to latest</string>
                     </property>

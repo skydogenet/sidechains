@@ -687,10 +687,10 @@ UniValue listmywithdrawals(const JSONRPCRequest& request)
             "id             (string)\n"
         );
 
-    std::set<uint256> setWTID = bmmCache.GetCachedWTID();
+    std::set<uint256> setID = bmmCache.GetCachedWithdrawalID();
 
     UniValue result(UniValue::VARR);
-    for (const uint256& u : setWTID) {
+    for (const uint256& u : setID) {
         UniValue obj(UniValue::VOBJ);
         obj.pushKV("id", u.ToString());
         result.push_back(obj);
@@ -699,49 +699,49 @@ UniValue listmywithdrawals(const JSONRPCRequest& request)
     return result;
 }
 
-UniValue rebroadcastwtprimehex(const JSONRPCRequest& request)
+UniValue rebroadcastwithdrawalbundle(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
         throw std::runtime_error(
-            "rebroadcastwtprimehex\n"
-            "\nSend the latest WT^ transaction hex to the local mainchain node.\n"
+            "rebroadcastwithdrawalbundle\n"
+            "\nSend the latest WithdrawalBundle transaction hex to the local mainchain node.\n"
         );
 
-    SidechainWTPrime wtPrime;
+    SidechainWithdrawalBundle withdrawalBundle;
     uint256 hashLatest;
-    psidechaintree->GetLastWTPrimeHash(hashLatest);
+    psidechaintree->GetLastWithdrawalBundleHash(hashLatest);
 
     if (hashLatest.IsNull())
-        throw JSONRPCError(RPC_MISC_ERROR, "Failed to lookup latest WT^ hash!");
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to lookup latest WithdrawalBundle hash!");
 
-    if (!psidechaintree->GetWTPrime(hashLatest, wtPrime))
-        throw JSONRPCError(RPC_MISC_ERROR, "Failed to load latest WT^ from database");
+    if (!psidechaintree->GetWithdrawalBundle(hashLatest, withdrawalBundle))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to load latest WithdrawalBundle from database");
 
     SidechainClient client;
-    std::string strHex = EncodeHexTx(wtPrime.wtPrime);
-    if (!client.BroadcastWTPrime(strHex))
-        throw JSONRPCError(RPC_MISC_ERROR, "Failed to broadcast latest WT^");
+    std::string strHex = EncodeHexTx(withdrawalBundle.tx);
+    if (!client.BroadcastWithdrawalBundle(strHex))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to broadcast latest WithdrawalBundle");
 
     return NullUniValue;
 }
 
-UniValue getwt(const JSONRPCRequest& request)
+UniValue getwithdrawal(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
-            "getwt\n"
+            "getwithdrawal\n"
             "\nArguments:\n"
-            "1. \"id (string, required) the WT (withdrawal) ID\"\n"
-            "\nGet WT information\n"
+            "1. \"id (string, required) the withdrawal ID\"\n"
+            "\nGet withdrawal information\n"
         );
 
     uint256 id = uint256S(request.params[0].get_str());
     if (id.IsNull())
-        throw JSONRPCError(RPC_MISC_ERROR, "Invalid WT ID!");
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid ID!");
 
-    SidechainWT wt;
-    if (!psidechaintree->GetWT(id, wt))
-        throw JSONRPCError(RPC_MISC_ERROR, "WT does not exist!");
+    SidechainWithdrawal wt;
+    if (!psidechaintree->GetWithdrawal(id, wt))
+        throw JSONRPCError(RPC_MISC_ERROR, "Withdrawal does not exist!");
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("destination", wt.strDestination);
@@ -749,7 +749,7 @@ UniValue getwt(const JSONRPCRequest& request)
     result.pushKV("amount", wt.amount);
     result.pushKV("amountmainchainfee",wt.mainchainFee );
     result.pushKV("status", wt.GetStatusStr());
-    result.pushKV("hashblindwtx", wt.hashBlindWTX.ToString());
+    result.pushKV("hashblindtx", wt.hashBlindTx.ToString());
 
     return result;
 }
@@ -801,16 +801,16 @@ static const CRPCCommand commands[] =
     { "hidden",             "getinfo",                  &getinfo_deprecated,       {}},
 
     /* Sidechain RPC functions */
-    { "sidechain",          "refreshbmm",               &refreshbmm,               {}},
-    { "sidechain",          "getaveragemainchainfees",  &getaveragemainchainfees,  {"blockcount", "startheight"}},
-    { "sidechain",          "getmainchainblockcount",   &getmainchainblockcount,   {}},
-    { "sidechain",          "getmainchainblockhash",    &getmainchainblockhash,    {"height"}},
-    { "sidechain",          "verifymainblockcache",     &verifymainblockcache,     {}},
-    { "sidechain",          "updatemainblockcache",     &updatemainblockcache,     {}},
-    { "sidechain",          "listmywithdrawals",        &listmywithdrawals,        {}},
-    { "sidechain",          "rebroadcastwtprimehex",    &rebroadcastwtprimehex,    {}},
-    { "sidechain",          "getwt",                    &getwt,                    {"id"}},
-    { "sidechain",          "formatdepositaddress",     &formatdepositaddress,     {"address"}},
+    { "sidechain",          "refreshbmm",                   &refreshbmm,                    {}},
+    { "sidechain",          "getaveragemainchainfees",      &getaveragemainchainfees,       {"blockcount", "startheight"}},
+    { "sidechain",          "getmainchainblockcount",       &getmainchainblockcount,        {}},
+    { "sidechain",          "getmainchainblockhash",        &getmainchainblockhash,         {"height"}},
+    { "sidechain",          "verifymainblockcache",         &verifymainblockcache,          {}},
+    { "sidechain",          "updatemainblockcache",         &updatemainblockcache,          {}},
+    { "sidechain",          "listmywithdrawals",            &listmywithdrawals,             {}},
+    { "sidechain",          "rebroadcastwithdrawalbundle",  &rebroadcastwithdrawalbundle,   {}},
+    { "sidechain",          "getwithdrawal",                &getwithdrawal,                 {"id"}},
+    { "sidechain",          "formatdepositaddress",         &formatdepositaddress,          {"address"}},
 
 };
 

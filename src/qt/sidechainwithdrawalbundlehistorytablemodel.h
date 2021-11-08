@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_SIDECHAINWTPRIMEHISTORYTABLEMODEL_H
-#define BITCOIN_SIDECHAINWTPRIMEHISTORYTABLEMODEL_H
+#ifndef BITCOIN_SIDECHAINWITHDRAWAL_BUNDLEHISTORYTABLEMODEL_H
+#define BITCOIN_SIDECHAINWITHDRAWAL_BUNDLEHISTORYTABLEMODEL_H
 
 #include <amount.h>
 #include <uint256.h>
@@ -18,7 +18,7 @@ QT_BEGIN_NAMESPACE
 class QTimer;
 QT_END_NAMESPACE
 
-struct WTPrimeHistoryTableObject
+struct WithdrawalBundleHistoryTableObject
 {
     QString hash;
     CAmount amount;
@@ -26,18 +26,18 @@ struct WTPrimeHistoryTableObject
     int height;
 };
 
-class SidechainWTPrimeHistoryTableModel : public QAbstractTableModel
+class SidechainWithdrawalBundleHistoryTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 
 public:
-    explicit SidechainWTPrimeHistoryTableModel(QObject *parent = 0);
+    explicit SidechainWithdrawalBundleHistoryTableModel(QObject *parent = 0);
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
 
-    bool GetWTPrimeInfoAtRow(int row, uint256& hash) const;
+    bool GetWithdrawalBundleInfoAtRow(int row, uint256& hash) const;
 
     void setWalletModel(WalletModel *model);
     void setClientModel(ClientModel *model);
@@ -53,4 +53,4 @@ private:
     ClientModel *clientModel;
 };
 
-#endif // BITCOIN_SIDECHAINWTPRIMEHISTORYTABLEMODEL_H
+#endif // BITCOIN_SIDECHAINWITHDRAWAL_BUNDLEHISTORYTABLEMODEL_H

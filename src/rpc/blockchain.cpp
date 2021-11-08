@@ -64,7 +64,7 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.pushKV("merkleroot", blockindex->hashMerkleRoot.GetHex());
     result.pushKV("time", (int64_t)blockindex->nTime);
     result.pushKV("mediantime", (int64_t)blockindex->GetMedianTimePast());
-    result.pushKV("hashwtprime", blockindex->hashWTPrime.GetHex());
+    result.pushKV("hashwithdrawalbundle", blockindex->hashWithdrawalBundle.GetHex());
 
     if (blockindex->pprev)
         result.pushKV("previousblockhash", blockindex->pprev->GetBlockHash().GetHex());
@@ -91,7 +91,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.pushKV("version", block.nVersion);
     result.pushKV("versionHex", strprintf("%08x", block.nVersion));
     result.pushKV("merkleroot", block.hashMerkleRoot.GetHex());
-    result.pushKV("hashwtprime", block.hashWTPrime.GetHex());
+    result.pushKV("hashwithdrawalbundle", block.hashWithdrawalBundle.GetHex());
     result.pushKV("hashmainblock", blockindex->hashMainBlock.GetHex());
     UniValue txs(UniValue::VARR);
     for(const auto& tx : block.vtx)

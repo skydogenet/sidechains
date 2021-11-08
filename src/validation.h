@@ -226,7 +226,7 @@ static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 static const char* const SIDECHAIN_CHANGE_KEY = "09c1fbf0ad3047fb825e0bc5911528596b7d7f49";
 static const char* const SIDECHAIN_TEST_SCRIPT_HEX = "76a914497f7d6b59281591c50b5e82fb4730adf0fbc10988ac";
 
-static const bool DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK = true;
+static const bool DEFAULT_VERIFY_WITHDRAWAL_BUNDLE_ACCEPT_BLOCK = true;
 
 extern BMMCache bmmCache;
 
@@ -437,24 +437,24 @@ void UpdateUncommittedBlockStructures(CBlock& block, const CBlockIndex* pindexPr
 /** Produce the necessary coinbase commitment for a block (modifies the hash, don't call for mined blocks). */
 std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBlockIndex* pindexPrev, const Consensus::Params& consensusParams);
 
-/** Produce WT^ status commitment for a block */
-CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime);
-CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime);
+/** Produce withdrawal bundle status commitment for a block */
+CScript GenerateWithdrawalBundleFailCommit(const uint256& hashWithdrawalBundle);
+CScript GenerateWithdrawalBundleSpentCommit(const uint256& hashWithdrawalBundle);
 
-/** Produce WT refund request */
-CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig);
+/** Produce withdrawal refund request */
+CScript GenerateWithdrawalRefundRequest(const uint256& id, const std::vector<unsigned char>& vchSig);
 
 /** Produce prev block commit (prev mainchain & prev sidechain block hash) */
 CScript GeneratePrevBlockCommit(const uint256& hashPrevMain, const uint256& hashPrevSide);
 
-/** Produce current WT^ hash commit */
-CScript GenerateWTPrimeHashCommit(const uint256& hashWTPrime);
+/** Produce current Withdrawal Bundle hash commit */
+CScript GenerateWithdrawalBundleHashCommit(const uint256& hashWithdrawalBundle);
 
 /** Produce block version commit */
 CScript GenerateBlockVersionCommit(const int32_t nVersion);
 
-/** Verify the status of WT to refund & check refund signature */
-bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, SidechainWT& wt);
+/** Verify the status of withdrawal to refund & check refund signature */
+bool VerifyWithdrawalRefundRequest(const uint256& id, const std::vector<unsigned char>& vchSig, SidechainWithdrawal& withdrawal);
 
 /** RAII wrapper for VerifyDB: Verify consistency of the block and coin databases */
 class CVerifyDB {
@@ -537,22 +537,22 @@ void DumpMainBlockCache();
 /** Load the cache of mainchain block hashes from disk */
 void LoadMainBlockCache();
 
-/** Dump the cache of users WT IDs */
-void DumpWTIDCache();
+/** Dump the cache of users withdrawal IDs */
+void DumpWithdrawalIDCache();
 
-/** Read the cache of users WT IDs */
-void LoadWTIDCache();
+/** Read the cache of users withdrawal IDs */
+void LoadWithdrawalIDCache();
 
-/** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck = false, bool fCheckUnique = false);
+/** Create joined Withdrawal Bundle to be sent to the mainchain */
+bool CreateWithdrawalBundleTx(int nHeight, CTransactionRef& withdrawalBundleTx, CTransactionRef& withdrawalBundleDataTx, bool fReplicationCheck = false, bool fCheckUnique = false);
 
 /**
- * If there are any WT^(s) (note the limit per block is 1) verify it, and
- * optionally replicate it. This function will return by reference a vector of
- * wt(s) spent by the WT^ if it has been validated - so that ConnectBlock can
- * update their status
+ * If there are any Withdrawal Bundle (s) (note the limit per block is 1) verify
+ * it, and optionally replicate it. This function will return by reference a
+ * vector of withdrawals spent by the Withdrawal Bundle if it has been validated
+ * so that ConnectBlock can update their status.
  */
-bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate = false);
+bool VerifyWithdrawalBundles(std::string& strFail, int nHeight, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWithdrawal>& vWithdrawal, uint256& hashWithdrawalBundle, uint256& hashWithdrawalBundleID, bool fReplicate = false);
 
 /** Sort deposits by CTIP spend order */
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);
@@ -578,10 +578,10 @@ bool VerifyMainBlockCache(std::string& strError);
 /** Disconnect blocks with a BMM commit from an orphan mainchain block */
 void HandleMainchainReorg(const std::vector<uint256>& vOrphan);
 
-CScript EncodeWTFees(const CAmount& amount);
+CScript EncodeWithdrawalFees(const CAmount& amount);
 
-bool DecodeWTFees(const CScript& script, CAmount& amount);
+bool DecodeWithdrawalFees(const CScript& script, CAmount& amount);
 
-uint256 GetWTRefundMessageHash(const uint256& wtid);
+uint256 GetWithdrawalRefundMessageHash(const uint256& id);
 
 #endif // BITCOIN_VALIDATION_H

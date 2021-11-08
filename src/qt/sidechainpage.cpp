@@ -14,9 +14,9 @@
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/sidechainbmmtablemodel.h>
-#include <qt/sidechainwtconfirmationdialog.h>
-#include <qt/sidechainwtprimehistorydialog.h>
-#include <qt/sidechainwttablemodel.h>
+#include <qt/sidechainwithdrawalconfirmationdialog.h>
+#include <qt/sidechainwithdrawalbundlehistorydialog.h>
+#include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/walletmodel.h>
 
 #include <base58.h>
@@ -27,7 +27,7 @@
 #include <init.h>
 #include <miner.h>
 #include <net.h>
-#include <policy/wtprime.h>
+#include <policy/withdrawalbundle.h>
 #include <primitives/block.h>
 #include <sidechain.h>
 #include <sidechainclient.h>
@@ -101,32 +101,32 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     connect(connectionCheckTimer, SIGNAL(timeout()), this, SLOT(CheckConnection()));
     connectionCheckTimer->start(nConnectionCheckInterval);
 
-    // Initialize pending WT table model
-    unspentWTModel = new SidechainWTTableModel(this);
+    // Initialize pending Withdrawaltable model
+    unspentWTModel = new SidechainWithdrawalTableModel(this);
 
     // Initialize BMM table model;
     bmmModel = new SidechainBMMTableModel(this);
 
-    // Pending WT table custom context menu
+    // Pending Withdrawaltable custom context menu
 
     ui->tableViewUnspentWT->setContextMenuPolicy(Qt::CustomContextMenu);
 
     wtContextMenu = new QMenu(this);
     wtContextMenu->setObjectName("wtContextMenu");
 
-    copyWTIDAction = new QAction(tr("Copy Withdrawal ID"), this);
-    wtRefundAction = new QAction(tr("Cancel Withdrawal"), this);
+    copyWITHDRAWALIDAction = new QAction(tr("Copy Withdrawal ID"), this);
+    withdrawalRefundAction = new QAction(tr("Cancel Withdrawal"), this);
 
-    wtContextMenu->addAction(copyWTIDAction);
-    wtContextMenu->addAction(wtRefundAction);
+    wtContextMenu->addAction(copyWITHDRAWALIDAction);
+    wtContextMenu->addAction(withdrawalRefundAction);
 
     connect(ui->tableViewUnspentWT, SIGNAL(customContextMenuRequested(QPoint)), this,
             SLOT(WTContextMenu(QPoint)));
-    connect(copyWTIDAction, SIGNAL(triggered()), this, SLOT(CopyWTID()));
-    connect(wtRefundAction, SIGNAL(triggered()), this, SLOT(RequestRefund()));
+    connect(copyWITHDRAWALIDAction, SIGNAL(triggered()), this, SLOT(CopyWITHDRAWALID()));
+    connect(withdrawalRefundAction, SIGNAL(triggered()), this, SLOT(RequestRefund()));
 
-    // WT confirmation dialog
-    wtConfDialog = new SidechainWTConfirmationDialog(this);
+    // Withdrawalconfirmation dialog
+    wtConfDialog = new SidechainWithdrawalConfirmationDialog(this);
 
     // Table style
 
@@ -169,7 +169,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->tableWidgetWTs->setWordWrap(false);
     ui->tableViewUnspentWT->setWordWrap(false);
 
-    // Set unspent WT table model
+    // Set unspent Withdrawaltable model
     ui->tableViewUnspentWT->setModel(unspentWTModel);
 
     // Set BMM table model
@@ -192,8 +192,8 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->lineEditDepositAddress->setText(QString::fromStdString(strAddress));
     generateQR(strAddress);
 
-    connect(ui->checkBoxAutoWTPrimeRefresh, SIGNAL(stateChanged(int)), this,
-            SLOT(on_checkBoxAutoWTPrimeRefresh_changed(int)));
+    connect(ui->checkBoxAutoWithdrawalBundleRefresh, SIGNAL(stateChanged(int)), this,
+            SLOT(on_checkBoxAutoWithdrawalBundleRefresh_changed(int)));
 
     // Set the fee label
     QString strFee = "Note: this sidechain will collect its own fee of: ";
@@ -224,15 +224,15 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->feeAmount->setValue(0);
     ui->mainchainFeeAmount->setValue(0);
 
-    // Initialize WT^ history dialog. We want users to be able to keep
+    // Initialize WithdrawalBundle history dialog. We want users to be able to keep
     // this window open while using the rest of the software.
-    wtPrimeHistoryDialog = new SidechainWTPrimeHistoryDialog();
-    wtPrimeHistoryDialog->setParent(this, Qt::Window);
+    withdrawalBundleHistoryDialog = new SidechainWithdrawalBundleHistoryDialog();
+    withdrawalBundleHistoryDialog->setParent(this, Qt::Window);
 
-    connect(wtPrimeHistoryDialog, SIGNAL(doubleClickedWTPrime(uint256)),
-            this, SLOT(on_wtPrime_doubleClicked(uint256)));
+    connect(withdrawalBundleHistoryDialog, SIGNAL(doubleClickedWithdrawalBundle(uint256)),
+            this, SLOT(on_withdrawalBundle_doubleClicked(uint256)));
 
-    // Update the total WT amount when withdrawal values are changed
+    // Update the total Withdrawalamount when withdrawal values are changed
     connect(ui->payAmount, SIGNAL(valueChanged()),
             this, SLOT(UpdateWTTotal()));
     connect(ui->feeAmount, SIGNAL(valueChanged()),
@@ -278,7 +278,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->tabWidgetTransfer->setTabIcon(0, platformStyle->SingleColorIcon(":/icons/left"));
     ui->tabWidgetTransfer->setTabIcon(1, platformStyle->SingleColorIcon(":/icons/right"));
 
-    // Setup the total WT amount line edit
+    // Setup the total Withdrawalamount line edit
     ui->lineEditTotalWT->setValue(CAmount(0));
     ui->lineEditTotalWT->setDisplayMode();
 }
@@ -320,7 +320,7 @@ void SidechainPage::generateQR(std::string data)
 void SidechainPage::setWalletModel(WalletModel *model)
 {
     walletModel = model;
-    wtPrimeHistoryDialog->setWalletModel(model);
+    withdrawalBundleHistoryDialog->setWalletModel(model);
     unspentWTModel->setWalletModel(model);
     bmmModel->setWalletModel(model);
     if (model && model->getOptionsModel())
@@ -328,14 +328,14 @@ void SidechainPage::setWalletModel(WalletModel *model)
         connect(model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)), this,
                 SLOT(setBalance(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)));
 
-        // Also set the WT^ explorer to the latest WT^. We don't do this in the
+        // Also set the WithdrawalBundle explorer to the latest WithdrawalBundle. We don't do this in the
         // constructor because it depends on having the wallet model set.
-        UpdateToLatestWTPrime(false /* fRequested */);
+        UpdateToLatestWithdrawalBundle(false /* fRequested */);
 
         // Set the sidechain wealth, which also requires the wallet model
         UpdateSidechainWealth();
 
-        // Set WT total to 0, formatting requires wallet model -> options model
+        // Set Withdrawaltotal to 0, formatting requires wallet model -> options model
         UpdateWTTotal();
 
         connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
@@ -346,7 +346,7 @@ void SidechainPage::setWalletModel(WalletModel *model)
 void SidechainPage::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
-    wtPrimeHistoryDialog->setClientModel(model);
+    withdrawalBundleHistoryDialog->setClientModel(model);
     unspentWTModel->setClientModel(model);
     if (model)
     {
@@ -374,79 +374,79 @@ void SidechainPage::setNumBlocks(const int nBlocksIn)
 
     nBlocks = nBlocksIn;
 
-    // Check on updates to current / next WT^
+    // Check on updates to current / next WithdrawalBundle
 
     uint256 hashLatest;
-    if (!psidechaintree->GetLastWTPrimeHash(hashLatest)) {
+    if (!psidechaintree->GetLastWithdrawalBundleHash(hashLatest)) {
         // Update the next bundle label on the transfer tab
         ui->labelNextBundle->setText("Waiting for withdrawals.");
 
-        // If there hasn't been a WT^ created yet, display message on banner
-        QString str = "WT^: None yet. Waiting for withdrawals.";
-        Q_EMIT WTPrimeBannerUpdate(str);
+        // If there hasn't been a WithdrawalBundle created yet, display message on banner
+        QString str = "WithdrawalBundle: None yet. Waiting for withdrawals.";
+        Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
 
     if (hashLatest.IsNull()) {
         ui->labelNextBundle->setText("Waiting for withdrawals.");
-        QString str = "WT^: None yet. Waiting for withdrawals.";
-        Q_EMIT WTPrimeBannerUpdate(str);
+        QString str = "WithdrawalBundle: None yet. Waiting for withdrawals.";
+        Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
 
-    SidechainWTPrime wtPrime;
-    if (!psidechaintree->GetWTPrime(hashLatest, wtPrime)) {
+    SidechainWithdrawalBundle withdrawalBundle;
+    if (!psidechaintree->GetWithdrawalBundle(hashLatest, withdrawalBundle)) {
         ui->labelNextBundle->setText("Error...");
 
-        QString str = "WT^: Error...";
-        Q_EMIT WTPrimeBannerUpdate(str);
+        QString str = "WithdrawalBundle: Error...";
+        Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
 
-    // Update UI to the latest WT^ if wanted
-    if (ui->checkBoxAutoWTPrimeRefresh->isChecked()) {
-        // Update to the current WT^
-        SetCurrentWTPrime(hashLatest.ToString(), false);
+    // Update UI to the latest WithdrawalBundle if wanted
+    if (ui->checkBoxAutoWithdrawalBundleRefresh->isChecked()) {
+        // Update to the current WithdrawalBundle
+        SetCurrentWithdrawalBundle(hashLatest.ToString(), false);
     }
 
-    if (wtPrime.status == WTPRIME_FAILED) {
-        // If the last WT^ failed, display how many blocks should be remaining
-        // in the cool down period before the next WT^
-        int nWaitPeriod = WTPRIME_FAIL_WAIT_PERIOD - (nBlocksIn - wtPrime.nFailHeight);
+    if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_FAILED) {
+        // If the last WithdrawalBundle failed, display how many blocks should be remaining
+        // in the cool down period before the next WithdrawalBundle
+        int nWaitPeriod = WITHDRAWAL_BUNDLE_FAIL_WAIT_PERIOD - (nBlocksIn - withdrawalBundle.nFailHeight);
         if (nWaitPeriod < 0)
             nWaitPeriod = 0;
 
         ui->labelNextBundle->setText(QString::number(nWaitPeriod) + " blocks.");
 
         QString str;
-        str = "WT^: None right now. Next in: ";
+        str = "WithdrawalBundle: None right now. Next in: ";
         str += QString::number(nWaitPeriod);
         str += " blocks.";
-        Q_EMIT WTPrimeBannerUpdate(str);
+        Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
     else
-    if (wtPrime.status == WTPRIME_SPENT) {
+    if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_SPENT) {
         ui->labelNextBundle->setText("Waiting for withdrawals.");
-        QString str = "WT^: None right now. Waiting for withdrawals.";
-        Q_EMIT WTPrimeBannerUpdate(str);
+        QString str = "WithdrawalBundle: None right now. Waiting for withdrawals.";
+        Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
     else
-    if (wtPrime.status == WTPRIME_CREATED) {
-        // If the WT^ has created status, display the required work score minus
+    if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_CREATED) {
+        // If the WithdrawalBundle has created status, display the required work score minus
         // the current work score.
         SidechainClient client;
         int nWorkScore = 0;
         if (client.GetWorkScore(hashLatest, nWorkScore)) {
-            ui->labelNextBundle->setText(QString::number(MAINCHAIN_WTPRIME_MIN_WORKSCORE - nWorkScore) + " blocks.");
+            ui->labelNextBundle->setText(QString::number(MAINCHAIN_WITHDRAWAL_BUNDLE_MIN_WORKSCORE - nWorkScore) + " blocks.");
         } else {
             ui->labelNextBundle->setText(QString::number(nWorkScore) + " blocks.");
         }
 
-        QString strBanner = "WT^: ";
+        QString strBanner = "WithdrawalBundle: ";
         strBanner += QString::fromStdString(hashLatest.ToString());
-        Q_EMIT WTPrimeBannerUpdate(strBanner);
+        Q_EMIT WithdrawalBundleBannerUpdate(strBanner);
         return;
     }
 }
@@ -475,7 +475,7 @@ void SidechainPage::on_pushButtonNew_clicked()
     generateQR(strAddress);
 }
 
-void SidechainPage::on_pushButtonWT_clicked()
+void SidechainPage::on_pushButtonWITHDRAWAL_clicked()
 {
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
@@ -496,7 +496,7 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
-    // Check WT amount
+    // Check Withdrawalamount
     if (!validateWTAmount()) {
         // Invalid withdrawal amount message box
         messageBox.setWindowTitle("Invalid withdrawal amount!");
@@ -535,7 +535,7 @@ void SidechainPage::on_pushButtonWT_clicked()
     }
 
     // Generate refund destination
-    std::string strRefundDest = GenerateAddress("WT Refund");
+    std::string strRefundDest = GenerateAddress("WithdrawalRefund");
     CTxDestination refundDest = DecodeDestination(strRefundDest, false);
     if (!IsValidDestination(refundDest)) {
         // Invalid address message box
@@ -554,7 +554,7 @@ void SidechainPage::on_pushButtonWT_clicked()
     QString strFeeAmount = BitcoinUnits::formatWithMainchainUnit(unit, feeAmount, false, BitcoinUnits::separatorAlways);
     QString strMcFeeAmount = BitcoinUnits::formatWithMainchainUnit(unit, mainchainFeeAmount, false, BitcoinUnits::separatorAlways);
 
-    // Show the WT confirmation dialog and check results before executing
+    // Show the Withdrawalconfirmation dialog and check results before executing
     wtConfDialog->SetInfo(strWTAmount, strFeeAmount, strMcFeeAmount, QString::fromStdString(strDest), QString::fromStdString(strRefundDest));
     wtConfDialog->exec();
     if (!wtConfDialog->GetConfirmed())
@@ -563,9 +563,9 @@ void SidechainPage::on_pushButtonWT_clicked()
     std::string strError = "";
     uint256 txid;
     uint256 wtid;
-    if (!vpwallets[0]->CreateWT(burnAmount, feeAmount, mainchainFeeAmount, strDest, strRefundDest, strError, txid, wtid)) {
+    if (!vpwallets[0]->CreateWithdrawal(burnAmount, feeAmount, mainchainFeeAmount, strDest, strRefundDest, strError, txid, wtid)) {
         // Create burn transaction error message box
-        messageBox.setWindowTitle("Creating withdraw transaction failed!");
+        messageBox.setWindowTitle("Creating withdrawal transaction failed!");
         QString createError = "Error creating transaction: ";
         createError += QString::fromStdString(strError);
         createError += "\n";
@@ -574,11 +574,11 @@ void SidechainPage::on_pushButtonWT_clicked()
         return;
     }
 
-    // Cache users WT ID
-    bmmCache.CacheWTID(wtid);
+    // Cache users WithdrawalID
+    bmmCache.CacheWithdrawalID(wtid);
 
     // Successful withdraw message box
-    messageBox.setWindowTitle("Withdraw transaction created!");
+    messageBox.setWindowTitle("Withdrawal transaction created!");
     QString result = "txid: " + QString::fromStdString(txid.ToString());
     result += "\n";
     result += "Amount withdrawn: ";
@@ -587,24 +587,24 @@ void SidechainPage::on_pushButtonWT_clicked()
     messageBox.exec();
 }
 
-void SidechainPage::on_checkBoxAutoWTPrimeRefresh_changed(int state)
+void SidechainPage::on_checkBoxAutoWithdrawalBundleRefresh_changed(int state)
 {
     if (state == Qt::Checked) {
-        UpdateToLatestWTPrime();
+        UpdateToLatestWithdrawalBundle();
     }
 }
 
-void SidechainPage::on_wtPrime_doubleClicked(uint256 hashWTPrime)
+void SidechainPage::on_withdrawalBundle_doubleClicked(uint256 hashWithdrawalBundle)
 {
-    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
-    SetCurrentWTPrime(hashWTPrime.ToString(), true);
+    ui->checkBoxAutoWithdrawalBundleRefresh->setChecked(false);
+    SetCurrentWithdrawalBundle(hashWithdrawalBundle.ToString(), true);
 }
 
-void SidechainPage::on_lineEditWTPrimeHash_returnPressed()
+void SidechainPage::on_lineEditWithdrawalBundleHash_returnPressed()
 {
-    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
-    std::string strHash = ui->lineEditWTPrimeHash->text().toStdString();
-    SetCurrentWTPrime(strHash);
+    ui->checkBoxAutoWithdrawalBundleRefresh->setChecked(false);
+    std::string strHash = ui->lineEditWithdrawalBundleHash->text().toStdString();
+    SetCurrentWithdrawalBundle(strHash);
 }
 
 void SidechainPage::UpdateWTTotal()
@@ -928,15 +928,15 @@ void SidechainPage::on_pushButtonRetryConnection_clicked()
     UpdateNetworkActive(fConnection);
 }
 
-void SidechainPage::on_pushButtonShowLatestWTPrime_clicked()
+void SidechainPage::on_pushButtonShowLatestWithdrawalBundle_clicked()
 {
-    ui->checkBoxAutoWTPrimeRefresh->setChecked(false);
-    UpdateToLatestWTPrime();
+    ui->checkBoxAutoWithdrawalBundleRefresh->setChecked(false);
+    UpdateToLatestWithdrawalBundle();
 }
 
-void SidechainPage::on_pushButtonShowPastWTPrimes_clicked()
+void SidechainPage::on_pushButtonShowPastWithdrawalBundles_clicked()
 {
-    wtPrimeHistoryDialog->show();
+    withdrawalBundleHistoryDialog->show();
 }
 
 void SidechainPage::UpdateNetworkActive(bool fMainchainConnected)
@@ -1007,7 +1007,7 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     UpdateNetworkActive(fConnection);
 }
 
-void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequested)
+void SidechainPage::SetCurrentWithdrawalBundle(const std::string& strHash, bool fRequested)
 {
     if (!walletModel)
         return;
@@ -1015,7 +1015,7 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     // If the user didn't request this update (fRequested) themselves, don't
     // show error messages
 
-    ClearWTPrimeExplorer();
+    ClearWithdrawalBundleExplorer();
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
 
@@ -1025,22 +1025,22 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
             QMessageBox messageBox;
             messageBox.setDefaultButton(QMessageBox::Ok);
 
-            messageBox.setWindowTitle("Invalid WT^ hash");
-            messageBox.setText("The WT^ hash you have entered is invalid.");
+            messageBox.setWindowTitle("Invalid WithdrawalBundle hash");
+            messageBox.setText("The WithdrawalBundle hash you have entered is invalid.");
             messageBox.exec();
         }
         return;
     }
 
-    // Try to lookup the WT^
-    SidechainWTPrime wtPrime;
-    if (!psidechaintree->GetWTPrime(hash, wtPrime)) {
+    // Try to lookup the WithdrawalBundle
+    SidechainWithdrawalBundle withdrawalBundle;
+    if (!psidechaintree->GetWithdrawalBundle(hash, withdrawalBundle)) {
         if (fRequested) {
             QMessageBox messageBox;
             messageBox.setDefaultButton(QMessageBox::Ok);
 
-            messageBox.setWindowTitle("Failed to lookup WT^");
-            messageBox.setText("Could not locate specified WT^ in the database.");
+            messageBox.setWindowTitle("Failed to lookup WithdrawalBundle");
+            messageBox.setText("Could not locate specified WithdrawalBundle in the database.");
             messageBox.exec();
         }
         return;
@@ -1048,19 +1048,19 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
 
     QString qHash = QString::fromStdString(strHash);
 
-    // Set the line edit to the current WT^ hash
-    ui->lineEditWTPrimeHash->setText(qHash);
-    ui->lineEditWTPrimeHash->setCursorPosition(0);
+    // Set the line edit to the current WithdrawalBundle hash
+    ui->lineEditWithdrawalBundleHash->setText(qHash);
+    ui->lineEditWithdrawalBundleHash->setCursorPosition(0);
 
-    // Set number of WT outputs
-    ui->labelNumWT->setText(QString::number(wtPrime.vWT.size()));
+    // Set number of Withdrawaloutputs
+    ui->labelNumWT->setText(QString::number(withdrawalBundle.vWithdrawalID.size()));
 
-    // If the WT^ has WTPRIME_CREATED status, it should be being acked
+    // If the WithdrawalBundle has WITHDRAWAL_BUNDLE_CREATED status, it should be being acked
     // by the mainchain (if it's already made it there). Try to request
-    // the workscore and display it on the WT^ explorer if we can.
+    // the workscore and display it on the WithdrawalBundle explorer if we can.
     bool fWorkScore = false;
     int nWorkScore = 0;
-    if (wtPrime.status == WTPRIME_CREATED) {
+    if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_CREATED) {
         // Try to request the workscore
         SidechainClient client;
         if (client.GetWorkScore(hash, nWorkScore)) {
@@ -1069,22 +1069,22 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     }
 
     QString qStatus = "";
-    if (wtPrime.status == WTPRIME_CREATED) {
+    if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_CREATED) {
         qStatus = "Created";
 
         if (fWorkScore) {
             qStatus = QString::number(nWorkScore);
             qStatus += " / ";
-            qStatus += QString::number(MAINCHAIN_WTPRIME_MIN_WORKSCORE);
+            qStatus += QString::number(MAINCHAIN_WITHDRAWAL_BUNDLE_MIN_WORKSCORE);
             qStatus += " ACK(s)";
         }
     }
     else
-    if (wtPrime.status == WTPRIME_FAILED) {
+    if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_FAILED) {
         qStatus = "Failed";
     }
     else
-    if (wtPrime.status == WTPRIME_SPENT) {
+    if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_SPENT) {
         qStatus = "Spent";
     }
 
@@ -1094,18 +1094,18 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     // Add WTs to the table view
     CAmount amountTotal = 0;
     CAmount amountMainchainFees = 0;
-    for (const uint256& id : wtPrime.vWT) {
-        SidechainWT wt;
-        if (!psidechaintree->GetWT(id, wt)) {
+    for (const uint256& id : withdrawalBundle.vWithdrawalID) {
+        SidechainWithdrawal wt;
+        if (!psidechaintree->GetWithdrawal(id, wt)) {
             if (fRequested) {
                 QMessageBox messageBox;
                 messageBox.setDefaultButton(QMessageBox::Ok);
 
-                messageBox.setWindowTitle("Failed to lookup WT in WT^");
-                messageBox.setText("For the specified WT^, one of the WT could not be located in the database.");
+                messageBox.setWindowTitle("Failed to lookup withdrawal from bundle");
+                messageBox.setText("For the specified Withdrawal Bundle, one of the withdrawals could not be located in the database.");
                 messageBox.exec();
             }
-            ClearWTPrimeExplorer();
+            ClearWithdrawalBundleExplorer();
             return;
         }
 
@@ -1154,15 +1154,15 @@ void SidechainPage::SetCurrentWTPrime(const std::string& strHash, bool fRequeste
     ui->labelTotalFees->setText(fees);
 
     // Set block height
-    ui->labelBlockHeight->setText(QString::number(wtPrime.nHeight));
+    ui->labelBlockHeight->setText(QString::number(withdrawalBundle.nHeight));
 
     // Set transaction size
-    int64_t sz = GetTransactionWeight(wtPrime.wtPrime);
+    int64_t sz = GetTransactionWeight(withdrawalBundle.tx);
 
     QString size;
     size += QString::number(sz);
     size += " / ";
-    size += QString::number(MAX_WTPRIME_WEIGHT);
+    size += QString::number(MAX_WITHDRAWAL_BUNDLE_WEIGHT);
     size += " wBytes";
 
     ui->labelTotalSize->setText(size);
@@ -1207,7 +1207,7 @@ void SidechainPage::CheckConnection()
     }
 }
 
-void SidechainPage::ClearWTPrimeExplorer()
+void SidechainPage::ClearWithdrawalBundleExplorer()
 {
     ui->tableWidgetWTs->setRowCount(0);
     ui->labelNumWT->setText(QString::number(0));
@@ -1246,13 +1246,13 @@ void SidechainPage::UpdateSidechainWealth()
     ui->tabWidgetMain->setTabText(4, label);
 }
 
-void SidechainPage::UpdateToLatestWTPrime(bool fRequested)
+void SidechainPage::UpdateToLatestWithdrawalBundle(bool fRequested)
 {
     uint256 hashLatest;
-    if (!psidechaintree->GetLastWTPrimeHash(hashLatest))
+    if (!psidechaintree->GetLastWithdrawalBundleHash(hashLatest))
         return;
 
-    SetCurrentWTPrime(hashLatest.ToString(), fRequested);
+    SetCurrentWithdrawalBundle(hashLatest.ToString(), fRequested);
 }
 
 void SidechainPage::updateDisplayUnit()
@@ -1289,15 +1289,15 @@ void SidechainPage::WTContextMenu(const QPoint& point)
         return;
 
     if (index.isValid()) {
-        bool fMine = selection.at(0).data(SidechainWTTableModel::IsMineRole).toBool();
-        wtRefundAction->setEnabled(fMine);
+        bool fMine = selection.at(0).data(SidechainWithdrawalTableModel::IsMineRole).toBool();
+        withdrawalRefundAction->setEnabled(fMine);
         wtContextMenu->popup(ui->tableViewUnspentWT->viewport()->mapToGlobal(point));
     }
 }
 
-void SidechainPage::CopyWTID()
+void SidechainPage::CopyWITHDRAWALID()
 {
-    GUIUtil::copyEntryData(ui->tableViewUnspentWT, 0, SidechainWTTableModel::WTIDRole);
+    GUIUtil::copyEntryData(ui->tableViewUnspentWT, 0, SidechainWithdrawalTableModel::WITHDRAWALIDRole);
 }
 
 void SidechainPage::RequestRefund()
@@ -1309,9 +1309,9 @@ void SidechainPage::RequestRefund()
     if (selection.empty())
         return;
 
-    // Get the WT ID from the model
+    // Get the WithdrawalID from the model
     uint256 wtID;
-    wtID.SetHex(selection.at(0).data(SidechainWTTableModel::WTIDRole).toString().toStdString());
+    wtID.SetHex(selection.at(0).data(SidechainWithdrawalTableModel::WITHDRAWALIDRole).toString().toStdString());
 
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
@@ -1321,7 +1321,7 @@ void SidechainPage::RequestRefund()
     if (vpwallets.empty()) {
         // No active wallet message box
         messageBox.setWindowTitle("No active wallet found!");
-        messageBox.setText("You must have an active wallet to request a WT refund.");
+        messageBox.setText("You must have an active wallet to request a Withdrawalrefund.");
         messageBox.exec();
         return;
     }
@@ -1334,18 +1334,18 @@ void SidechainPage::RequestRefund()
     }
 
     // Get WT
-    SidechainWT wt;
-    if (!psidechaintree->GetWT(wtID, wt)) {
+    SidechainWithdrawal wt;
+    if (!psidechaintree->GetWithdrawal(wtID, wt)) {
         messageBox.setWindowTitle("Failed to look up WT!");
         messageBox.setText("Specified withdrawal not found in database.");
         messageBox.exec();
         return;
     }
 
-    // Check WT status
-    if (wt.status != WT_UNSPENT) {
-        messageBox.setWindowTitle("Invalid WT status!");
-        messageBox.setText("WT must be unspent to refund.");
+    // Check Withdrawalstatus
+    if (wt.status != WITHDRAWAL_UNSPENT) {
+        messageBox.setWindowTitle("Invalid Withdrawalstatus!");
+        messageBox.setText("Withdrawalmust be unspent to refund.");
         messageBox.exec();
         return;
     }
@@ -1375,7 +1375,7 @@ void SidechainPage::RequestRefund()
     confirmMessage.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     confirmMessage.setDefaultButton(QMessageBox::Cancel);
     confirmMessage.setIcon(QMessageBox::Information);
-    confirmMessage.setWindowTitle("Confirm WT Refund Request");
+    confirmMessage.setWindowTitle("Confirm WithdrawalRefund Request");
     QString refundMessage = "This will create a refund request for your withdrawal.\n\n";
     refundMessage += BitcoinUnits::formatWithUnit(unit, wt.amount, false, BitcoinUnits::separatorAlways);
     refundMessage += " will be refunded to your refund address:\n\n";
@@ -1403,7 +1403,7 @@ void SidechainPage::RequestRefund()
     }
 
     // Get refund message hash
-    uint256 hashMessage = GetWTRefundMessageHash(wtID);
+    uint256 hashMessage = GetWithdrawalRefundMessageHash(wtID);
 
     // Sign refund message hash
     std::vector<unsigned char> vchSig;
@@ -1416,7 +1416,7 @@ void SidechainPage::RequestRefund()
 
     std::string strFail = "";
     uint256 txid;
-    if (!vpwallets[0]->CreateWTRefundRequest(wtID, vchSig, strFail, txid)) {
+    if (!vpwallets[0]->CreateWithdrawalRefundRequest(wtID, vchSig, strFail, txid)) {
         // Create refund transaction error message box
         messageBox.setWindowTitle("Creating refund request failed!");
         QString error = "Error creating transaction: ";
@@ -1428,8 +1428,8 @@ void SidechainPage::RequestRefund()
     }
 
     // TODO cache refund request?
-    // Cache users WT ID
-    //bmmCache.CacheWTID(wtid);
+    // Cache users WithdrawalID
+    //bmmCache.CacheWITHDRAWALID(wtid);
 
     // Successful refund request message box
     messageBox.setWindowTitle("Refund request created!");

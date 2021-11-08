@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_SIDECHAINWTTABLEMODEL_H
-#define BITCOIN_SIDECHAINWTTABLEMODEL_H
+#ifndef BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLETABLEMODEL_H
+#define BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLETABLEMODEL_H
 
 #include <amount.h>
 #include <uint256.h>
@@ -29,17 +29,17 @@ struct WTTableObject
     bool fMine;
 };
 
-class SidechainWTTableModel : public QAbstractTableModel
+class SidechainWithdrawalTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 
 public:
-    explicit SidechainWTTableModel(QObject *parent = 0);
+    explicit SidechainWithdrawalTableModel(QObject *parent = 0);
 
     enum RoleIndex {
-        /** WT ID */
-        WTIDRole = Qt::UserRole,
-        /** Is WT Mine? */
+        /** WithdrawalID */
+        WITHDRAWALIDRole = Qt::UserRole,
+        /** Is WithdrawalMine? */
         IsMineRole,
     };
 
@@ -65,4 +65,4 @@ private:
     bool fOnlyMyWTs;
 };
 
-#endif // BITCOIN_SIDECHAINWTTABLEMODEL_H
+#endif // BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLETABLEMODEL_H

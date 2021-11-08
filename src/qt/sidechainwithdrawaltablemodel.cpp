@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <qt/sidechainwttablemodel.h>
+#include <qt/sidechainwithdrawaltablemodel.h>
 
 #include <QBrush>
 #include <QColor>
@@ -16,14 +16,14 @@
 
 #include <bmmcache.h>
 #include <consensus/validation.h>
-#include <policy/wtprime.h>
+#include <policy/withdrawalbundle.h>
 #include <sidechain.h>
 #include <txdb.h>
 #include <validation.h>
 
 Q_DECLARE_METATYPE(WTTableObject)
 
-SidechainWTTableModel::SidechainWTTableModel(QObject *parent) :
+SidechainWithdrawalTableModel::SidechainWithdrawalTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
     fOnlyMyWTs = false;
@@ -31,17 +31,17 @@ SidechainWTTableModel::SidechainWTTableModel(QObject *parent) :
     connect(parent, SIGNAL(OnlyMyWTsToggled(bool)), this, SLOT(SetOnlyMyWTs(bool)));
 }
 
-int SidechainWTTableModel::rowCount(const QModelIndex & /*parent*/) const
+int SidechainWithdrawalTableModel::rowCount(const QModelIndex & /*parent*/) const
 {
     return model.size();
 }
 
-int SidechainWTTableModel::columnCount(const QModelIndex & /*parent*/) const
+int SidechainWithdrawalTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
     return 4;
 }
 
-QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
+QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role) const
 {
     if (!walletModel)
         return false;
@@ -53,7 +53,7 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
     int col = index.column();
 
     // Double check that the data pointed at by the index still exists, it is
-    // possible for a WT to be removed from the model when a block is connected.
+    // possible for a Withdrawalto be removed from the model when a block is connected.
     if (row >= model.size())
         return QVariant();
 
@@ -83,12 +83,12 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
         if (col == 2) {
             return object.destination;
         }
-        // Cumulative size of WT^ up to this WT output being added
+        // Cumulative size of WithdrawalBundle up to this Withdrawaloutput being added
         if (col == 3) {
             QString weight;
             weight += QString::number(object.nCumulativeWeight);
             weight += " / ";
-            weight += QString::number(MAX_WTPRIME_WEIGHT);
+            weight += QString::number(MAX_WITHDRAWAL_BUNDLE_WEIGHT);
             return weight;
         }
 
@@ -96,9 +96,9 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
     }
     case Qt::BackgroundRole:
     {
-        // Highlight WT(s) with cumulative weight > MAX_WTPRIME_WEIGHT to
-        // indicate that they are not going to be included in the next WT^
-        if (object.nCumulativeWeight > MAX_WTPRIME_WEIGHT) {
+        // Highlight WT(s) with cumulative weight > MAX_WITHDRAWAL_BUNDLE_WEIGHT
+        // to indicate that they are not going to be included in the next bundle
+        if (object.nCumulativeWeight > MAX_WITHDRAWAL_BUNDLE_WEIGHT) {
             // Semi-transparent red
             return QBrush(QColor(255, 40, 0, 180));
         }
@@ -118,12 +118,12 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
         if (col == 2) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // Cumulative size of WT^ up to this WT output being added
+        // Cumulative size of WithdrawalBundle up to this Withdrawaloutput being added
         if (col == 3) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
-    case WTIDRole:
+    case WITHDRAWALIDRole:
         return QString::fromStdString(object.id.ToString());
     case IsMineRole:
         return object.fMine;
@@ -131,7 +131,7 @@ QVariant SidechainWTTableModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-QVariant SidechainWTTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant SidechainWithdrawalTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role == Qt::DisplayRole) {
         if (orientation == Qt::Horizontal) {
@@ -143,53 +143,53 @@ QVariant SidechainWTTableModel::headerData(int section, Qt::Orientation orientat
             case 2:
                 return QString("Destination");
             case 3:
-                return QString("Cumulative WT^ Weight");
+                return QString("Cumulative WithdrawalBundle Weight");
             }
         }
     }
     return QVariant();
 }
 
-void SidechainWTTableModel::UpdateModel()
+void SidechainWithdrawalTableModel::UpdateModel()
 {
     beginResetModel();
     model.clear();
     endResetModel();
 
-    std::vector<SidechainWT> vWT;
-    vWT = psidechaintree->GetWTs(THIS_SIDECHAIN);
+    std::vector<SidechainWithdrawal> vWT;
+    vWT = psidechaintree->GetWithdrawals(THIS_SIDECHAIN);
 
-    SelectUnspentWT(vWT);
+    SelectUnspentWithdrawal(vWT);
 
     if (vWT.empty())
         return;
 
-    SortWTByFee(vWT);
+    SortWithdrawalByFee(vWT);
 
-    // Create a fake WT^ transaction so that we can estimate the total size of
-    // the WT^. WT(s) in the table after the cumulative size is too large will
+    // Create a fake WithdrawalBundle transaction so that we can estimate the total size of
+    // the WithdrawalBundle. WT(s) in the table after the cumulative size is too large will
     // be highlighted.
     CMutableTransaction wjtx;
-    // Add SIDECHAIN_WTPRIME_RETURN_DEST output
-    wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WTPRIME_RETURN_DEST))));
+    // Add SIDECHAIN_WITHDRAWAL_RETURN_DEST output
+    wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WITHDRAWAL_BUNDLE_RETURN_DEST))));
     // Add a dummy output for mainchain fee encoding
     wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << CScriptNum(1LL << 40)));
     wjtx.nVersion = 2;
     wjtx.vin.resize(1); // Dummy vin for serialization...
     wjtx.vin[0].scriptSig = CScript() << OP_0;
 
-    // Add WT(s) to model & to the fake WT^ transaction to estimate size
+    // Add WT(s) to model & to the fake WithdrawalBundle transaction to estimate size
     //
     // Loop through WTs and calculate TX size, copy WTs that should be displayed
     // (based on fOnlyMyWTs) into vector.
     std::vector<WTTableObject> vWTDisplay;
-    for (const SidechainWT& wt : vWT) {
-        // Add wt output to fake WT^ and calculate size estimate as well as
-        // estimate which WTs will be included in the next WT^
+    for (const SidechainWithdrawal& wt : vWT) {
+        // Add wt output to fake WithdrawalBundle and calculate size estimate as well as
+        // estimate which WTs will be included in the next WithdrawalBundle
         CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
         wjtx.vout.push_back(CTxOut(wt.amount, GetScriptForDestination(dest)));
 
-        // Check if the WT is mine
+        // Check if the Withdrawalis mine
         bool fMine = bmmCache.IsMyWT(wt.GetID());
         if (!fMine && fOnlyMyWTs)
             continue;
@@ -211,18 +211,18 @@ void SidechainWTTableModel::UpdateModel()
     endInsertRows();
 }
 
-void SidechainWTTableModel::SetOnlyMyWTs(bool fChecked)
+void SidechainWithdrawalTableModel::SetOnlyMyWTs(bool fChecked)
 {
     fOnlyMyWTs = fChecked;
     UpdateModel();
 }
 
-void SidechainWTTableModel::setWalletModel(WalletModel *model)
+void SidechainWithdrawalTableModel::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
 }
 
-void SidechainWTTableModel::setClientModel(ClientModel *model)
+void SidechainWithdrawalTableModel::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     if (model)

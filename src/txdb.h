@@ -20,8 +20,8 @@ class CCoinsViewDBCursor;
 class SidechainObj;
 class SidechainDeposit;
 class SidechainTransfer;
-class SidechainWT;
-class SidechainWTPrime;
+class SidechainWithdrawal;
+class SidechainWithdrawalBundle;
 class uint256;
 
 //! No need to periodic flush if at least this much space still available.
@@ -137,22 +137,22 @@ class CSidechainTreeDB : public CDBWrapper
 public:
     CSidechainTreeDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
     bool WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list);
-    bool WriteWTUpdate(const std::vector<SidechainWT>& vWT);
-    bool WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime);
-    bool WriteLastWTPrimeHash(const uint256& hash);
+    bool WriteWithdrawalUpdate(const std::vector<SidechainWithdrawal>& vWithdrawal);
+    bool WriteWithdrawalBundleUpdate(const SidechainWithdrawalBundle& withdrawalBundle);
+    bool WriteLastWithdrawalBundleHash(const uint256& hash);
 
-    bool GetWT(const uint256 & /* WT ID */, SidechainWT &wt);
-    bool GetWTPrime(const uint256 & /* WT^ ID */, SidechainWTPrime &wtPrime);
+    bool GetWithdrawal(const uint256 & /* Withdrawal ID */, SidechainWithdrawal &withdrawal);
+    bool GetWithdrawalBundle(const uint256 & /* Withdrawal Bundle ID */, SidechainWithdrawalBundle &withdrawalBundle);
     bool GetDeposit(const uint256 & /* Deposit ID */, SidechainDeposit &deposit);
     bool HaveDeposits();
     bool HaveDepositNonAmount(const uint256& hashNonAmount);
     bool GetLastDeposit(SidechainDeposit& deposit);
-    bool GetLastWTPrimeHash(uint256& hash);
+    bool GetLastWithdrawalBundleHash(uint256& hash);
 
-    bool HaveWTPrime(const uint256& hashWTPrime) const;
+    bool HaveWithdrawalBundle(const uint256& hashWithdrawalBundle) const;
 
-    std::vector<SidechainWT> GetWTs(const uint8_t & /* nSidechain */);
-    std::vector<SidechainWTPrime> GetWTPrimes(const uint8_t & /* nSidechain */);
+    std::vector<SidechainWithdrawal> GetWithdrawals(const uint8_t & /* nSidechain */);
+    std::vector<SidechainWithdrawalBundle> GetWithdrawalBundles(const uint8_t & /* nSidechain */);
     std::vector<SidechainDeposit> GetDeposits(const uint8_t & /* nSidechain */);
 };
 

@@ -51,18 +51,18 @@ static const std::string SIDECHAIN_BUILD_COMMIT_HASH = "a67a177c615cf2e228ab4027
 //! Sidechain build tar hash
 static const std::string SIDECHAIN_BUILD_TAR_HASH = "15eda1257f8efcfded8a2ccbbdd756b29797f2c7f4174c9ef43d5667ac570374";
 
-//! Required WT^ workscore for mainchain payout
-static const int MAINCHAIN_WTPRIME_MIN_WORKSCORE = 131;
+//! Required workscore for mainchain payout
+static const int MAINCHAIN_WITHDRAWAL_BUNDLE_MIN_WORKSCORE = 131;
 
-//! Minimum number of pooled WT to create new WT^
-static const unsigned int DEFAULT_MIN_WT_CREATE_WTPRIME = 10;
+//! Minimum number of pooled withdrawals to create new bundle
+static const unsigned int DEFAULT_MIN_WITHDRAWAL_CREATE_BUNDLE = 10;
 
 // Temporary testnet value
-static const int WTPRIME_FAIL_WAIT_PERIOD = 20;
-// Real value final release: static const int WTPRIME_FAIL_WAIT_PERIOD = 144;
+static const int WITHDRAWAL_BUNDLE_FAIL_WAIT_PERIOD = 20;
+// Real value final release: static const int WITHDRAWAL_BUNDLE_FAIL_WAIT_PERIOD = 144;
 
-// The destination string for the change of a WT^
-static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
+// The destination string for the change of a bundle
+static const std::string SIDECHAIN_WITHDRAWAL_BUNDLE_RETURN_DEST = "D";
 
 struct Sidechain {
     uint8_t nSidechain;
@@ -72,15 +72,15 @@ struct Sidechain {
     std::string GetSidechainName() const;
 };
 
-//! WT status / zone (unspent, included in a WT^, paid out)
-static const char WT_UNSPENT = 'u';
-static const char WT_IN_WTPRIME = 'p';
-static const char WT_SPENT = 's';
+//! Withdrawal status / zone (unspent, included in a bundle, paid out)
+static const char WITHDRAWAL_UNSPENT = 'u';
+static const char WITHDRAWAL_IN_BUNDLE = 'p';
+static const char WITHDRAWAL_SPENT = 's';
 
-//! WT^ status / zone
-static const char WTPRIME_CREATED = 'c';
-static const char WTPRIME_FAILED = 'f';
-static const char WTPRIME_SPENT = 'o';
+//! Withdrawal Bundle status / zone
+static const char WITHDRAWAL_BUNDLE_CREATED = 'c';
+static const char WITHDRAWAL_BUNDLE_FAILED = 'f';
+static const char WITHDRAWAL_BUNDLE_SPENT = 'o';
 
 //! KeyID for testing
 static const std::string testkey = "b5437dc6a4e5da5597548cf87db009237d286636";
@@ -99,8 +99,8 @@ static const CAmount DEFAULT_CRITICAL_DATA_AMOUNT = 0.0001 * COIN;
 static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 
 static const char DB_SIDECHAIN_DEPOSIT_OP = 'D';
-static const char DB_SIDECHAIN_WT_OP = 'W';
-static const char DB_SIDECHAIN_WTPRIME_OP = 'P';
+static const char DB_SIDECHAIN_WITHDRAWAL_OP = 'W';
+static const char DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP = 'P';
 
 /**
  * Base object for sidechain related database entries
@@ -117,19 +117,19 @@ struct SidechainObj {
 };
 
 /**
- * Sidechain individual withdrawal (WT) database object
+ * Sidechain individual withdrawal database object
  */
-struct SidechainWT: public SidechainObj {
+struct SidechainWithdrawal: public SidechainObj {
     uint8_t nSidechain;
     std::string strDestination;
     std::string strRefundDestination;
     CAmount amount;
     CAmount mainchainFee;
     char status;
-    uint256 hashBlindWTX; // The hash of the WT transaction minus the WT script
+    uint256 hashBlindTx; // Hash of transaction minus the serialization output
 
-    SidechainWT(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WT_OP; status = WT_UNSPENT; }
-    virtual ~SidechainWT(void) { }
+    SidechainWithdrawal(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WITHDRAWAL_OP; status = WITHDRAWAL_UNSPENT; }
+    virtual ~SidechainWithdrawal(void) { }
 
     ADD_SERIALIZE_METHODS
 
@@ -142,35 +142,35 @@ struct SidechainWT: public SidechainObj {
         READWRITE(amount);
         READWRITE(mainchainFee);
         READWRITE(status);
-        READWRITE(hashBlindWTX);
+        READWRITE(hashBlindTx);
     }
 
     std::string ToString(void) const;
     std::string GetStatusStr(void) const;
 
     uint256 GetID() const {
-        SidechainWT wt(*this);
-        wt.status = WT_UNSPENT;
-        return wt.GetHash();
+        SidechainWithdrawal withdrawal(*this);
+        withdrawal.status = WITHDRAWAL_UNSPENT;
+        return withdrawal.GetHash();
     }
 };
 
 /**
- * Sidechain joined withdraw proposal (WT^) database object
+ * Sidechain withdrawal bundle proposal database object
  */
-struct SidechainWTPrime: public SidechainObj {
+struct SidechainWithdrawalBundle: public SidechainObj {
     uint8_t nSidechain;
-    CMutableTransaction wtPrime;
-    std::vector<uint256> vWT; // The id in ldb of WT(s) that this WT^ is using
+    CMutableTransaction tx;
+    std::vector<uint256> vWithdrawalID; // The id in ldb of bundle's withdrawals
     int nHeight;
-    // If the WT^ fails we keep track of the sidechain height that it was marked
-    // failed at so that we can wait WTPRIME_FAIL_WAIT_PERIOD before trying the
-    // next WT^.
+    // If the bundle fails we keep track of the sidechain height that it was
+    // marked failed at so that we can wait WITHDRAWAL_BUNDLE_FAIL_WAIT_PERIOD
+    // before trying the next bundle.
     int nFailHeight;
     char status;
 
-    SidechainWTPrime(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WTPRIME_OP; status = WTPRIME_CREATED; nHeight = 0;}
-    virtual ~SidechainWTPrime(void) { }
+    SidechainWithdrawalBundle(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP; status = WITHDRAWAL_BUNDLE_CREATED; nHeight = 0;}
+    virtual ~SidechainWithdrawalBundle(void) { }
 
     ADD_SERIALIZE_METHODS
 
@@ -178,19 +178,19 @@ struct SidechainWTPrime: public SidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(sidechainop);
         READWRITE(nSidechain);
-        READWRITE(wtPrime);
-        READWRITE(vWT);
+        READWRITE(tx);
+        READWRITE(vWithdrawalID);
         READWRITE(status);
         READWRITE(nHeight);
         READWRITE(nFailHeight);
     }
 
     uint256 GetID() const {
-        SidechainWTPrime wt(*this);
-        wt.status = WTPRIME_CREATED;
-        wt.nHeight = 0;
-        wt.nFailHeight = 0;
-        return wt.GetHash();
+        SidechainWithdrawalBundle bundle(*this);
+        bundle.status = WITHDRAWAL_BUNDLE_CREATED;
+        bundle.nHeight = 0;
+        bundle.nFailHeight = 0;
+        return bundle.GetHash();
     }
 
     std::string ToString(void) const;
@@ -268,18 +268,18 @@ struct SidechainDeposit : public SidechainObj {
  */
 SidechainObj* ParseSidechainObj(const std::vector<unsigned char>& vch);
 
-// Functions for both WT^ creation and the GUI to use in order to make sure that
-// what the GUI displays (on the pending WT table) is the same as what the WT^
-// creation code will actually select.
+// Functions for both withdrawal bundle creation and the GUI to use in order to
+// make sure that what the GUI displays (on the pending table) is the same
+// as what the bundle creation code will actually select.
 
-// Sort a vector of SidechainWT by mainchain fee in descending order
-void SortWTByFee(std::vector<SidechainWT>& vWT);
+// Sort a vector of SidechainWithdrawal by mainchain fee in descending order
+void SortWithdrawalByFee(std::vector<SidechainWithdrawal>& vWithdrawal);
 
-// Sort a vector of SidechainWTPrime by height in descending order
-void SortWTPrimeByHeight(std::vector<SidechainWTPrime>& vWTPrime);
+// Sort a vector of SidechainWithdrawalBundle by height in descending order
+void SortWithdrawalBundleByHeight(std::vector<SidechainWithdrawalBundle>& vWithdrawalBundle);
 
-// Erase all SidechainWT from a vector which do not have WT_UNSPENT status
-void SelectUnspentWT(std::vector<SidechainWT>& vWT);
+// Erase all SidechainWithdrawal from a vector which do not have WITHDRAWAL_UNSPENT status
+void SelectUnspentWithdrawal(std::vector<SidechainWithdrawal>& vWithdrawal);
 
 std::string GenerateDepositAddress(const std::string& strDestIn);
 

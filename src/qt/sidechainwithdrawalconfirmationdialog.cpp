@@ -2,25 +2,25 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <qt/sidechainwtconfirmationdialog.h>
-#include <qt/forms/ui_sidechainwtconfirmationdialog.h>
+#include <qt/sidechainwithdrawalconfirmationdialog.h>
+#include <qt/forms/ui_sidechainwithdrawalconfirmationdialog.h>
 
 #include <utilmoneystr.h>
 
-SidechainWTConfirmationDialog::SidechainWTConfirmationDialog(QWidget *parent) :
+SidechainWithdrawalConfirmationDialog::SidechainWithdrawalConfirmationDialog(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::SidechainWTConfirmationDialog)
+    ui(new Ui::SidechainWithdrawalConfirmationDialog)
 {
     ui->setupUi(this);
     Reset();
 }
 
-SidechainWTConfirmationDialog::~SidechainWTConfirmationDialog()
+SidechainWithdrawalConfirmationDialog::~SidechainWithdrawalConfirmationDialog()
 {
     delete ui;
 }
 
-bool SidechainWTConfirmationDialog::GetConfirmed()
+bool SidechainWithdrawalConfirmationDialog::GetConfirmed()
 {
     // Return the confirmation status and reset dialog
     if (fConfirmed) {
@@ -32,7 +32,7 @@ bool SidechainWTConfirmationDialog::GetConfirmed()
     }
 }
 
-void SidechainWTConfirmationDialog::SetInfo(const QString& strWTAmount, const QString& strFee,
+void SidechainWithdrawalConfirmationDialog::SetInfo(const QString& strWTAmount, const QString& strFee,
                                             const QString& strMcFee, const QString& strDest,
                                             const QString& strRefundDest)
 {
@@ -43,19 +43,19 @@ void SidechainWTConfirmationDialog::SetInfo(const QString& strWTAmount, const QS
     ui->labelRefundDest->setText(strRefundDest);
 }
 
-void SidechainWTConfirmationDialog::Reset()
+void SidechainWithdrawalConfirmationDialog::Reset()
 {
     // Reset the dialog's confirmation status
     fConfirmed = false;
 }
 
-void SidechainWTConfirmationDialog::on_buttonBox_accepted()
+void SidechainWithdrawalConfirmationDialog::on_buttonBox_accepted()
 {
     fConfirmed = true;
     this->close();
 }
 
-void SidechainWTConfirmationDialog::on_buttonBox_rejected()
+void SidechainWithdrawalConfirmationDialog::on_buttonBox_rejected()
 {
     this->close();
 }

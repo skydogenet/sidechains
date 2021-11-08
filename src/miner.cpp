@@ -20,7 +20,7 @@
 #include <net.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
-#include <policy/wtprime.h>
+#include <policy/withdrawalbundle.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
 #include <sidechain.h>
@@ -180,21 +180,21 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // transaction (which in most cases can be a no-op).
     fIncludeWitness = true;
 
-    // Try to create a WT^ for this block. We want to know if a WT^ is going to
-    // be generated because we will skip adding WT refund transactions to the
-    // same block as a WT^. We will add the WT^ to the block later if created.
-    CTransactionRef wtPrimeTx;
-    CTransactionRef wtPrimeDataTx;
-    bool fCreatedWTPrime = false;
-    if (CreateWTPrimeTx(nHeight, wtPrimeTx, wtPrimeDataTx, false /* fReplicationCheck */,
+    // Try to create a Withdrawal Bundle for this block. We want to know if a Withdrawal Bundle is going to
+    // be generated because we will skip adding refund transactions to the
+    // same block as a Withdrawal Bundle. We will add the Withdrawal Bundle to the block later if created.
+    CTransactionRef withdrawalBundleTx;
+    CTransactionRef withdrawalBundleDataTx;
+    bool fCreatedWithdrawalBundle = false;
+    if (CreateWithdrawalBundleTx(nHeight, withdrawalBundleTx, withdrawalBundleDataTx, false /* fReplicationCheck */,
                 true /* fCheckUnique */)) {
-        fCreatedWTPrime = true;
+        fCreatedWithdrawalBundle = true;
     }
 
     int nPackagesSelected = 0;
     int nDescendantsUpdated = 0;
-    std::vector<CTxMemPool::txiter> vWTRefund;
-    addPackageTxs(nPackagesSelected, nDescendantsUpdated, vWTRefund, !fCreatedWTPrime /* fIncludeWTRefunds */);
+    std::vector<CTxMemPool::txiter> vRefund;
+    addPackageTxs(nPackagesSelected, nDescendantsUpdated, vRefund, !fCreatedWithdrawalBundle /* fIncludeRefunds */);
 
     int64_t nTime1 = GetTimeMicros();
 
@@ -210,21 +210,21 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     SidechainClient client;
 
-    // Create WT^ status updates
-    // Lookup the current WT^
-    SidechainWTPrime wtPrime;
-    uint256 hashCurrentWTPrime;
-    psidechaintree->GetLastWTPrimeHash(hashCurrentWTPrime);
-    if (psidechaintree->GetWTPrime(hashCurrentWTPrime, wtPrime)) {
-        if (wtPrime.status == WTPRIME_CREATED) {
-            // Check if the WT^ has been paid out or failed
-            if (client.HaveFailedWTPrime(hashCurrentWTPrime)) {
-                CScript script = GenerateWTPrimeFailCommit(hashCurrentWTPrime);
+    // Create Withdrawal Bundle status updates
+    // Lookup the current Withdrawal Bundle
+    SidechainWithdrawalBundle withdrawalBundle;
+    uint256 hashCurrentWithdrawalBundle;
+    psidechaintree->GetLastWithdrawalBundleHash(hashCurrentWithdrawalBundle);
+    if (psidechaintree->GetWithdrawalBundle(hashCurrentWithdrawalBundle, withdrawalBundle)) {
+        if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_CREATED) {
+            // Check if the Withdrawal Bundle has been paid out or failed
+            if (client.HaveFailedWithdrawalBundle(hashCurrentWithdrawalBundle)) {
+                CScript script = GenerateWithdrawalBundleFailCommit(hashCurrentWithdrawalBundle);
                 coinbaseTx.vout.push_back(CTxOut(0, script));
             }
             else
-            if (client.HaveSpentWTPrime(hashCurrentWTPrime)) {
-                CScript script = GenerateWTPrimeSpentCommit(hashCurrentWTPrime);
+            if (client.HaveSpentWithdrawalBundle(hashCurrentWithdrawalBundle)) {
+                CScript script = GenerateWithdrawalBundleSpentCommit(hashCurrentWithdrawalBundle);
                 coinbaseTx.vout.push_back(CTxOut(0, script));
             }
         }
@@ -235,48 +235,48 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     CScript scriptPrev = GeneratePrevBlockCommit(bmmCache.GetLastMainBlockHash(), pindexPrev->GetBlockHash());
     coinbaseTx.vout.push_back(CTxOut(0, scriptPrev));
 
-    // Add current hashWTPrime to coinbase output
-    if (!hashCurrentWTPrime.IsNull()) {
-        CScript scriptWTPrime = GenerateWTPrimeHashCommit(hashCurrentWTPrime);
-        coinbaseTx.vout.push_back(CTxOut(0, scriptWTPrime));
+    // Add current hashWithdrawalBundle to coinbase output
+    if (!hashCurrentWithdrawalBundle.IsNull()) {
+        CScript scriptWithdrawalBundle = GenerateWithdrawalBundleHashCommit(hashCurrentWithdrawalBundle);
+        coinbaseTx.vout.push_back(CTxOut(0, scriptWithdrawalBundle));
     }
 
     // Add block version to coinbase output
     CScript scriptVersion = GenerateBlockVersionCommit(pblock->nVersion);
     coinbaseTx.vout.push_back(CTxOut(0, scriptVersion));
 
-    // Add WT^ to block if one was created earlier
-    if (fCreatedWTPrime) {
-        for (const CTxOut& out : wtPrimeDataTx->vout)
+    // Add Withdrawal Bundle to block if one was created earlier
+    if (fCreatedWithdrawalBundle) {
+        for (const CTxOut& out : withdrawalBundleDataTx->vout)
             coinbaseTx.vout.push_back(out);
     }
 
-    // Create WT refund payout output(s) unless there is a WT^ in this block.
+    // Create refund payout output(s) unless there is a Withdrawal Bundle in this block.
     //
     // Don't add too many refunds.
     //
-    if (!fCreatedWTPrime) {
+    if (!fCreatedWithdrawalBundle) {
         uint64_t nRefundAdded = 0;
-        for (const CTxMemPool::txiter& it : vWTRefund) {
+        for (const CTxMemPool::txiter& it : vRefund) {
             CTransactionRef tx = it->GetSharedTx();
             if (tx == nullptr) continue;
 
             // Find the refund script
-            uint256 wtID;
-            wtID.SetNull();
+            uint256 id;
+            id.SetNull();
             std::vector<unsigned char> vchSig;
             for (const CTxOut& o : tx->vout) {
-                if (!o.scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+                if (!o.scriptPubKey.IsWithdrawalRefundRequest(id, vchSig))
                     continue;
                 break;
             }
-            if (wtID.IsNull())
+            if (id.IsNull())
                 continue;
 
-            // Verify refund request & get WT data
-            SidechainWT wt;
-            if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
-                LogPrintf("%s: Miner failed to verify WT refund request! WT ID: %s\n", __func__, wtID.ToString());
+            // Verify refund request & get data
+            SidechainWithdrawal withdrawal;
+            if (!VerifyWithdrawalRefundRequest(id, vchSig, withdrawal)) {
+                LogPrintf("%s: Miner failed to verify withdrawal refund request! ID: %s\n", __func__, id.ToString());
                 return nullptr;
             }
 
@@ -284,7 +284,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             // and stop trying to process more refunds
 
             // Figure out how much weight the refund payout will add
-            coinbaseTx.vout.push_back(CTxOut(wt.amount, GetScriptForDestination(DecodeDestination(wt.strRefundDestination))));
+            coinbaseTx.vout.push_back(CTxOut(withdrawal.amount, GetScriptForDestination(DecodeDestination(withdrawal.strRefundDestination))));
             uint64_t nCoinbaseTxSize = GetVirtualTransactionSize(coinbaseTx);
 
             nRefundAdded += nCoinbaseTxSize;
@@ -433,9 +433,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         // Outputs created to payout this deposit - to be added to vOutPackages
         std::vector<CTxOut> vOut;
 
-        // Special case for WT^ change return. We don't pay anyone this deposit
+        // Special case for Withdrawal Bundle change return. We don't pay anyone this deposit
         // but it still must be added to the database.
-        if (deposit.strDest == SIDECHAIN_WTPRIME_RETURN_DEST) {
+        if (deposit.strDest == SIDECHAIN_WITHDRAWAL_BUNDLE_RETURN_DEST) {
             vOut.push_back(CTxOut(0, deposit.GetScript()));
             // Add this deposits output to the vector of deposit outputs
             vOutPackages.push_back(vOut);
@@ -490,9 +490,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (nFeesOut)
         *nFeesOut = nFees;
 
-    // Signal the most recent WT^ created by this sidechain
-    if (!hashCurrentWTPrime.IsNull())
-        pblock->hashWTPrime = hashCurrentWTPrime;
+    // Signal the most recent Withdrawal Bundle created by this sidechain
+    if (!hashCurrentWithdrawalBundle.IsNull())
+        pblock->hashWithdrawalBundle = hashCurrentWithdrawalBundle;
 
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
@@ -565,8 +565,8 @@ void BlockAssembler::AddToBlock(CTxMemPool::txiter iter)
     pblocktemplate->vTxSigOpsCost.push_back(iter->GetSigOpCost());
     nBlockWeight += iter->GetTxWeight();
 
-    // If we are adding a WT refund, also account for the payout coinbase output
-    if (iter->IsWTRefund()) {
+    // If we are adding a refund, also account for the payout coinbase output
+    if (iter->IsWithdrawalRefund()) {
         nBlockWeight += nRefundOutputSize;
     }
 
@@ -646,7 +646,7 @@ void BlockAssembler::SortForBlock(const CTxMemPool::setEntries& package, CTxMemP
 // Each time through the loop, we compare the best transaction in
 // mapModifiedTxs with the next transaction in the mempool to decide what
 // transaction package to work on next.
-void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, std::vector<CTxMemPool::txiter>& vWTRefund, bool fIncludeWTRefunds)
+void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, std::vector<CTxMemPool::txiter>& vRefund, bool fIncludeRefunds)
 {
     // mapModifiedTx will store sorted packages after they are modified
     // because some of their txs are already in the block
@@ -667,17 +667,17 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
     const int64_t MAX_CONSECUTIVE_FAILURES = 1000;
     int64_t nConsecutiveFailed = 0;
 
-    std::set<uint256> setWTRefund;
+    std::set<uint256> setRefund;
     while (mi != mempool.mapTx.get<ancestor_score>().end() || !mapModifiedTx.empty())
     {
-        // Skip WT refunds if we don't want to include them
-        if (!fIncludeWTRefunds && mi->IsWTRefund()) {
+        // Skip refunds if we don't want to include them
+        if (!fIncludeRefunds && mi->IsWithdrawalRefund()) {
             ++mi;
             continue;
         }
 
-        // Very WT refund in the mempool again before adding it to a block
-        if (mi->IsWTRefund()) {
+        // Very refund in the mempool again before adding it to a block
+        if (mi->IsWithdrawalRefund()) {
             CTransactionRef tx = mi->GetSharedTx();
             if (tx == nullptr) {
                 ++mi;
@@ -685,26 +685,26 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
             }
 
             // Find the refund script
-            uint256 wtID;
-            wtID.SetNull();
+            uint256 id;
+            id.SetNull();
             std::vector<unsigned char> vchSig;
             for (const CTxOut& o : tx->vout) {
-                if (!o.scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+                if (!o.scriptPubKey.IsWithdrawalRefundRequest(id, vchSig))
                     continue;
                 break;
             }
-            if (wtID.IsNull())
+            if (id.IsNull())
                 continue;
 
             // Double check that we haven't already added another refund request
-            // txn for this same WT ID (that would be invalid).
-            if (setWTRefund.count(wtID)) {
-                LogPrintf("%s: Invalid (duplicate WT ID) WT refund in mempool!\n", __func__);
+            // txn for this same withdrawal ID (that would be invalid).
+            if (setRefund.count(id)) {
+                LogPrintf("%s: Invalid (duplicate withdrawal ID) refund in mempool!\n", __func__);
                 continue;
             }
 
-            SidechainWT wt;
-            if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
+            SidechainWithdrawal withdrawal;
+            if (!VerifyWithdrawalRefundRequest(id, vchSig, withdrawal)) {
                 ++mi;
                 continue;
             }
@@ -757,7 +757,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         }
 
         // Add the size of the refund payout that will be added to the coinbase
-        if (iter->IsWTRefund()) {
+        if (iter->IsWithdrawalRefund()) {
             packageSize += nRefundOutputSize;
         }
 
@@ -810,9 +810,9 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         SortForBlock(ancestors, iter, sortedEntries);
 
         for (size_t i=0; i<sortedEntries.size(); ++i) {
-            // Keep track of WT refunds that are added
-            if (sortedEntries[i]->IsWTRefund()) {
-                vWTRefund.push_back(sortedEntries[i]);
+            // Keep track of withdrawal refunds that are added
+            if (sortedEntries[i]->IsWithdrawalRefund()) {
+                vRefund.push_back(sortedEntries[i]);
             }
 
             AddToBlock(sortedEntries[i]);
