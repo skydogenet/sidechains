@@ -550,7 +550,7 @@ bool SidechainClient::GetBlockCount(int& nBlocks)
     return nBlocks >= 0;
 }
 
-bool SidechainClient::GetWorkScore(const uint256& hashWithdrawalBundle, int& nWorkScore)
+bool SidechainClient::GetWorkScore(const uint256& hash, int& nWorkScore)
 {
     // JSON for 'getworkscore' mainchain HTTP-RPC
     std::string json;
@@ -560,7 +560,7 @@ bool SidechainClient::GetWorkScore(const uint256& hashWithdrawalBundle, int& nWo
     json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append(",");
     json.append("\"");
-    json.append(hashWithdrawalBundle.ToString());
+    json.append(hash.ToString());
     json.append("\"");
     json.append("] }");
 
@@ -639,15 +639,15 @@ bool SidechainClient::GetBlockHash(int nHeight, uint256& hashBlock)
     return (!hashBlock.IsNull());
 }
 
-bool SidechainClient::HaveSpentWithdrawalBundle(const uint256& hashWithdrawalBundle)
+bool SidechainClient::HaveSpentWithdrawalBundle(const uint256& hash)
 {
     // JSON for 'havespentwithdrawalbundle' mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"havespentwithdrawalbundle\", \"params\": ");
+    json.append("\"method\": \"havespentwithdrawal\", \"params\": ");
     json.append("[");
     json.append("\"");
-    json.append(hashWithdrawalBundle.ToString());
+    json.append(hash.ToString());
     json.append("\"");
     json.append(",");
     json.append(UniValue((int)THIS_SIDECHAIN).write());
@@ -665,15 +665,15 @@ bool SidechainClient::HaveSpentWithdrawalBundle(const uint256& hashWithdrawalBun
     return fSpent;
 }
 
-bool SidechainClient::HaveFailedWithdrawalBundle(const uint256& hashWithdrawalBundle)
+bool SidechainClient::HaveFailedWithdrawalBundle(const uint256& hash)
 {
     // JSON for 'havefailedwithdrawalbundle' mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"havefailedwithdrawalbundle\", \"params\": ");
+    json.append("\"method\": \"havefailedwithdrawal\", \"params\": ");
     json.append("[");
     json.append("\"");
-    json.append(hashWithdrawalBundle.ToString());
+    json.append(hash.ToString());
     json.append("\"");
     json.append(",");
     json.append(UniValue((int)THIS_SIDECHAIN).write());

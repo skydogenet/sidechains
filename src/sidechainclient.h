@@ -23,7 +23,7 @@ public:
     SidechainClient();
 
     /*
-     * Send B-WithdrawalBundle hash to local node
+     * Send Withdrawal Bundle tx to local node
      */
     bool BroadcastWithdrawalBundle(const std::string& hex);
 
@@ -67,15 +67,15 @@ public:
 
     bool GetBlockCount(int& nBlocks);
 
-    bool GetWorkScore(const uint256& hashWithdrawalBundle, int& nWorkScore);
+    bool GetWorkScore(const uint256& hash, int& nWorkScore);
 
     bool ListWithdrawalBundleStatus(std::vector<uint256>& vHashWithdrawalBundle);
 
     bool GetBlockHash(int nHeight, uint256& hashBlock);
 
-    bool HaveSpentWithdrawalBundle(const uint256& hashWithdrawalBundle);
+    bool HaveSpentWithdrawalBundle(const uint256& hash);
 
-    bool HaveFailedWithdrawalBundle(const uint256& hashWithdrawalBundle);
+    bool HaveFailedWithdrawalBundle(const uint256& hash);
 
 private:
     /*

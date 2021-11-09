@@ -26,9 +26,9 @@ Q_DECLARE_METATYPE(WTTableObject)
 SidechainWithdrawalTableModel::SidechainWithdrawalTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
-    fOnlyMyWTs = false;
+    fOnlyMyWithdrawals = false;
 
-    connect(parent, SIGNAL(OnlyMyWTsToggled(bool)), this, SLOT(SetOnlyMyWTs(bool)));
+    connect(parent, SIGNAL(OnlyMyWithdrawalsToggled(bool)), this, SLOT(SetOnlyMyWithdrawals(bool)));
 }
 
 int SidechainWithdrawalTableModel::rowCount(const QModelIndex & /*parent*/) const
@@ -123,7 +123,7 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
-    case WITHDRAWALIDRole:
+    case WithdrawalIDRole:
         return QString::fromStdString(object.id.ToString());
     case IsMineRole:
         return object.fMine;
@@ -181,7 +181,7 @@ void SidechainWithdrawalTableModel::UpdateModel()
     // Add WT(s) to model & to the fake WithdrawalBundle transaction to estimate size
     //
     // Loop through WTs and calculate TX size, copy WTs that should be displayed
-    // (based on fOnlyMyWTs) into vector.
+    // (based on fOnlyMyWithdrawals) into vector.
     std::vector<WTTableObject> vWTDisplay;
     for (const SidechainWithdrawal& wt : vWT) {
         // Add wt output to fake WithdrawalBundle and calculate size estimate as well as
@@ -191,7 +191,7 @@ void SidechainWithdrawalTableModel::UpdateModel()
 
         // Check if the Withdrawalis mine
         bool fMine = bmmCache.IsMyWT(wt.GetID());
-        if (!fMine && fOnlyMyWTs)
+        if (!fMine && fOnlyMyWithdrawals)
             continue;
 
         WTTableObject object;
@@ -211,9 +211,9 @@ void SidechainWithdrawalTableModel::UpdateModel()
     endInsertRows();
 }
 
-void SidechainWithdrawalTableModel::SetOnlyMyWTs(bool fChecked)
+void SidechainWithdrawalTableModel::SetOnlyMyWithdrawals(bool fChecked)
 {
-    fOnlyMyWTs = fChecked;
+    fOnlyMyWithdrawals = fChecked;
     UpdateModel();
 }
 

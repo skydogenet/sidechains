@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLETABLEMODEL_H
-#define BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLETABLEMODEL_H
+#ifndef BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLE_TABLEMODEL_H
+#define BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLE_TABLEMODEL_H
 
 #include <amount.h>
 #include <uint256.h>
@@ -38,7 +38,7 @@ public:
 
     enum RoleIndex {
         /** WithdrawalID */
-        WITHDRAWALIDRole = Qt::UserRole,
+        WithdrawalIDRole = Qt::UserRole,
         /** Is WithdrawalMine? */
         IsMineRole,
     };
@@ -53,7 +53,7 @@ public:
 
 public Q_SLOTS:
     void UpdateModel();
-    void SetOnlyMyWTs(bool fChecked);
+    void SetOnlyMyWithdrawals(bool fChecked);
 
 private:
     QList<QVariant> model;
@@ -62,7 +62,7 @@ private:
     WalletModel *walletModel;
     ClientModel *clientModel;
 
-    bool fOnlyMyWTs;
+    bool fOnlyMyWithdrawals;
 };
 
-#endif // BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLETABLEMODEL_H
+#endif // BITCOIN_SIDECHAIN_WITHDRAWAL_BUNDLE_TABLEMODEL_H

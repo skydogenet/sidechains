@@ -114,18 +114,18 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     wtContextMenu = new QMenu(this);
     wtContextMenu->setObjectName("wtContextMenu");
 
-    copyWITHDRAWALIDAction = new QAction(tr("Copy Withdrawal ID"), this);
+    copyWithdrawalIDAction = new QAction(tr("Copy Withdrawal ID"), this);
     withdrawalRefundAction = new QAction(tr("Cancel Withdrawal"), this);
 
-    wtContextMenu->addAction(copyWITHDRAWALIDAction);
+    wtContextMenu->addAction(copyWithdrawalIDAction);
     wtContextMenu->addAction(withdrawalRefundAction);
 
     connect(ui->tableViewUnspentWT, SIGNAL(customContextMenuRequested(QPoint)), this,
             SLOT(WTContextMenu(QPoint)));
-    connect(copyWITHDRAWALIDAction, SIGNAL(triggered()), this, SLOT(CopyWITHDRAWALID()));
+    connect(copyWithdrawalIDAction, SIGNAL(triggered()), this, SLOT(CopyWithdrawalID()));
     connect(withdrawalRefundAction, SIGNAL(triggered()), this, SLOT(RequestRefund()));
 
-    // Withdrawalconfirmation dialog
+    // Withdrawal confirmation dialog
     wtConfDialog = new SidechainWithdrawalConfirmationDialog(this);
 
     // Table style
@@ -169,7 +169,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->tableWidgetWTs->setWordWrap(false);
     ui->tableViewUnspentWT->setWordWrap(false);
 
-    // Set unspent Withdrawaltable model
+    // Set unspent Withdrawal table model
     ui->tableViewUnspentWT->setModel(unspentWTModel);
 
     // Set BMM table model
@@ -382,14 +382,14 @@ void SidechainPage::setNumBlocks(const int nBlocksIn)
         ui->labelNextBundle->setText("Waiting for withdrawals.");
 
         // If there hasn't been a WithdrawalBundle created yet, display message on banner
-        QString str = "WithdrawalBundle: None yet. Waiting for withdrawals.";
+        QString str = "Bundle: None yet. Waiting for withdrawals.";
         Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
 
     if (hashLatest.IsNull()) {
         ui->labelNextBundle->setText("Waiting for withdrawals.");
-        QString str = "WithdrawalBundle: None yet. Waiting for withdrawals.";
+        QString str = "Bundle: None yet. Waiting for withdrawals.";
         Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
@@ -398,7 +398,7 @@ void SidechainPage::setNumBlocks(const int nBlocksIn)
     if (!psidechaintree->GetWithdrawalBundle(hashLatest, withdrawalBundle)) {
         ui->labelNextBundle->setText("Error...");
 
-        QString str = "WithdrawalBundle: Error...";
+        QString str = "Bundle: Error...";
         Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
@@ -419,7 +419,7 @@ void SidechainPage::setNumBlocks(const int nBlocksIn)
         ui->labelNextBundle->setText(QString::number(nWaitPeriod) + " blocks.");
 
         QString str;
-        str = "WithdrawalBundle: None right now. Next in: ";
+        str = "Bundle: None right now. Next in: ";
         str += QString::number(nWaitPeriod);
         str += " blocks.";
         Q_EMIT WithdrawalBundleBannerUpdate(str);
@@ -428,7 +428,7 @@ void SidechainPage::setNumBlocks(const int nBlocksIn)
     else
     if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_SPENT) {
         ui->labelNextBundle->setText("Waiting for withdrawals.");
-        QString str = "WithdrawalBundle: None right now. Waiting for withdrawals.";
+        QString str = "Bundle: None right now. Waiting for withdrawals.";
         Q_EMIT WithdrawalBundleBannerUpdate(str);
         return;
     }
@@ -444,21 +444,11 @@ void SidechainPage::setNumBlocks(const int nBlocksIn)
             ui->labelNextBundle->setText(QString::number(nWorkScore) + " blocks.");
         }
 
-        QString strBanner = "WithdrawalBundle: ";
+        QString strBanner = "Bundle: ";
         strBanner += QString::fromStdString(hashLatest.ToString());
         Q_EMIT WithdrawalBundleBannerUpdate(strBanner);
         return;
     }
-}
-
-void SidechainPage::on_pushButtonMainchain_clicked()
-{
-    ui->tabWidgetTransfer->setCurrentIndex(0);
-}
-
-void SidechainPage::on_pushButtonSidechain_clicked()
-{
-    ui->tabWidgetTransfer->setCurrentIndex(1);
 }
 
 void SidechainPage::on_pushButtonCopy_clicked()
@@ -475,7 +465,7 @@ void SidechainPage::on_pushButtonNew_clicked()
     generateQR(strAddress);
 }
 
-void SidechainPage::on_pushButtonWITHDRAWAL_clicked()
+void SidechainPage::on_pushButtonWithdraw_clicked()
 {
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
@@ -928,12 +918,6 @@ void SidechainPage::on_pushButtonRetryConnection_clicked()
     UpdateNetworkActive(fConnection);
 }
 
-void SidechainPage::on_pushButtonShowLatestWithdrawalBundle_clicked()
-{
-    ui->checkBoxAutoWithdrawalBundleRefresh->setChecked(false);
-    UpdateToLatestWithdrawalBundle();
-}
-
 void SidechainPage::on_pushButtonShowPastWithdrawalBundles_clicked()
 {
     withdrawalBundleHistoryDialog->show();
@@ -1058,26 +1042,20 @@ void SidechainPage::SetCurrentWithdrawalBundle(const std::string& strHash, bool 
     // If the WithdrawalBundle has WITHDRAWAL_BUNDLE_CREATED status, it should be being acked
     // by the mainchain (if it's already made it there). Try to request
     // the workscore and display it on the WithdrawalBundle explorer if we can.
-    bool fWorkScore = false;
-    int nWorkScore = 0;
-    if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_CREATED) {
-        // Try to request the workscore
-        SidechainClient client;
-        if (client.GetWorkScore(hash, nWorkScore)) {
-            fWorkScore = true;
-        }
-    }
-
     QString qStatus = "";
     if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_CREATED) {
-        qStatus = "Created";
-
-        if (fWorkScore) {
+        // Try to get the work score
+        SidechainClient client;
+        int nWorkScore = 0;
+        if (client.GetWorkScore(hash, nWorkScore)) {
             qStatus = QString::number(nWorkScore);
             qStatus += " / ";
             qStatus += QString::number(MAINCHAIN_WITHDRAWAL_BUNDLE_MIN_WORKSCORE);
             qStatus += " ACK(s)";
+        } else {
+            qStatus = "Pending Proposal";
         }
+
     }
     else
     if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_FAILED) {
@@ -1276,9 +1254,9 @@ void SidechainPage::on_pushButtonNewBMM_clicked()
     }
 }
 
-void SidechainPage::on_checkBoxOnlyMyWTs_toggled(bool fChecked)
+void SidechainPage::on_checkBoxOnlyMyWithdrawals_toggled(bool fChecked)
 {
-    Q_EMIT(OnlyMyWTsToggled(fChecked));
+    Q_EMIT(OnlyMyWithdrawalsToggled(fChecked));
 }
 
 void SidechainPage::WTContextMenu(const QPoint& point)
@@ -1295,9 +1273,9 @@ void SidechainPage::WTContextMenu(const QPoint& point)
     }
 }
 
-void SidechainPage::CopyWITHDRAWALID()
+void SidechainPage::CopyWithdrawalID()
 {
-    GUIUtil::copyEntryData(ui->tableViewUnspentWT, 0, SidechainWithdrawalTableModel::WITHDRAWALIDRole);
+    GUIUtil::copyEntryData(ui->tableViewUnspentWT, 0, SidechainWithdrawalTableModel::WithdrawalIDRole);
 }
 
 void SidechainPage::RequestRefund()
@@ -1311,7 +1289,7 @@ void SidechainPage::RequestRefund()
 
     // Get the WithdrawalID from the model
     uint256 wtID;
-    wtID.SetHex(selection.at(0).data(SidechainWithdrawalTableModel::WITHDRAWALIDRole).toString().toStdString());
+    wtID.SetHex(selection.at(0).data(SidechainWithdrawalTableModel::WithdrawalIDRole).toString().toStdString());
 
     QMessageBox messageBox;
     messageBox.setDefaultButton(QMessageBox::Ok);
@@ -1342,7 +1320,7 @@ void SidechainPage::RequestRefund()
         return;
     }
 
-    // Check Withdrawalstatus
+    // Check Withdrawal status
     if (wt.status != WITHDRAWAL_UNSPENT) {
         messageBox.setWindowTitle("Invalid Withdrawalstatus!");
         messageBox.setText("Withdrawalmust be unspent to refund.");
@@ -1375,7 +1353,7 @@ void SidechainPage::RequestRefund()
     confirmMessage.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     confirmMessage.setDefaultButton(QMessageBox::Cancel);
     confirmMessage.setIcon(QMessageBox::Information);
-    confirmMessage.setWindowTitle("Confirm WithdrawalRefund Request");
+    confirmMessage.setWindowTitle("Confirm Withdrawal Refund Request");
     QString refundMessage = "This will create a refund request for your withdrawal.\n\n";
     refundMessage += BitcoinUnits::formatWithUnit(unit, wt.amount, false, BitcoinUnits::separatorAlways);
     refundMessage += " will be refunded to your refund address:\n\n";
@@ -1429,7 +1407,7 @@ void SidechainPage::RequestRefund()
 
     // TODO cache refund request?
     // Cache users WithdrawalID
-    //bmmCache.CacheWITHDRAWALID(wtid);
+    //bmmCache.CacheWithdrawalID(wtid);
 
     // Successful refund request message box
     messageBox.setWindowTitle("Refund request created!");

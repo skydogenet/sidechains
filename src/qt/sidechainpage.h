@@ -55,15 +55,11 @@ public Q_SLOTS:
     void setNumBlocks(const int nBlocks);
 
 private Q_SLOTS:
-    void on_pushButtonMainchain_clicked();
-
-    void on_pushButtonSidechain_clicked();
-
     void on_pushButtonCopy_clicked();
 
     void on_pushButtonNew_clicked();
 
-    void on_pushButtonWITHDRAWAL_clicked();
+    void on_pushButtonWithdraw_clicked();
 
     void on_addressBookButton_clicked();
 
@@ -80,8 +76,6 @@ private Q_SLOTS:
     void ShowRestartPage();
 
     void on_pushButtonRetryConnection_clicked();
-
-    void on_pushButtonShowLatestWithdrawalBundle_clicked();
 
     void on_pushButtonShowPastWithdrawalBundles_clicked();
 
@@ -103,11 +97,11 @@ private Q_SLOTS:
 
     void on_pushButtonNewBMM_clicked();
 
-    void on_checkBoxOnlyMyWTs_toggled(bool fChecked);
+    void on_checkBoxOnlyMyWithdrawals_toggled(bool fChecked);
 
     void WTContextMenu(const QPoint& point);
 
-    void CopyWITHDRAWALID();
+    void CopyWithdrawalID();
 
     void RequestRefund();
 
@@ -132,7 +126,7 @@ private:
     QMessageBox* connectionErrorMessage = nullptr;
 
     QAction *withdrawalRefundAction;
-    QAction *copyWITHDRAWALIDAction;
+    QAction *copyWithdrawalIDAction;
     QMenu *wtContextMenu;
 
     QTimer *bmmTimer;
@@ -167,7 +161,7 @@ private:
     void StopBMM();
 
 Q_SIGNALS:
-    void OnlyMyWTsToggled(bool fChecked);
+    void OnlyMyWithdrawalsToggled(bool fChecked);
     void WithdrawalBundleBannerUpdate(QString str);
 };
 
