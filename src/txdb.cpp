@@ -32,7 +32,7 @@ static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
 
 static const char DB_LAST_SIDECHAIN_DEPOSIT = 'x';
-static const char DB_LAST_SIDECHAIN_WTPRIME = 'w';
+static const char DB_LAST_SIDECHAIN_WITHDRAWAL_BUNDLE = 'w';
 
 namespace {
 
@@ -287,7 +287,7 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
                 pindexNew->nTime          = diskindex.nTime;
                 pindexNew->hashMainBlock  = diskindex.hashMainBlock;
-                pindexNew->hashWTPrime    = diskindex.hashWTPrime;
+                pindexNew->hashWithdrawalBundle    = diskindex.hashWithdrawalBundle;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
 
@@ -314,25 +314,25 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
         const SidechainObj *obj = it->second;
         std::pair<char, uint256> key = std::make_pair(obj->sidechainop, objid);
 
-        if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
-            const SidechainWT *ptr = (const SidechainWT *) obj;
+        if (obj->sidechainop == DB_SIDECHAIN_WITHDRAWAL_OP) {
+            const SidechainWithdrawal *ptr = (const SidechainWithdrawal *) obj;
             batch.Write(key, *ptr);
         }
         else
-        if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
-            const SidechainWTPrime *ptr = (const SidechainWTPrime *) obj;
+        if (obj->sidechainop == DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP) {
+            const SidechainWithdrawalBundle *ptr = (const SidechainWithdrawalBundle *) obj;
             batch.Write(key, *ptr);
 
-            // Also index the WT^ by the WT^ transaction hash
-            uint256 hashWTPrime = ptr->wtPrime.GetHash();
-            std::pair<char, uint256> keyTx = std::make_pair(DB_SIDECHAIN_WTPRIME_OP, hashWTPrime);
+            // Also index the WithdrawalBundle by the WithdrawalBundle transaction hash
+            uint256 hashWithdrawalBundle = ptr->tx.GetHash();
+            std::pair<char, uint256> keyTx = std::make_pair(DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP, hashWithdrawalBundle);
             batch.Write(keyTx, *ptr);
 
-            // Update DB_LAST_SIDECHAIN_WTPRIME
-            batch.Write(DB_LAST_SIDECHAIN_WTPRIME, hashWTPrime);
+            // Update DB_LAST_SIDECHAIN_WITHDRAWAL_BUNDLE
+            batch.Write(DB_LAST_SIDECHAIN_WITHDRAWAL_BUNDLE, hashWithdrawalBundle);
 
-            LogPrintf("%s: Writing new WT^ and updating DB_LAST_SIDECHAIN_WTPRIME to: %s",
-                    __func__, hashWTPrime.ToString());
+            LogPrintf("%s: Writing new WithdrawalBundle and updating DB_LAST_SIDECHAIN_WITHDRAWAL_BUNDLE to: %s",
+                    __func__, hashWithdrawalBundle.ToString());
         }
         else
         if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
@@ -351,11 +351,11 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
     return WriteBatch(batch, true);
 }
 
-bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
+bool CSidechainTreeDB::WriteWithdrawalUpdate(const std::vector<SidechainWithdrawal>& vWithdrawal)
 {
     CDBBatch batch(*this);
 
-    for (const SidechainWT& wt : vWT)
+    for (const SidechainWithdrawal& wt : vWithdrawal)
     {
         std::pair<char, uint256> key = std::make_pair(wt.sidechainop, wt.GetID());
         batch.Write(key, wt);
@@ -364,66 +364,66 @@ bool CSidechainTreeDB::WriteWTUpdate(const std::vector<SidechainWT>& vWT)
     return WriteBatch(batch, true);
 }
 
-bool CSidechainTreeDB::WriteWTPrimeUpdate(const SidechainWTPrime& wtPrime)
+bool CSidechainTreeDB::WriteWithdrawalBundleUpdate(const SidechainWithdrawalBundle& withdrawalBundle)
 {
     CDBBatch batch(*this);
 
-    std::pair<char, uint256> key = std::make_pair(wtPrime.sidechainop, wtPrime.GetID());
-    batch.Write(key, wtPrime);
+    std::pair<char, uint256> key = std::make_pair(withdrawalBundle.sidechainop, withdrawalBundle.GetID());
+    batch.Write(key, withdrawalBundle);
 
-    // Also index the WT^ by the WT^ transaction hash
-    uint256 hashWTPrime = wtPrime.wtPrime.GetHash();
-    std::pair<char, uint256> keyTx = std::make_pair(DB_SIDECHAIN_WTPRIME_OP, hashWTPrime);
-    batch.Write(keyTx, wtPrime);
+    // Also index the WithdrawalBundle by the WithdrawalBundle transaction hash
+    uint256 hashWithdrawalBundle = withdrawalBundle.tx.GetHash();
+    std::pair<char, uint256> keyTx = std::make_pair(DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP, hashWithdrawalBundle);
+    batch.Write(keyTx, withdrawalBundle);
 
-    // Also write wt status updates if WT^ status changes
-    std::vector<SidechainWT> vUpdate;
-    for (const uint256& wtid: wtPrime.vWT) {
-        SidechainWT wt;
-        if (!GetWT(wtid, wt)) {
-            LogPrintf("%s: Failed to read wt of WT^ from LDB!\n", __func__);
+    // Also write withdrawal status updates if WithdrawalBundle status changes
+    std::vector<SidechainWithdrawal> vUpdate;
+    for (const uint256& id: withdrawalBundle.vWithdrawalID) {
+        SidechainWithdrawal withdrawal;
+        if (!GetWithdrawal(id, withdrawal)) {
+            LogPrintf("%s: Failed to read withdrawal of WithdrawalBundle from LDB!\n", __func__);
             return false;
         }
-        if (wtPrime.status == WTPRIME_FAILED) {
-            wt.status = WT_UNSPENT;
-            vUpdate.push_back(wt);
+        if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_FAILED) {
+            withdrawal.status = WITHDRAWAL_UNSPENT;
+            vUpdate.push_back(withdrawal);
         }
         else
-        if (wtPrime.status == WTPRIME_SPENT) {
-            wt.status = WT_SPENT;
-            vUpdate.push_back(wt);
+        if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_SPENT) {
+            withdrawal.status = WITHDRAWAL_SPENT;
+            vUpdate.push_back(withdrawal);
         }
         else
-        if (wtPrime.status == WTPRIME_CREATED) {
-            wt.status = WT_IN_WTPRIME;
-            vUpdate.push_back(wt);
+        if (withdrawalBundle.status == WITHDRAWAL_BUNDLE_CREATED) {
+            withdrawal.status = WITHDRAWAL_IN_BUNDLE;
+            vUpdate.push_back(withdrawal);
         }
     }
 
-    if (!WriteWTUpdate(vUpdate)) {
-        LogPrintf("%s: Failed to write wt update!\n", __func__);
+    if (!WriteWithdrawalUpdate(vUpdate)) {
+        LogPrintf("%s: Failed to write withdrawal update!\n", __func__);
         return false;
     }
 
     return WriteBatch(batch, true);
 }
 
-bool CSidechainTreeDB::WriteLastWTPrimeHash(const uint256& hash)
+bool CSidechainTreeDB::WriteLastWithdrawalBundleHash(const uint256& hash)
 {
-    return Write(DB_LAST_SIDECHAIN_WTPRIME, hash);
+    return Write(DB_LAST_SIDECHAIN_WITHDRAWAL_BUNDLE, hash);
 }
 
-bool CSidechainTreeDB::GetWT(const uint256& objid, SidechainWT& wt)
+bool CSidechainTreeDB::GetWithdrawal(const uint256& objid, SidechainWithdrawal& withdrawal)
 {
-    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WT_OP, objid), wt))
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WITHDRAWAL_OP, objid), withdrawal))
         return true;
 
     return false;
 }
 
-bool CSidechainTreeDB::GetWTPrime(const uint256& objid, SidechainWTPrime& wtPrime)
+bool CSidechainTreeDB::GetWithdrawalBundle(const uint256& objid, SidechainWithdrawalBundle& withdrawalBundle)
 {
-    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WTPRIME_OP, objid), wtPrime))
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP, objid), withdrawalBundle))
         return true;
 
     return false;
@@ -437,13 +437,13 @@ bool CSidechainTreeDB::GetDeposit(const uint256& objid, SidechainDeposit& deposi
     return false;
 }
 
-std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
+std::vector<SidechainWithdrawal> CSidechainTreeDB::GetWithdrawals(const uint8_t& nSidechain)
 {
-    const char sidechainop = DB_SIDECHAIN_WT_OP;
+    const char sidechainop = DB_SIDECHAIN_WITHDRAWAL_OP;
     std::ostringstream ss;
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
-    std::vector<SidechainWT> vWT;
+    std::vector<SidechainWithdrawal> vWT;
 
     std::unique_ptr<CDBIterator> pcursor(NewIterator());
     pcursor->Seek(ss.str());
@@ -451,7 +451,7 @@ std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
         boost::this_thread::interruption_point();
 
         std::pair<char, uint256> key;
-        SidechainWT wt;
+        SidechainWithdrawal wt;
         if (pcursor->GetKey(key) && key.first == sidechainop) {
             if (pcursor->GetSidechainValue(wt))
                 vWT.push_back(wt);
@@ -463,13 +463,13 @@ std::vector<SidechainWT> CSidechainTreeDB::GetWTs(const uint8_t& nSidechain)
     return vWT;
 }
 
-std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSidechain)
+std::vector<SidechainWithdrawalBundle> CSidechainTreeDB::GetWithdrawalBundles(const uint8_t& nSidechain)
 {
-    const char sidechainop = DB_SIDECHAIN_WTPRIME_OP;
+    const char sidechainop = DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP;
     std::ostringstream ss;
     ::Serialize(ss, std::make_pair(std::make_pair(sidechainop, nSidechain), uint256()));
 
-    std::vector<SidechainWTPrime> vWTPrime;
+    std::vector<SidechainWithdrawalBundle> vWithdrawalBundle;
 
     std::unique_ptr<CDBIterator> pcursor(NewIterator());
     pcursor->Seek(ss.str());
@@ -477,18 +477,18 @@ std::vector<SidechainWTPrime> CSidechainTreeDB::GetWTPrimes(const uint8_t& nSide
         boost::this_thread::interruption_point();
 
         std::pair<char, uint256> key;
-        SidechainWTPrime wtPrime;
+        SidechainWithdrawalBundle withdrawalBundle;
         if (pcursor->GetKey(key) && key.first == sidechainop) {
-            if (pcursor->GetSidechainValue(wtPrime)) {
-                // Only return the WT^(s) indexed by ID
-                if (key.second == wtPrime.GetID())
-                    vWTPrime.push_back(wtPrime);
+            if (pcursor->GetSidechainValue(withdrawalBundle)) {
+                // Only return the WithdrawalBundle(s) indexed by ID
+                if (key.second == withdrawalBundle.GetID())
+                    vWithdrawalBundle.push_back(withdrawalBundle);
             }
         }
 
         pcursor->Next();
     }
-    return vWTPrime;
+    return vWithdrawalBundle;
 }
 
 std::vector<SidechainDeposit> CSidechainTreeDB::GetDeposits(const uint8_t& nSidechain)
@@ -562,19 +562,19 @@ bool CSidechainTreeDB::GetLastDeposit(SidechainDeposit& deposit)
     return false;
 }
 
-bool CSidechainTreeDB::GetLastWTPrimeHash(uint256& hash)
+bool CSidechainTreeDB::GetLastWithdrawalBundleHash(uint256& hash)
 {
     // Look up the last deposit non amount hash
-    if (!Read(DB_LAST_SIDECHAIN_WTPRIME, hash))
+    if (!Read(DB_LAST_SIDECHAIN_WITHDRAWAL_BUNDLE, hash))
         return false;
 
     return true;
 }
 
-bool CSidechainTreeDB::HaveWTPrime(const uint256& hashWTPrime) const
+bool CSidechainTreeDB::HaveWithdrawalBundle(const uint256& hashWithdrawalBundle) const
 {
-    SidechainWTPrime wtPrime;
-    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WTPRIME_OP, hashWTPrime), wtPrime))
+    SidechainWithdrawalBundle withdrawalBundle;
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP, hashWithdrawalBundle), withdrawalBundle))
         return true;
 
     return false;

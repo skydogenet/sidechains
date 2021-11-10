@@ -4237,7 +4237,7 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
     }
 }
 
-bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, const std::string& strRefundDestination, std::string& strFail, uint256& txid, uint256& wtid)
+bool CWallet::CreateWithdrawal(const CAmount& nAmount, const CAmount& nFee, const CAmount& nMainchainFee, const std::string& strDestination, const std::string& strRefundDestination, std::string& strFail, uint256& txid, uint256& id)
 {
     if (!(nAmount > 0)) {
         strFail = "Invalid amount - must be greater than 0.";
@@ -4272,7 +4272,7 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
 
     LOCK2(cs_main, cs_wallet);
 
-    // Select coins to cover WT
+    // Select coins to cover withdrawal
     std::vector<COutput> vCoins;
     AvailableCoins(vCoins, true /* fOnlySafe */);
     std::set<CInputCoin> setCoins;
@@ -4304,24 +4304,24 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
             mtx.vout.push_back(out);
     }
 
-    // Add WT inputs
+    // Add Withdrawalinputs
     for (const auto& coin : setCoins) {
         mtx.vin.push_back(CTxIn(coin.outpoint.hash, coin.outpoint.n, CScript()));
     }
 
-    // Add WT burn output
+    // Add Withdrawalburn output
     mtx.vout.push_back(CTxOut(nAmount + nMainchainFee, CScript() << OP_RETURN));
 
-    // WT data ouput
-    SidechainWT wt;
+    // Withdrawaldata ouput
+    SidechainWithdrawal wt;
     wt.nSidechain = THIS_SIDECHAIN;
     wt.strDestination = strDestination;
     wt.strRefundDestination = strRefundDestination;
     wt.amount = nAmount + nMainchainFee;
-    wt.hashBlindWTX = CTransaction(mtx).GetHash();
+    wt.hashBlindTx = CTransaction(mtx).GetHash();
     wt.mainchainFee = nMainchainFee;
 
-    wtid = wt.GetID();
+    id = wt.GetID();
 
     mtx.vout.push_back(CTxOut(CAmount(0), wt.GetScript()));
 
@@ -4388,7 +4388,7 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
 
     CValidationState state;
     if (!CommitTransaction(wtx, reserveKey, g_connman.get(), state)) {
-        strFail = "Failed to commit WT! Reject reason: " + FormatStateMessage(state) + "\n";
+        strFail = "Failed to commit withdrawal transaction! Reject reason: " + FormatStateMessage(state) + "\n";
         return false;
     }
 
@@ -4397,17 +4397,17 @@ bool CWallet::CreateWT(const CAmount& nAmount, const CAmount& nFee, const CAmoun
     return true;
 }
 
-bool CWallet::CreateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, std::string& strFail, uint256& txid)
+bool CWallet::CreateWithdrawalRefundRequest(const uint256& id, const std::vector<unsigned char>& vchSig, std::string& strFail, uint256& txid)
 {
-    if (mempool.WTRefundExists(wtID)) {
+    if (mempool.WithdrawalRefundExists(id)) {
         strFail = "A refund request is already in the mempool for this withdrawal!";
         return false;
     }
 
-    CScript script = GenerateWTRefundRequest(wtID, vchSig);
+    CScript script = GenerateWithdrawalRefundRequest(id, vchSig);
 
     CWalletTx wtx;
-    wtx.mapValue["comment"] = "WT Refund Request";
+    wtx.mapValue["comment"] = "WithdrawalRefund Request";
     wtx.fTimeReceivedIsTxTime = true;
     wtx.fFromMe = true;
     wtx.BindWallet(this);
@@ -4419,13 +4419,13 @@ bool CWallet::CreateWTRefundRequest(const uint256& wtID, const std::vector<unsig
     CAmount nFeeRequired = 0;
     std::string strError = "";
     if (!CreateTransaction(std::vector<CRecipient> { recipient }, wtx, reserveKey, nFeeRequired, nChangePosRet, strError, coinControl)) {
-        strFail = "Failed to create WT refund tx! Reason: " + strError + "\n";
+        strFail = "Failed to create refund tx! Reason: " + strError + "\n";
         return false;
     }
 
     CValidationState state;
     if (!CommitTransaction(wtx, reserveKey, g_connman.get(), state)) {
-        strFail = "Failed to commit WT refund tx! Reject reason: " + FormatStateMessage(state) + "\n";
+        strFail = "Failed to commit refund tx! Reject reason: " + FormatStateMessage(state) + "\n";
         return false;
     }
 

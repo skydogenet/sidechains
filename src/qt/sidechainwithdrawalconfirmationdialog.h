@@ -2,24 +2,24 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SIDECHAINWTCONFIRMATIONDIALOG_H
-#define SIDECHAINWTCONFIRMATIONDIALOG_H
+#ifndef SIDECHAIN_WITHDRAWAL_BUNDLECONFIRMATIONDIALOG_H
+#define SIDECHAIN_WITHDRAWAL_BUNDLECONFIRMATIONDIALOG_H
 
 #include <QDialog>
 
 #include <amount.h>
 
 namespace Ui {
-class SidechainWTConfirmationDialog;
+class SidechainWithdrawalConfirmationDialog;
 }
 
-class SidechainWTConfirmationDialog : public QDialog
+class SidechainWithdrawalConfirmationDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit SidechainWTConfirmationDialog(QWidget *parent = nullptr);
-    ~SidechainWTConfirmationDialog();
+    explicit SidechainWithdrawalConfirmationDialog(QWidget *parent = nullptr);
+    ~SidechainWithdrawalConfirmationDialog();
 
     bool GetConfirmed();
     void SetInfo(const QString& strWTAmount, const QString& strFee,
@@ -31,11 +31,11 @@ public Q_SLOTS:
     void on_buttonBox_rejected();
 
 private:
-    Ui::SidechainWTConfirmationDialog *ui;
+    Ui::SidechainWithdrawalConfirmationDialog *ui;
 
     void Reset();
     bool fConfirmed = false;
 
 };
 
-#endif // SIDECHAINWTCONFIRMATIONDIALOG_H
+#endif // SIDECHAIN_WITHDRAWAL_BUNDLECONFIRMATIONDIALOG_H

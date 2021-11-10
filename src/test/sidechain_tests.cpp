@@ -38,14 +38,14 @@ BOOST_AUTO_TEST_CASE(sidechain_obj)
 {
     // Test sidechain object (for leveldb) scripts
 
-    SidechainWT wt;
+    SidechainWithdrawal wt;
     wt.nSidechain = 0;
     wt.strDestination = "";
     wt.strRefundDestination = "";
     wt.amount = 0;
     wt.mainchainFee = 0;
-    wt.status = WT_UNSPENT;
-    wt.hashBlindWTX = uint256();
+    wt.status = WITHDRAWAL_UNSPENT;
+    wt.hashBlindTx = uint256();
 
     CScript script = wt.GetScript();
 
@@ -285,28 +285,28 @@ BOOST_AUTO_TEST_CASE(sidechain_deposit_sort_deposits)
     BOOST_CHECK(vDepositSorted == vD);
 }
 
-BOOST_AUTO_TEST_CASE(IsWTPrimeFailCommit)
+BOOST_AUTO_TEST_CASE(IsWithdrawalBundleFailCommit)
 {
-    uint256 hashWTPrime = GetRandHash();
+    uint256 hashWithdrawalBundle = GetRandHash();
 
-    CScript script =  GenerateWTPrimeFailCommit(hashWTPrime);
+    CScript script =  GenerateWithdrawalBundleFailCommit(hashWithdrawalBundle);
 
-    uint256 hashWTPrimeFromCommit;
-    BOOST_CHECK(script.IsWTPrimeFailCommit(hashWTPrimeFromCommit));
+    uint256 hashWithdrawalBundleFromCommit;
+    BOOST_CHECK(script.IsWithdrawalBundleFailCommit(hashWithdrawalBundleFromCommit));
 
-    BOOST_CHECK(hashWTPrime == hashWTPrimeFromCommit);
+    BOOST_CHECK(hashWithdrawalBundle == hashWithdrawalBundleFromCommit);
 }
 
-BOOST_AUTO_TEST_CASE(IsWTPrimeSpentCommit)
+BOOST_AUTO_TEST_CASE(IsWithdrawalBundleSpentCommit)
 {
-    uint256 hashWTPrime = GetRandHash();
+    uint256 hashWithdrawalBundle = GetRandHash();
 
-    CScript script = GenerateWTPrimeSpentCommit(hashWTPrime);
+    CScript script = GenerateWithdrawalBundleSpentCommit(hashWithdrawalBundle);
 
-    uint256 hashWTPrimeFromCommit;
-    BOOST_CHECK(script.IsWTPrimeSpentCommit(hashWTPrimeFromCommit));
+    uint256 hashWithdrawalBundleFromCommit;
+    BOOST_CHECK(script.IsWithdrawalBundleSpentCommit(hashWithdrawalBundleFromCommit));
 
-    BOOST_CHECK(hashWTPrime == hashWTPrimeFromCommit);
+    BOOST_CHECK(hashWithdrawalBundle == hashWithdrawalBundleFromCommit);
 }
 
 BOOST_AUTO_TEST_CASE(WTFeeEncoding)
@@ -317,50 +317,50 @@ BOOST_AUTO_TEST_CASE(WTFeeEncoding)
 
     // Test 1 * COIN
     amount = COIN;
-    script = EncodeWTFees(amount);
-    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    script = EncodeWithdrawalFees(amount);
+    BOOST_CHECK(DecodeWithdrawalFees(script, amountRead));
     BOOST_CHECK(amountRead == amount);
 
     // Test 1 * CENT
     amount = CENT;
-    script = EncodeWTFees(amount);
-    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    script = EncodeWithdrawalFees(amount);
+    BOOST_CHECK(DecodeWithdrawalFees(script, amountRead));
     BOOST_CHECK(amountRead == amount);
 
     // Test with a negative number
     amount = -1000000;
-    script = EncodeWTFees(amount);
-    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    script = EncodeWithdrawalFees(amount);
+    BOOST_CHECK(DecodeWithdrawalFees(script, amountRead));
     BOOST_CHECK(amountRead == amount);
 
     // Test incrementing from 0.01 to 21 by 1 * CENT
     amount = 0;
     while (amount < 21 * COIN) {
         amount += CENT;
-        script = EncodeWTFees(amount);
+        script = EncodeWithdrawalFees(amount);
 
-        BOOST_CHECK(DecodeWTFees(script, amountRead));
+        BOOST_CHECK(DecodeWithdrawalFees(script, amountRead));
         BOOST_CHECK(amountRead == amount);
     }
 
     // Test number greater than CScriptNum default 4 byte integer limit
     amount = 22 * COIN;
     amountRead = 0;
-    script = EncodeWTFees(amount);
-    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    script = EncodeWithdrawalFees(amount);
+    BOOST_CHECK(DecodeWithdrawalFees(script, amountRead));
     BOOST_CHECK(amount == amountRead);
 
     // Test high number
     amount = MAX_MONEY;
     amountRead = 0;
-    script = EncodeWTFees(amount);
-    BOOST_CHECK(DecodeWTFees(script, amountRead));
+    script = EncodeWithdrawalFees(amount);
+    BOOST_CHECK(DecodeWithdrawalFees(script, amountRead));
     BOOST_CHECK(amount == amountRead);
 }
 
 BOOST_AUTO_TEST_CASE(wt_refund_script)
 {
-    // Test a valid WT refund message / script
+    // Test a valid Withdrawalrefund message / script
 
     std::string strRefundAddress = "sVf5Jjy6EuVdq2oKFDaQAxb6rTYbmQZAPT";
     CTxDestination dest = DecodeDestination(strRefundAddress);
@@ -380,37 +380,37 @@ BOOST_AUTO_TEST_CASE(wt_refund_script)
     CKey privKey = vchSecret.GetKey();
     BOOST_CHECK(privKey.IsValid());
 
-    // Add WT to psidechaintree
-    SidechainWT wt;
+    // Add Withdrawalto psidechaintree
+    SidechainWithdrawal wt;
     wt.nSidechain = 0;
     wt.strDestination = "";
     wt.strRefundDestination = strRefundAddress;
     wt.amount = 0;
     wt.mainchainFee = 0;
-    wt.status = WT_UNSPENT;
-    wt.hashBlindWTX = uint256();
+    wt.status = WITHDRAWAL_UNSPENT;
+    wt.hashBlindTx = uint256();
 
-    psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
+    psidechaintree->WriteWithdrawalUpdate(std::vector<SidechainWithdrawal> { wt });
 
-    uint256 hashMessage = GetWTRefundMessageHash(wt.GetID());
+    uint256 hashMessage = GetWithdrawalRefundMessageHash(wt.GetID());
 
     // We are really only signing the hash of the message
     std::vector<unsigned char> vchSig;
     BOOST_CHECK(privKey.SignCompact(hashMessage, vchSig));
 
     // Generate refund request script
-    CScript script = GenerateWTRefundRequest(wt.GetID(), vchSig);
+    CScript script = GenerateWithdrawalRefundRequest(wt.GetID(), vchSig);
 
     // Check refund script
     uint256 idFromScript;
     std::vector<unsigned char> vchSigFromScript;
-    BOOST_CHECK(script.IsWTRefundRequest(idFromScript, vchSigFromScript));
+    BOOST_CHECK(script.IsWithdrawalRefundRequest(idFromScript, vchSigFromScript));
     BOOST_CHECK(idFromScript == wt.GetID());
     BOOST_CHECK(vchSigFromScript == vchSig);
 
     // Verify refund script
-    SidechainWT wtOut;
-    BOOST_CHECK(VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
+    SidechainWithdrawal wtOut;
+    BOOST_CHECK(VerifyWithdrawalRefundRequest(idFromScript, vchSigFromScript, wtOut));
 
     // Verify again ourselves
     CPubKey pubkey;
@@ -438,7 +438,7 @@ BOOST_AUTO_TEST_CASE(IsPrevBlockCommit)
 
 BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
 {
-    // Test a WT refund script with invalid address / signature
+    // Test a Withdrawalrefund script with invalid address / signature
 
     std::string strRefundAddress = "sVf5Jjy6EuVdq2oKFDaQAxb6rTYbmQZAPT";
     CTxDestination dest = DecodeDestination(strRefundAddress);
@@ -462,42 +462,42 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_address)
     // sign the message with and check that it is rejected.
     std::string strOtherAdress = "sSnLM62jFg5XHiHdN1nzbQ9dHXzUnZS2kP";
 
-    // Add WT to psidechaintree
-    SidechainWT wt;
+    // Add Withdrawalto psidechaintree
+    SidechainWithdrawal wt;
     wt.nSidechain = 0;
     wt.strDestination = "";
     wt.strRefundDestination = strOtherAdress;
     wt.amount = 0;
     wt.mainchainFee = 0;
-    wt.status = WT_UNSPENT;
-    wt.hashBlindWTX = uint256();
+    wt.status = WITHDRAWAL_UNSPENT;
+    wt.hashBlindTx = uint256();
 
-    psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
+    psidechaintree->WriteWithdrawalUpdate(std::vector<SidechainWithdrawal> { wt });
 
-    uint256 hashMessage = GetWTRefundMessageHash(wt.GetID());
+    uint256 hashMessage = GetWithdrawalRefundMessageHash(wt.GetID());
 
     // We are really only signing the hash of the message
     std::vector<unsigned char> vchSig;
     BOOST_CHECK(privKey.SignCompact(hashMessage, vchSig));
 
     // Generate refund request script
-    CScript script = GenerateWTRefundRequest(wt.GetID(), vchSig);
+    CScript script = GenerateWithdrawalRefundRequest(wt.GetID(), vchSig);
 
     // Check refund script
     uint256 idFromScript;
     std::vector<unsigned char> vchSigFromScript;
-    BOOST_CHECK(script.IsWTRefundRequest(idFromScript, vchSigFromScript));
+    BOOST_CHECK(script.IsWithdrawalRefundRequest(idFromScript, vchSigFromScript));
     BOOST_CHECK(idFromScript == wt.GetID());
     BOOST_CHECK(vchSigFromScript == vchSig);
 
     // Refund script should be invalid
-    SidechainWT wtOut;
-    BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
+    SidechainWithdrawal wtOut;
+    BOOST_CHECK(!VerifyWithdrawalRefundRequest(idFromScript, vchSigFromScript, wtOut));
 }
 
 BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
 {
-    // Test a WT refund script with invalid WT ID
+    // Test a Withdrawalrefund script with invalid WithdrawalID
 
     std::string strRefundAddress = "sVf5Jjy6EuVdq2oKFDaQAxb6rTYbmQZAPT";
     CTxDestination dest = DecodeDestination(strRefundAddress);
@@ -517,38 +517,38 @@ BOOST_AUTO_TEST_CASE(wt_refund_script_invalid_wtid)
     CKey privKey = vchSecret.GetKey();
     BOOST_CHECK(privKey.IsValid());
 
-    // Add WT to psidechaintree
-    SidechainWT wt;
+    // Add Withdrawalto psidechaintree
+    SidechainWithdrawal wt;
     wt.nSidechain = 0;
     wt.strDestination = "";
     wt.strRefundDestination = strRefundAddress;
     wt.amount = 0;
     wt.mainchainFee = 0;
-    wt.status = WT_UNSPENT;
-    wt.hashBlindWTX = uint256();
+    wt.status = WITHDRAWAL_UNSPENT;
+    wt.hashBlindTx = uint256();
 
-    psidechaintree->WriteWTUpdate(std::vector<SidechainWT> { wt });
+    psidechaintree->WriteWithdrawalUpdate(std::vector<SidechainWithdrawal> { wt });
 
-    // Put an invalid WT ID in the message
-    uint256 hashMessage = GetWTRefundMessageHash(GetRandHash());
+    // Put an invalid WithdrawalID in the message
+    uint256 hashMessage = GetWithdrawalRefundMessageHash(GetRandHash());
 
     // We are really only signing the hash of the message
     std::vector<unsigned char> vchSig;
     BOOST_CHECK(privKey.SignCompact(hashMessage, vchSig));
 
     // Generate refund request script
-    CScript script = GenerateWTRefundRequest(wt.GetID(), vchSig);
+    CScript script = GenerateWithdrawalRefundRequest(wt.GetID(), vchSig);
 
     // Check refund script
     uint256 idFromScript;
     std::vector<unsigned char> vchSigFromScript;
-    BOOST_CHECK(script.IsWTRefundRequest(idFromScript, vchSigFromScript));
+    BOOST_CHECK(script.IsWithdrawalRefundRequest(idFromScript, vchSigFromScript));
     BOOST_CHECK(idFromScript == wt.GetID());
     BOOST_CHECK(vchSigFromScript == vchSig);
 
     // Refund script should be invalid
-    SidechainWT wtOut;
-    BOOST_CHECK(!VerifyWTRefundRequest(idFromScript, vchSigFromScript, wtOut));
+    SidechainWithdrawal wtOut;
+    BOOST_CHECK(!VerifyWithdrawalRefundRequest(idFromScript, vchSigFromScript, wtOut));
 }
 
 

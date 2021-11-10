@@ -66,9 +66,9 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 4) {
             return QDateTime::fromTime_t((int64_t)object.nTime).toString("dd MMMM yyyy hh:mm");
         }
-        // hashWTPrime
+        // hashWithdrawalBundle
         if (row == 5) {
-            return QString::fromStdString(object.hashWTPrime.ToString()).left(32) + "...";
+            return QString::fromStdString(object.hashWithdrawalBundle.ToString()).left(32) + "...";
         }
         // hashMainchainBlock
         if (row == 6) {
@@ -105,7 +105,7 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 4) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // hashWTPrime
+        // hashWithdrawalBundle
         if (row == 5) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
@@ -134,7 +134,7 @@ QVariant BlockExplorerTableModel::headerData(int section, Qt::Orientation orient
             case 4:
                 return QString("Time");
             case 5:
-                return QString("Hash WT^");
+                return QString("Hash WithdrawalBundle");
             case 6:
                 return QString("Hash Main Block");
             }
@@ -192,7 +192,7 @@ void BlockExplorerTableModel::UpdateModel()
 
         object.hashPrev = hashPrev;
         object.nTime = index->nTime;
-        object.hashWTPrime = index->hashWTPrime;
+        object.hashWithdrawalBundle = index->hashWithdrawalBundle;
         object.hashMainBlock = index->hashMainBlock;
 
         model.append(QVariant::fromValue(object));

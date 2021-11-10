@@ -20,11 +20,11 @@ const uint32_t nVersion = 1;
 uint256 SidechainObj::GetHash(void) const
 {
     uint256 ret;
-    if (sidechainop == DB_SIDECHAIN_WT_OP)
-        ret = SerializeHash(*(SidechainWT *) this);
+    if (sidechainop == DB_SIDECHAIN_WITHDRAWAL_OP)
+        ret = SerializeHash(*(SidechainWithdrawal *) this);
     else
-    if (sidechainop == DB_SIDECHAIN_WTPRIME_OP)
-        ret = SerializeHash(*(SidechainWTPrime *) this);
+    if (sidechainop == DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP)
+        ret = SerializeHash(*(SidechainWithdrawalBundle *) this);
     else
     if (sidechainop == DB_SIDECHAIN_DEPOSIT_OP)
         ret = SerializeHash(*(SidechainDeposit *) this);
@@ -39,7 +39,7 @@ std::string SidechainObj::ToString(void) const
     return str.str();
 }
 
-std::string SidechainWT::ToString() const
+std::string SidechainWithdrawal::ToString() const
 {
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;
@@ -48,47 +48,47 @@ std::string SidechainWT::ToString() const
     str << "amount=" << FormatMoney(amount) << std::endl;
     str << "mainchainFee=" << FormatMoney(mainchainFee) << std::endl;
     str << "status=" << GetStatusStr() << std::endl;
-    str << "hashBlindWTX=" << hashBlindWTX.ToString() << std::endl;
+    str << "hashBlindTx=" << hashBlindTx.ToString() << std::endl;
     return str.str();
 }
 
-std::string SidechainWT::GetStatusStr(void) const
+std::string SidechainWithdrawal::GetStatusStr(void) const
 {
-    if (status == WT_UNSPENT) {
+    if (status == WITHDRAWAL_UNSPENT) {
         return "Unspent";
     }
     else
-    if (status == WT_IN_WTPRIME) {
-        return "Pending - in WT^";
+    if (status == WITHDRAWAL_IN_BUNDLE) {
+        return "Pending - in WithdrawalBundle";
     }
     else
-    if (status == WT_SPENT) {
+    if (status == WITHDRAWAL_SPENT) {
         return "Spent";
     }
     return "Unknown";
 }
 
-std::string SidechainWTPrime::ToString() const
+std::string SidechainWithdrawalBundle::ToString() const
 {
     std::stringstream str;
     str << "sidechainop=" << sidechainop << std::endl;
     str << "nSidechain=" << std::to_string(nSidechain) << std::endl;
-    str << "wtprime=" << CTransaction(wtPrime).ToString() << std::endl;
+    str << "tx=" << CTransaction(tx).ToString() << std::endl;
     str << "status=" << GetStatusStr() << std::endl;
     return str.str();
 }
 
-std::string SidechainWTPrime::GetStatusStr(void) const
+std::string SidechainWithdrawalBundle::GetStatusStr(void) const
 {
-    if (status == WTPRIME_CREATED) {
+    if (status == WITHDRAWAL_BUNDLE_CREATED) {
         return "Created";
     }
     else
-    if (status == WTPRIME_FAILED) {
+    if (status == WITHDRAWAL_BUNDLE_FAILED) {
         return "Failed";
     }
     else
-    if (status == WTPRIME_SPENT) {
+    if (status == WITHDRAWAL_BUNDLE_SPENT) {
         return "Spent";
     }
     return "Unknown";
@@ -120,14 +120,14 @@ SidechainObj* ParseSidechainObj(const std::vector<unsigned char>& vch)
     const char *vch0 = (const char *) &vch.begin()[0];
     CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
-    if (*vch0 == DB_SIDECHAIN_WT_OP) {
-        SidechainWT *obj = new SidechainWT;
+    if (*vch0 == DB_SIDECHAIN_WITHDRAWAL_OP) {
+        SidechainWithdrawal *obj = new SidechainWithdrawal;
         obj->Unserialize(ds);
         return obj;
     }
     else
-    if (*vch0 == DB_SIDECHAIN_WTPRIME_OP) {
-        SidechainWTPrime *obj = new SidechainWTPrime;
+    if (*vch0 == DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP) {
+        SidechainWithdrawalBundle *obj = new SidechainWithdrawalBundle;
         obj->Unserialize(ds);
         return obj;
     }
@@ -141,46 +141,46 @@ SidechainObj* ParseSidechainObj(const std::vector<unsigned char>& vch)
     return NULL;
 }
 
-struct CompareWTMainchainFee
+struct CompareMainchainFee
 {
-    bool operator()(const SidechainWT& a, const SidechainWT& b) const
+    bool operator()(const SidechainWithdrawal& a, const SidechainWithdrawal& b) const
     {
         return a.mainchainFee > b.mainchainFee;
     }
 };
 
-void SortWTByFee(std::vector<SidechainWT>& vWT)
+void SortWithdrawalByFee(std::vector<SidechainWithdrawal>& vWT)
 {
-    std::sort(vWT.begin(), vWT.end(), CompareWTMainchainFee());
+    std::sort(vWT.begin(), vWT.end(), CompareMainchainFee());
 }
 
-struct CompareWTPrimeHeight
+struct CompareWithdrawalBundleHeight
 {
-    bool operator()(const SidechainWTPrime& a, const SidechainWTPrime& b) const
+    bool operator()(const SidechainWithdrawalBundle& a, const SidechainWithdrawalBundle& b) const
     {
         return a.nHeight > b.nHeight;
     }
 };
 
-void SortWTPrimeByHeight(std::vector<SidechainWTPrime>& vWTPrime)
+void SortWithdrawalBundleByHeight(std::vector<SidechainWithdrawalBundle>& vWithdrawalBundle)
 {
-    std::sort(vWTPrime.begin(), vWTPrime.end(), CompareWTPrimeHeight());
+    std::sort(vWithdrawalBundle.begin(), vWithdrawalBundle.end(), CompareWithdrawalBundleHeight());
 }
 
-void SelectUnspentWT(std::vector<SidechainWT>& vWT)
+void SelectUnspentWithdrawal(std::vector<SidechainWithdrawal>& vWT)
 {
-    vWT.erase(std::remove_if(vWT.begin(), vWT.end(),[](const SidechainWT& wt)
-                {return wt.status != WT_UNSPENT;}), vWT.end());
+    vWT.erase(std::remove_if(vWT.begin(), vWT.end(),[](const SidechainWithdrawal& wt)
+                {return wt.status != WITHDRAWAL_UNSPENT;}), vWT.end());
 }
 
 CScript SidechainObj::GetScript(void) const
 {
     CDataStream ds (SER_DISK, CLIENT_VERSION);
-    if (sidechainop == DB_SIDECHAIN_WT_OP)
-        ((SidechainWT *) this)->Serialize(ds);
+    if (sidechainop == DB_SIDECHAIN_WITHDRAWAL_OP)
+        ((SidechainWithdrawal *) this)->Serialize(ds);
     else
-    if (sidechainop == DB_SIDECHAIN_WTPRIME_OP)
-        ((SidechainWTPrime *) this)->Serialize(ds);
+    if (sidechainop == DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP)
+        ((SidechainWithdrawalBundle *) this)->Serialize(ds);
     else
     if (sidechainop == DB_SIDECHAIN_DEPOSIT_OP)
         ((SidechainDeposit *) this)->Serialize(ds);

@@ -235,7 +235,7 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
-bool CScript::IsWTPrimeFailCommit(uint256& hashWTPrime) const
+bool CScript::IsWithdrawalBundleFailCommit(uint256& hashWithdrawalBundle) const
 {
     // Check script size
     size_t size = this->size();
@@ -250,15 +250,15 @@ bool CScript::IsWTPrimeFailCommit(uint256& hashWTPrime) const
             (*this)[4] != 0x89)
         return false;
 
-    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    hashWithdrawalBundle = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
 
-    if (hashWTPrime.IsNull())
+    if (hashWithdrawalBundle.IsNull())
         return false;
 
     return true;
 }
 
-bool CScript::IsWTPrimeSpentCommit(uint256& hashWTPrime) const
+bool CScript::IsWithdrawalBundleSpentCommit(uint256& hashWithdrawalBundle) const
 {
     // Check script size
     size_t size = this->size();
@@ -273,15 +273,15 @@ bool CScript::IsWTPrimeSpentCommit(uint256& hashWTPrime) const
             (*this)[4] != 0xDE)
         return false;
 
-    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    hashWithdrawalBundle = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
 
-    if (hashWTPrime.IsNull())
+    if (hashWithdrawalBundle.IsNull())
         return false;
 
     return true;
 }
 
-bool CScript::IsWTRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSig) const
+bool CScript::IsWithdrawalRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSig) const
 {
     // Check script size
     size_t size = this->size();
@@ -331,7 +331,7 @@ bool CScript::IsPrevBlockCommit(uint256& hashPrevMain, uint256& hashPrevSide) co
     return true;
 }
 
-bool CScript::IsWTPrimeHashCommit(uint256& hashWTPrime) const
+bool CScript::IsWithdrawalBundleHashCommit(uint256& hashWithdrawalBundle) const
 {
     // Check script size
     size_t size = this->size();
@@ -346,9 +346,9 @@ bool CScript::IsWTPrimeHashCommit(uint256& hashWTPrime) const
             (*this)[4] != 0xFE)
         return false;
 
-    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    hashWithdrawalBundle = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
 
-    if (hashWTPrime.IsNull())
+    if (hashWithdrawalBundle.IsNull())
         return false;
 
     return true;

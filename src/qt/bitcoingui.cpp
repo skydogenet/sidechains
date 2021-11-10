@@ -33,8 +33,8 @@
 #include <ui_interface.h>
 #include <util.h>
 
-// For getting the latest WT^ hash
-// TODO make the latest WT^ hash get set in the client model or somewhere else
+// For getting the latest WithdrawalBundle hash
+// TODO make the latest WithdrawalBundle hash get set in the client model or somewhere else
 // instead of looking it up here.
 #include <validation.h>
 #include <txdb.h>
@@ -95,7 +95,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     labelProgressPercentage(0),
     labelNumBlocks(0),
     labelLastBlock(0),
-    labelLastWTPrime(0),
+    labelLastWithdrawalBundle(0),
     appMenuBar(0),
     overviewAction(0),
     historyAction(0),
@@ -219,9 +219,9 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     labelNumBlocks = new QLabel();
     labelLastBlock = new QLabel();
 
-    labelLastWTPrime = new QLabel();
-    labelLastWTPrime->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-    labelLastWTPrime->setIndent(90);
+    labelLastWithdrawalBundle = new QLabel();
+    labelLastWithdrawalBundle->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    labelLastWithdrawalBundle->setIndent(90);
 
     labelProgressReason = new QLabel();
     labelProgressPercentage = new QLabel();
@@ -232,7 +232,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         frameBlocksLayout->addWidget(labelWalletEncryptionIcon);
     }
     frameBlocksLayout->addStretch();
-    frameBlocksLayout->addWidget(labelLastWTPrime);
+    frameBlocksLayout->addWidget(labelLastWithdrawalBundle);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(CreateVLine());
     frameBlocksLayout->addWidget(labelNumBlocks);
@@ -991,10 +991,10 @@ void BitcoinGUI::message(const QString &title, const QString &message, unsigned 
         notificator->notify(static_cast<Notificator::Class>(nNotifyIcon), strTitle, message);
 }
 
-void BitcoinGUI::WTPrimeBannerUpdated(QString str)
+void BitcoinGUI::WithdrawalBundleBannerUpdated(QString str)
 {
-    // Set latest WT^ banner text
-    labelLastWTPrime->setText(str);
+    // Set latest WithdrawalBundle banner text
+    labelLastWithdrawalBundle->setText(str);
 }
 
 void BitcoinGUI::changeEvent(QEvent *e)

@@ -43,10 +43,10 @@ std::vector<CBlock> BMMCache::GetBMMBlockCache() const
     return vBlock;
 }
 
-std::vector<uint256> BMMCache::GetBroadcastedWTPrimeCache() const
+std::vector<uint256> BMMCache::GetBroadcastedWithdrawalBundleCache() const
 {
     std::vector<uint256> vHash;
-    for (const auto& u : setWTPrimeBroadcasted) {
+    for (const auto& u : setWithdrawalBundleBroadcasted) {
         vHash.push_back(u);
     }
     return vHash;
@@ -76,9 +76,9 @@ void BMMCache::ClearBMMBlocks()
     mapBMMBlocks.clear();
 }
 
-void BMMCache::StoreBroadcastedWTPrime(const uint256& hashWTPrime)
+void BMMCache::StoreBroadcastedWithdrawalBundle(const uint256& hashWithdrawalBundle)
 {
-    setWTPrimeBroadcasted.insert(hashWTPrime);
+    setWithdrawalBundleBroadcasted.insert(hashWithdrawalBundle);
 }
 
 void BMMCache::StorePrevBlockBMMCreated(const uint256& hashPrevBlock)
@@ -86,12 +86,12 @@ void BMMCache::StorePrevBlockBMMCreated(const uint256& hashPrevBlock)
     setPrevBlockBMMCreated.insert(hashPrevBlock);
 }
 
-bool BMMCache::HaveBroadcastedWTPrime(const uint256& hashWTPrime) const
+bool BMMCache::HaveBroadcastedWithdrawalBundle(const uint256& hashWithdrawalBundle) const
 {
-    if (hashWTPrime.IsNull())
+    if (hashWithdrawalBundle.IsNull())
         return false;
 
-    if (setWTPrimeBroadcasted.count(hashWTPrime))
+    if (setWithdrawalBundleBroadcasted.count(hashWithdrawalBundle))
         return true;
 
     return false;
@@ -291,17 +291,17 @@ void BMMCache::ResetMainBlockCache()
     mapMainBlock.clear();
 }
 
-void BMMCache::CacheWTID(const uint256& wtid)
+void BMMCache::CacheWithdrawalID(const uint256& wtid)
 {
-    setWTIDCache.insert(wtid);
+    setWITHDRAWALIDCache.insert(wtid);
 }
 
-std::set<uint256> BMMCache::GetCachedWTID()
+std::set<uint256> BMMCache::GetCachedWithdrawalID()
 {
-    return setWTIDCache;
+    return setWITHDRAWALIDCache;
 }
 
 bool BMMCache::IsMyWT(const uint256& wtid)
 {
-    return setWTIDCache.count(wtid);
+    return setWITHDRAWALIDCache.count(wtid);
 }

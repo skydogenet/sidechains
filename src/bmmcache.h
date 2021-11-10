@@ -27,7 +27,7 @@ public:
 
     std::vector<CBlock> GetBMMBlockCache() const;
 
-    std::vector<uint256> GetBroadcastedWTPrimeCache() const;
+    std::vector<uint256> GetBroadcastedWithdrawalBundleCache() const;
 
     std::vector<uint256> GetMainBlockHashCache() const;
 
@@ -35,11 +35,11 @@ public:
 
     void ClearBMMBlocks();
 
-    void StoreBroadcastedWTPrime(const uint256& hashWTPrime);
+    void StoreBroadcastedWithdrawalBundle(const uint256& hashWithdrawalBundle);
 
     void StorePrevBlockBMMCreated(const uint256& hashPrevBlock);
 
-    bool HaveBroadcastedWTPrime(const uint256& hashWTPrime) const;
+    bool HaveBroadcastedWithdrawalBundle(const uint256& hashWithdrawalBundle) const;
 
     // Check if we already verified BMM for this sidechain block
     bool HaveVerifiedBMM(const uint256& hashBlock) const;
@@ -81,9 +81,9 @@ public:
 
     void ResetMainBlockCache();
 
-    void CacheWTID(const uint256& wtid);
+    void CacheWithdrawalID(const uint256& wtid);
 
-    std::set<uint256> GetCachedWTID();
+    std::set<uint256> GetCachedWithdrawalID();
 
     bool IsMyWT(const uint256& wtid);
 
@@ -99,8 +99,8 @@ private:
     // Cache of deposit txid which we have already verified with the mainchain
     std::set<uint256 /* txid */> setDepositVerified;
 
-    // WT^(s) that we have already broadcasted to the mainchain.
-    std::set<uint256> setWTPrimeBroadcasted;
+    // WithdrawalBundle(s) that we have already broadcasted to the mainchain.
+    std::set<uint256> setWithdrawalBundleBroadcasted;
 
     // Index of mainchain block hash in vMainBlockHash
     std::map<uint256 /* hashMainchainBlock */, MainBlockIndex> mapMainBlock;
@@ -121,8 +121,8 @@ private:
     // Set of main block hashes that we've already checked for our BMM requests
     std::set<uint256> setMainBlockChecked;
 
-    // WT IDs for WT(s) created by the user
-    std::set<uint256> setWTIDCache;
+    // WithdrawalIDs for WT(s) created by the user
+    std::set<uint256> setWITHDRAWALIDCache;
 };
 
 #endif // BITCOIN_BMMCACHE_H

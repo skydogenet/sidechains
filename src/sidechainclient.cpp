@@ -32,12 +32,12 @@ SidechainClient::SidechainClient()
 
 }
 
-bool SidechainClient::BroadcastWTPrime(const std::string& hex)
+bool SidechainClient::BroadcastWithdrawalBundle(const std::string& hex)
 {
-    // JSON for sending the WT^ to mainchain via HTTP-RPC
+    // JSON for sending the WithdrawalBundle to mainchain via HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"receivewtprime\", \"params\": ");
+    json.append("\"method\": \"receivewithdrawalbundle\", \"params\": ");
     json.append("[");
     json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append(",\"");
@@ -45,7 +45,7 @@ bool SidechainClient::BroadcastWTPrime(const std::string& hex)
     json.append("\"] }");
 
     // TODO Read result
-    // the mainchain will return the txid if WT^ has been received
+    // the mainchain will return the txid if WithdrawalBundle has been received
     boost::property_tree::ptree ptree;
     return SendRequestToMainchain(json, ptree);
 }
@@ -550,7 +550,7 @@ bool SidechainClient::GetBlockCount(int& nBlocks)
     return nBlocks >= 0;
 }
 
-bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
+bool SidechainClient::GetWorkScore(const uint256& hash, int& nWorkScore)
 {
     // JSON for 'getworkscore' mainchain HTTP-RPC
     std::string json;
@@ -560,7 +560,7 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append(",");
     json.append("\"");
-    json.append(hashWTPrime.ToString());
+    json.append(hash.ToString());
     json.append("\"");
     json.append("] }");
 
@@ -576,23 +576,23 @@ bool SidechainClient::GetWorkScore(const uint256& hashWTPrime, int& nWorkScore)
     return nWorkScore >= 0;
 }
 
-bool SidechainClient::ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime)
+bool SidechainClient::ListWithdrawalBundleStatus(std::vector<uint256>& vHashWithdrawalBundle)
 {
     // TODO for now this function is only being used to see if there are any
-    // WT^(s) for nSidechain. The rest of the results could be useful for the
+    // WithdrawalBundle(s) for nSidechain. The rest of the results could be useful for the
     // GUI though.
 
-    // JSON for 'listwtprimestatus' mainchain HTTP-RPC
+    // JSON for 'listwithdrawalstatus' mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"listwtprimestatus\", \"params\": ");
+    json.append("\"method\": \"listwithdrawalstatus\", \"params\": ");
     json.append("[");
     json.append(UniValue((int)THIS_SIDECHAIN).write());
     json.append("] }");
 
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
-        LogPrintf("ERROR Sidechain client failed to request WT^ status\n");
+        LogPrintf("ERROR Sidechain client failed to request WithdrawalBundle status\n");
         return false;
     }
 
@@ -600,7 +600,7 @@ bool SidechainClient::ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime)
     BOOST_FOREACH(boost::property_tree::ptree::value_type &value, ptree.get_child("result")) {
         BOOST_FOREACH(boost::property_tree::ptree::value_type &v, value.second.get_child("")) {
             // Looping through members
-            if (v.first == "hashwtprime") {
+            if (v.first == "hash") {
                 // Read txid
                 std::string data = v.second.data();
                 if (!data.length())
@@ -608,12 +608,12 @@ bool SidechainClient::ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime)
 
                 uint256 hash = uint256S(data);
                 if (!hash.IsNull())
-                    vHashWTPrime.push_back(hash);
+                    vHashWithdrawalBundle.push_back(hash);
             }
         }
     }
 
-    return vHashWTPrime.size() > 0;
+    return vHashWithdrawalBundle.size() > 0;
 }
 
 bool SidechainClient::GetBlockHash(int nHeight, uint256& hashBlock)
@@ -639,15 +639,15 @@ bool SidechainClient::GetBlockHash(int nHeight, uint256& hashBlock)
     return (!hashBlock.IsNull());
 }
 
-bool SidechainClient::HaveSpentWTPrime(const uint256& hashWTPrime)
+bool SidechainClient::HaveSpentWithdrawalBundle(const uint256& hash)
 {
-    // JSON for 'havespentwtprime' mainchain HTTP-RPC
+    // JSON for 'havespentwithdrawalbundle' mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"havespentwtprime\", \"params\": ");
+    json.append("\"method\": \"havespentwithdrawal\", \"params\": ");
     json.append("[");
     json.append("\"");
-    json.append(hashWTPrime.ToString());
+    json.append(hash.ToString());
     json.append("\"");
     json.append(",");
     json.append(UniValue((int)THIS_SIDECHAIN).write());
@@ -656,7 +656,7 @@ bool SidechainClient::HaveSpentWTPrime(const uint256& hashWTPrime)
     // Try to request mainchain block hash
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
-        LogPrintf("ERROR Sidechain client failed to request spent WT^!\n");
+        LogPrintf("ERROR Sidechain client failed to request spent WithdrawalBundle!\n");
         return false;
     }
 
@@ -665,15 +665,15 @@ bool SidechainClient::HaveSpentWTPrime(const uint256& hashWTPrime)
     return fSpent;
 }
 
-bool SidechainClient::HaveFailedWTPrime(const uint256& hashWTPrime)
+bool SidechainClient::HaveFailedWithdrawalBundle(const uint256& hash)
 {
-    // JSON for 'havefailedwtprime' mainchain HTTP-RPC
+    // JSON for 'havefailedwithdrawalbundle' mainchain HTTP-RPC
     std::string json;
     json.append("{\"jsonrpc\": \"1.0\", \"id\":\"SidechainClient\", ");
-    json.append("\"method\": \"havefailedwtprime\", \"params\": ");
+    json.append("\"method\": \"havefailedwithdrawal\", \"params\": ");
     json.append("[");
     json.append("\"");
-    json.append(hashWTPrime.ToString());
+    json.append(hash.ToString());
     json.append("\"");
     json.append(",");
     json.append(UniValue((int)THIS_SIDECHAIN).write());
@@ -682,7 +682,7 @@ bool SidechainClient::HaveFailedWTPrime(const uint256& hashWTPrime)
     // Try to request mainchain block hash
     boost::property_tree::ptree ptree;
     if (!SendRequestToMainchain(json, ptree)) {
-        LogPrintf("ERROR Sidechain client failed to request failed WT^!\n");
+        LogPrintf("ERROR Sidechain client failed to request failed WithdrawalBundle!\n");
         return false;
     }
 

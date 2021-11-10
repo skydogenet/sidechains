@@ -22,7 +22,7 @@ public:
     uint32_t nTime;
 
     // BMM header contents
-    uint256 hashWTPrime;
+    uint256 hashWithdrawalBundle;
     uint256 hashMainchainBlock;
 
     CBlockHeader()
@@ -38,7 +38,7 @@ public:
         READWRITE(hashPrevBlock);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
-        READWRITE(hashWTPrime);
+        READWRITE(hashWithdrawalBundle);
         READWRITE(hashMainchainBlock);
     }
 
@@ -53,7 +53,7 @@ public:
 
     bool IsNull() const
     {
-        return (hashMainchainBlock.IsNull() && hashWTPrime.IsNull());
+        return (hashMainchainBlock.IsNull() && hashWithdrawalBundle.IsNull());
     }
 
     uint256 GetHash() const;
@@ -107,7 +107,7 @@ public:
         block.hashPrevBlock         = hashPrevBlock;
         block.hashMerkleRoot        = hashMerkleRoot;
         block.nTime                 = nTime;
-        block.hashWTPrime           = hashWTPrime;
+        block.hashWithdrawalBundle           = hashWithdrawalBundle;
         block.hashMainchainBlock    = hashMainchainBlock;
         return block;
     }

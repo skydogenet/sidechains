@@ -2,22 +2,22 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <qt/sidechainwtprimehistorydialog.h>
-#include <qt/forms/ui_sidechainwtprimehistorydialog.h>
+#include <qt/sidechainwithdrawalbundlehistorydialog.h>
+#include <qt/forms/ui_sidechainwithdrawalbundlehistorydialog.h>
 
 #include <QScrollBar>
 
-#include <qt/sidechainwtprimehistorytablemodel.h>
+#include <qt/sidechainwithdrawalbundlehistorytablemodel.h>
 
-SidechainWTPrimeHistoryDialog::SidechainWTPrimeHistoryDialog(QWidget *parent) :
+SidechainWithdrawalBundleHistoryDialog::SidechainWithdrawalBundleHistoryDialog(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::SidechainWTPrimeHistoryDialog)
+    ui(new Ui::SidechainWithdrawalBundleHistoryDialog)
 {
     ui->setupUi(this);
 
-    wtPrimeHistoryModel = new SidechainWTPrimeHistoryTableModel(this);
+    withdrawalBundleHistoryModel = new SidechainWithdrawalBundleHistoryTableModel(this);
 
-    ui->tableView->setModel(wtPrimeHistoryModel);
+    ui->tableView->setModel(withdrawalBundleHistoryModel);
 
     // Set resize mode
     ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -45,34 +45,34 @@ SidechainWTPrimeHistoryDialog::SidechainWTPrimeHistoryDialog(QWidget *parent) :
     ui->tableView->setWordWrap(false);
 }
 
-SidechainWTPrimeHistoryDialog::~SidechainWTPrimeHistoryDialog()
+SidechainWithdrawalBundleHistoryDialog::~SidechainWithdrawalBundleHistoryDialog()
 {
     delete ui;
 }
 
-void SidechainWTPrimeHistoryDialog::setWalletModel(WalletModel *model)
+void SidechainWithdrawalBundleHistoryDialog::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
-    wtPrimeHistoryModel->setWalletModel(model);
+    withdrawalBundleHistoryModel->setWalletModel(model);
 }
 
-void SidechainWTPrimeHistoryDialog::setClientModel(ClientModel *model)
+void SidechainWithdrawalBundleHistoryDialog::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
-    wtPrimeHistoryModel->setClientModel(model);
-    wtPrimeHistoryModel->UpdateModel();
+    withdrawalBundleHistoryModel->setClientModel(model);
+    withdrawalBundleHistoryModel->UpdateModel();
 }
 
-void SidechainWTPrimeHistoryDialog::on_tableView_doubleClicked(const QModelIndex& index)
+void SidechainWithdrawalBundleHistoryDialog::on_tableView_doubleClicked(const QModelIndex& index)
 {
-    // Get the WT^ hash that was double clicked
+    // Get the WithdrawalBundle hash that was double clicked
     QModelIndexList selected = ui->tableView->selectionModel()->selectedRows();
 
-    // Emit double clicked signal with WT^ hash
+    // Emit double clicked signal with WithdrawalBundle hash
     for (int i = 0; i < selected.size(); i++) {
         uint256 hash;
-        if (wtPrimeHistoryModel->GetWTPrimeInfoAtRow(selected[i].row(), hash)) {
-            Q_EMIT doubleClickedWTPrime(hash);
+        if (withdrawalBundleHistoryModel->GetWithdrawalBundleInfoAtRow(selected[i].row(), hash)) {
+            Q_EMIT doubleClickedWithdrawalBundle(hash);
         }
     }
 }

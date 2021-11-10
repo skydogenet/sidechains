@@ -25,7 +25,7 @@
 #include <policy/fees.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
-#include <policy/wtprime.h>
+#include <policy/withdrawalbundle.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
@@ -594,7 +594,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         return state.Invalid(false, REJECT_DUPLICATE, "txn-already-in-mempool");
     }
 
-    // If this is a wt check that it is valid
+    // If this is a withdrawal check that it is valid
     for (const CTxOut& txout : tx.vout) {
         const CScript& scriptPubKey = txout.scriptPubKey;
         std::vector<unsigned char> vch;
@@ -605,49 +605,49 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         if (!obj)
             return state.Invalid(false, REJECT_INVALID, "invalid-sidechain-obj-script");
 
-        if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
-            SidechainWT *wt = dynamic_cast<SidechainWT*>(obj);
+        if (obj->sidechainop == DB_SIDECHAIN_WITHDRAWAL_OP) {
+            SidechainWithdrawal *withdrawal = dynamic_cast<SidechainWithdrawal*>(obj);
             // Verify that burn output actually exists
             bool fBurnFound = false;
             for (const CTxOut& o : tx.vout) {
                 if (o.scriptPubKey.size()
                         && o.scriptPubKey[0] == OP_RETURN
-                        && o.nValue == wt->amount)
+                        && o.nValue == withdrawal->amount)
                 {
                     // Make sure that the burn amount & fee are valid
-                    if (wt->amount > 0 && wt->mainchainFee > 0 && wt->amount > wt->mainchainFee)
+                    if (withdrawal->amount > 0 && withdrawal->mainchainFee > 0 && withdrawal->amount > withdrawal->mainchainFee)
                         fBurnFound = true;
                 }
             }
             if (!fBurnFound) {
-                return state.DoS(100, false, REJECT_INVALID, "invalid-wt-missing-or-invalid-burn");
+                return state.DoS(100, false, REJECT_INVALID, "invalid-withdrawal-missing-or-invalid-burn");
             }
         }
     }
 
-    // If this transaction is a WT refund request, verify it.
+    // If this transaction is a withdrawal refund request, verify it.
     for (const CTxOut& o : tx.vout) {
         const CScript& scriptPubKey = o.scriptPubKey;
-        uint256 wtID;
+        uint256 id;
         std::vector<unsigned char> vchSig;
-        if (!scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+        if (!scriptPubKey.IsWithdrawalRefundRequest(id, vchSig))
             continue;
 
-        if (wtID.IsNull()) {
-            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
-                        REJECT_INVALID, "verify-wt-refund-no-script");
+        if (id.IsNull()) {
+            return state.DoS(100, error("%s: Invalid withdrawal refund!", __func__),
+                        REJECT_INVALID, "verify-withdrawal-refund-no-script");
         }
 
-        // Check if a refund for this WT is already in our memory pool
-        if (pool.WTRefundExists(wtID)) {
-            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
+        // Check if a refund for this withdrawal is already in our memory pool
+        if (pool.WithdrawalRefundExists(id)) {
+            return state.DoS(100, error("%s: Invalid withdrawal refund!", __func__),
                         REJECT_INVALID, "refund-already-in-mempool");
         }
 
-        SidechainWT wt;
-        if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
-            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
-                        REJECT_INVALID, "verify-wt-refund-invalid");
+        SidechainWithdrawal withdrawal;
+        if (!VerifyWithdrawalRefundRequest(id, vchSig, withdrawal)) {
+            return state.DoS(100, error("%s: Invalid withdrawal refund!", __func__),
+                        REJECT_INVALID, "verify-withdrawal-refund-invalid");
         }
     }
 
@@ -767,17 +767,17 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             }
         }
 
-        // Keep track of transactions that have a WT refund request script
-        bool fWTRefund = false;
-        uint256 wtID;
+        // Keep track of transactions that have a withdrawal refund request script
+        bool fRefund = false;
+        uint256 id;
         for (const CTxOut& o : tx.vout) {
             std::vector<unsigned char> vchSig;
-            if (o.scriptPubKey.IsWTRefundRequest(wtID, vchSig))
-                fWTRefund = true;
+            if (o.scriptPubKey.IsWithdrawalRefundRequest(id, vchSig))
+                fRefund = true;
         }
 
         CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, chainActive.Height(),
-                              fSpendsCoinbase, fWTRefund, wtID, nSigOpsCost, lp);
+                              fSpendsCoinbase, fRefund, id, nSigOpsCost, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of
@@ -1629,7 +1629,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
         //
-        // Also check for WT^(s) and restore the status of wt(s) it used
+        // Also check for withdrawal bundles and restore the status of withdrawals
         for (size_t o = 0; o < tx.vout.size(); o++) {
             const CScript& scriptPubKey = tx.vout[o].scriptPubKey;
             if (!scriptPubKey.IsUnspendable()) {
@@ -1641,8 +1641,8 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
                 }
             }
 
-            // If this output is a WT^ database entry, reset the status of wt(s)
-            // included in the WT^
+            // If this output is a withdrawal bundle database entry, reset the
+            // status of withdrawals
             std::vector<unsigned char> vch;
             if (scriptPubKey.IsSidechainObj(vch)) {
                 SidechainObj *obj = ParseSidechainObj(vch);
@@ -1651,78 +1651,78 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
                     return DISCONNECT_FAILED;
                 }
 
-                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
-                    const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
+                if (obj->sidechainop == DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP) {
+                    const SidechainWithdrawalBundle *withdrawalBundle = (const SidechainWithdrawalBundle *) obj;
 
-                    std::vector<SidechainWT> vWT;
-                    for (const uint256& wtid : wtPrime->vWT) {
-                        SidechainWT wt;
+                    std::vector<SidechainWithdrawal> vWithdrawal;
+                    for (const uint256& id : withdrawalBundle->vWithdrawalID) {
+                        SidechainWithdrawal withdrawal;
 
-                        if (!psidechaintree->GetWT(wtid, wt)) {
-                            error("DisconnectBlock(): wt of WT^ not in ldb");
+                        if (!psidechaintree->GetWithdrawal(id, withdrawal)) {
+                            error("DisconnectBlock(): withdrawal of bundle not in ldb");
                             return DISCONNECT_FAILED;
                         }
-                        if (wt.status == WT_UNSPENT) {
-                            error("DisconnectBlock(): wt of WT^ has invalid unspent status");
+                        if (withdrawal.status == WITHDRAWAL_UNSPENT) {
+                            error("DisconnectBlock(): withdrawal of bundle has invalid unspent status");
                             return DISCONNECT_FAILED;
                         }
 
-                        vWT.push_back(wt);
+                        vWithdrawal.push_back(withdrawal);
                     }
 
-                    // Update status of wt(s)
-                    for (size_t w = 0; w < vWT.size(); w++)
-                        vWT[w].status = WT_UNSPENT;
+                    // Update status of withdrawals(s)
+                    for (size_t w = 0; w < vWithdrawal.size(); w++)
+                        vWithdrawal[w].status = WITHDRAWAL_UNSPENT;
 
                     // Write to ldb
 
-                    if (!psidechaintree->WriteWTUpdate(vWT)) {
-                        error("DisconnectBlock(): Failed to write wt update!");
+                    if (!psidechaintree->WriteWithdrawalUpdate(vWithdrawal)) {
+                        error("DisconnectBlock(): Failed to write withdrawal update!");
                         return DISCONNECT_FAILED;
                     }
 
-                    SidechainWTPrime wtPrimeUpdate = *wtPrime;
-                    wtPrimeUpdate.status = WTPRIME_FAILED;
-                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrimeUpdate)) {
-                        error("DisconnectBlock(): Failed to write WT^ update!");
+                    SidechainWithdrawalBundle withdrawalBundleUpdate = *withdrawalBundle;
+                    withdrawalBundleUpdate.status = WITHDRAWAL_BUNDLE_FAILED;
+                    if (!psidechaintree->WriteWithdrawalBundleUpdate(withdrawalBundleUpdate)) {
+                        error("DisconnectBlock(): Failed to write withdrawal bundle update!");
                         return DISCONNECT_FAILED;
                     }
                 }
             }
 
-            // If this output is a WT^ status update commit - undo the update
-            uint256 hashWTPrime;
-            if (scriptPubKey.IsWTPrimeFailCommit(hashWTPrime) ||
-                    scriptPubKey.IsWTPrimeSpentCommit(hashWTPrime)) {
+            // If this output is a withdrawal bundle status update commit - undo the update
+            uint256 hashWithdrawalBundle;
+            if (scriptPubKey.IsWithdrawalBundleFailCommit(hashWithdrawalBundle) ||
+                    scriptPubKey.IsWithdrawalBundleSpentCommit(hashWithdrawalBundle)) {
 
-                SidechainWTPrime wtPrime;
-                if (!psidechaintree->GetWTPrime(hashWTPrime, wtPrime)) {
-                    error("DisconnectBlock(): Failed to read WT^ to undo update!");
+                SidechainWithdrawalBundle withdrawalBundle;
+                if (!psidechaintree->GetWithdrawalBundle(hashWithdrawalBundle, withdrawalBundle)) {
+                    error("DisconnectBlock(): Failed to read withdrawal bundle to undo update!");
                     return DISCONNECT_FAILED;
                 }
 
-                wtPrime.status = WTPRIME_CREATED;
-                wtPrime.nFailHeight = 0;
+                withdrawalBundle.status = WITHDRAWAL_BUNDLE_CREATED;
+                withdrawalBundle.nFailHeight = 0;
 
-                if (!psidechaintree->WriteWTPrimeUpdate(wtPrime)) {
-                    error("DisconnectBlock(): Failed to write WT^ undo update!");
+                if (!psidechaintree->WriteWithdrawalBundleUpdate(withdrawalBundle)) {
+                    error("DisconnectBlock(): Failed to write withdrawal bundle undo update!");
                     return DISCONNECT_FAILED;
                 }
             }
 
-            // If output is a WT refund request set status back to WT_UNSPENT
-            uint256 wtid;
+            // If output is a Withdrawal refund request set status back to Withdrawal_UNSPENT
+            uint256 id;
             std::vector<unsigned char> vchSig;
-            if (scriptPubKey.IsWTRefundRequest(wtid, vchSig)) {
-                SidechainWT wt;
-                if (!psidechaintree->GetWT(wtid, wt)) {
-                    error("DisconnectBlock(): Failed to read WT for refund undo!");
+            if (scriptPubKey.IsWithdrawalRefundRequest(id, vchSig)) {
+                SidechainWithdrawal withdrawal;
+                if (!psidechaintree->GetWithdrawal(id, withdrawal)) {
+                    error("DisconnectBlock(): Failed to read Withdrawal for refund undo!");
                     return DISCONNECT_FAILED;
                 }
 
-                wt.status = WT_UNSPENT;
-                if (!psidechaintree->WriteWTUpdate(std::vector<SidechainWT>{ wt })) {
-                    error("DisconnectBlock(): Failed to write WT refund update!");
+                withdrawal.status = WITHDRAWAL_UNSPENT;
+                if (!psidechaintree->WriteWithdrawalUpdate(std::vector<SidechainWithdrawal>{ withdrawal })) {
+                    error("DisconnectBlock(): Failed to write Withdrawal refund update!");
                     return DISCONNECT_FAILED;
                 }
             }
@@ -1745,8 +1745,8 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         }
     }
 
-    // Revert the current WT^ hash
-    psidechaintree->WriteLastWTPrimeHash(pindex->pprev->hashWTPrime);
+    // Revert the current withdrawal bundle hash
+    psidechaintree->WriteLastWithdrawalBundleHash(pindex->pprev->hashWithdrawalBundle);
 
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
@@ -2027,8 +2027,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     CAmount nDepositPayout = 0;
     CAmount nRefundPayout = 0;
     std::multimap<std::pair<CScript, CAmount>, uint256> mapRefundOutputs;
-    std::vector<SidechainWT> vRefundedWT;
-    std::set<uint256> setRefundWTID;
+    std::vector<SidechainWithdrawal> vRefundedWithdrawal;
+    std::set<uint256> setRefundWithdrawalID;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -2038,40 +2038,40 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         // Find & verify refund request txns - verify coinbase payouts later
         for (const CTxOut& o : tx.vout) {
             const CScript& scriptPubKey = o.scriptPubKey;
-            uint256 wtID;
+            uint256 id;
             std::vector<unsigned char> vchSig;
-            if (!scriptPubKey.IsWTRefundRequest(wtID, vchSig))
+            if (!scriptPubKey.IsWithdrawalRefundRequest(id, vchSig))
                 continue;
 
-            if (wtID.IsNull()) {
-                return state.DoS(100, error("%s: Invalid WT refund!", __func__),
-                            REJECT_INVALID, "verify-wt-refund-no-script");
+            if (id.IsNull()) {
+                return state.DoS(100, error("%s: Invalid Withdrawal refund!", __func__),
+                            REJECT_INVALID, "verify-withdrawal-refund-no-script");
             }
 
-            SidechainWT wt;
-            if (!VerifyWTRefundRequest(wtID, vchSig, wt)) {
-                return state.DoS(100, error("%s: Invalid WT refund!", __func__),
-                            REJECT_INVALID, "verify-wt-refund-invalid");
+            SidechainWithdrawal withdrawal;
+            if (!VerifyWithdrawalRefundRequest(id, vchSig, withdrawal)) {
+                return state.DoS(100, error("%s: Invalid Withdrawal refund!", __func__),
+                            REJECT_INVALID, "verify-withdrawal-refund-invalid");
             }
 
-            if (setRefundWTID.count(wtID)) {
-                return state.DoS(100, error("%s: Invalid WT refund!", __func__),
-                            REJECT_INVALID, "verify-wt-refund-duplicate");
+            if (setRefundWithdrawalID.count(id)) {
+                return state.DoS(100, error("%s: Invalid Withdrawal refund!", __func__),
+                            REJECT_INVALID, "verify-withdrawal-refund-duplicate");
             }
-            setRefundWTID.insert(wtID);
+            setRefundWithdrawalID.insert(id);
 
             // Keep track of refund request outputs so that we can verify they
             // each have a matching coinbase payout output later.
-            CScript scriptDest = GetScriptForDestination(DecodeDestination(wt.strRefundDestination));
-            mapRefundOutputs.insert(std::pair<std::pair<CScript, CAmount>, uint256>( std::make_pair(scriptDest, wt.amount), wtID));
+            CScript scriptDest = GetScriptForDestination(DecodeDestination(withdrawal.strRefundDestination));
+            mapRefundOutputs.insert(std::pair<std::pair<CScript, CAmount>, uint256>( std::make_pair(scriptDest, withdrawal.amount), id));
 
-            // Update wt object status and keep track of it so that we can apply
+            // Update withdrawal object status and keep track of it so that we can apply
             // the update later if all verification checks work out.
-            wt.status = WT_SPENT;
-            vRefundedWT.push_back(wt);
+            withdrawal.status = WITHDRAWAL_SPENT;
+            vRefundedWithdrawal.push_back(withdrawal);
 
-            // Keep track of the total refunded WT amount for the block
-            nRefundPayout += wt.amount;
+            // Keep track of the total refunded Withdrawal amount for the block
+            nRefundPayout += withdrawal.amount;
         }
 
         // Perform non coinbase txn checks
@@ -2172,7 +2172,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
                 amountPrev = burn;
 
-                if (d.amtUserPayout == 0 && d.strDest == SIDECHAIN_WTPRIME_RETURN_DEST)
+                if (d.amtUserPayout == 0 && d.strDest == SIDECHAIN_WITHDRAWAL_BUNDLE_RETURN_DEST)
                     continue;
 
                 if (d.amtUserPayout != payout) {
@@ -2225,9 +2225,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
-    // Verify WT refunds
-    // - Check that for every WT refund request tx in the block a refund payout
-    // of the correct amount to the WT refund address exists in the coinbase tx.
+    // Verify Withdrawal refunds
+    // - Check that for every Withdrawal refund request tx in the block a refund payout
+    // of the correct amount to the Withdrawal refund address exists in the coinbase tx.
     //
     // - Check that no refund payout outputs exist that aren't based on a valid
     // refund request tx. This is checked by making sure that the coinbase total
@@ -2259,18 +2259,18 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         }
 
         if (nFound != nOut)
-            return state.DoS(100, error("%s: Invalid WT refund!", __func__),
-                        REJECT_INVALID, "verify-wt-refund-missing-payout");
+            return state.DoS(100, error("%s: Invalid Withdrawal refund!", __func__),
+                        REJECT_INVALID, "verify-withdrawal-refund-missing-payout");
 
         // Move on to end of range
         it = range.second;
     }
 
-    // Update status of refunded WT(s)
-    if (!fJustCheck && vRefundedWT.size()) {
-        // Write the updated status of wt(s) in the WT^ (WT_SPENT)
-        if (!psidechaintree->WriteWTUpdate(vRefundedWT))
-            return state.Error(strprintf("%s: Failed to write refunded wt status update!\n", __func__));
+    // Update status of refunded Withdrawal(s)
+    if (!fJustCheck && vRefundedWithdrawal.size()) {
+        // Write the updated status of withdrawals(s) in the bundle (WITHDRAW_SPENT)
+        if (!psidechaintree->WriteWithdrawalUpdate(vRefundedWithdrawal))
+            return state.Error(strprintf("%s: Failed to write refunded withdrawal status update!\n", __func__));
     }
 
     CAmount blockReward = nFees + nDepositPayout + nRefundPayout;
@@ -2302,20 +2302,20 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     if (fSidechainIndex) {
         SidechainClient client;
 
-        // Send latest WT^ to the mainchain if it hasn't been broadcasted yet
-        SidechainWTPrime wtPrimeLatest;
-        uint256 hashLatestWTPrime;
-        psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
-        if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrimeLatest)) {
-            // If we haven't broadcasted the latest WT^ yet, do it now
-            if (!bmmCache.HaveBroadcastedWTPrime(hashLatestWTPrime)) {
-                std::string strHex = EncodeHexTx(wtPrimeLatest.wtPrime);
-                if (client.BroadcastWTPrime(strHex)) {
-                    bmmCache.StoreBroadcastedWTPrime(hashLatestWTPrime);
+        // Send latest bundle to the mainchain if it hasn't been broadcasted yet
+        SidechainWithdrawalBundle withdrawalBundleLatest;
+        uint256 hashLatestWithdrawalBundle;
+        psidechaintree->GetLastWithdrawalBundleHash(hashLatestWithdrawalBundle);
+        if (psidechaintree->GetWithdrawalBundle(hashLatestWithdrawalBundle, withdrawalBundleLatest)) {
+            // If we haven't broadcasted the latest bundle yet, do it now
+            if (!bmmCache.HaveBroadcastedWithdrawalBundle(hashLatestWithdrawalBundle)) {
+                std::string strHex = EncodeHexTx(withdrawalBundleLatest.tx);
+                if (client.BroadcastWithdrawalBundle(strHex)) {
+                    bmmCache.StoreBroadcastedWithdrawalBundle(hashLatestWithdrawalBundle);
                 }
             }
         } else {
-            LogPrintf("%s: Failed to get latest WT^ from ldb: %s!\n", __func__, hashLatestWTPrime.ToString());
+            LogPrintf("%s: Failed to get latest withdrawal bundle from ldb: %s!\n", __func__, hashLatestWithdrawalBundle.ToString());
         }
 
         // Check version commit in coinbase
@@ -2336,84 +2336,84 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             return state.DoS(25, false, REJECT_INVALID, "no-version-commit", false, "Block version commit not found!");
         }
 
-        // Check current WT^ hash in header and coinbase
-        if (!hashLatestWTPrime.IsNull()) {
-            bool fWTPrimeCommitFound = false;
+        // Check current bundle hash in header and coinbase
+        if (!hashLatestWithdrawalBundle.IsNull()) {
+            bool fWithdrawalBundleCommitFound = false;
             for (const CTxOut& out : block.vtx[0]->vout) {
-                uint256 hashWTPrime;
-                if (out.scriptPubKey.IsWTPrimeHashCommit(hashWTPrime)) {
-                    if (hashWTPrime != hashLatestWTPrime) {
-                        LogPrintf("%s: Invalid WT^ hash commit: %s != %s\n", __func__, hashLatestWTPrime.ToString(), hashWTPrime.ToString());
-                        return state.DoS(25, false, REJECT_INVALID, "bad-wtprime-commit", false, "invalid WT^ hash commit");
+                uint256 hashWithdrawalBundle;
+                if (out.scriptPubKey.IsWithdrawalBundleHashCommit(hashWithdrawalBundle)) {
+                    if (hashWithdrawalBundle != hashLatestWithdrawalBundle) {
+                        LogPrintf("%s: Invalid withdrawal bundle hash commit: %s != %s\n", __func__, hashLatestWithdrawalBundle.ToString(), hashWithdrawalBundle.ToString());
+                        return state.DoS(25, false, REJECT_INVALID, "bad-withdrawal-bundle-commit", false, "invalid withdrawal bundle hash commit");
                     }
-                    fWTPrimeCommitFound = true;
+                    fWithdrawalBundleCommitFound = true;
                     break;
                 }
             }
-            if (!fWTPrimeCommitFound) {
-                LogPrintf("%s: Missing WT^ hash commit!\n", __func__);
-                return state.DoS(25, false, REJECT_INVALID, "no-wtprime-commit", false, "WT^ hash commit not found!");
+            if (!fWithdrawalBundleCommitFound) {
+                LogPrintf("%s: Missing Withdrawal Bundle hash commit!\n", __func__);
+                return state.DoS(25, false, REJECT_INVALID, "no-withdrawal-bundle-commit", false, "Withdrawal Bundle hash commit not found!");
             }
 
-            if (block.hashWTPrime != hashLatestWTPrime) {
-                LogPrintf("%s: Invalid WT^ hash in block header!\n", __func__);
-                return state.DoS(25, false, REJECT_INVALID, "bad-header-wtprime-commit", false, "WT^ hash in header is invalid!");
+            if (block.hashWithdrawalBundle != hashLatestWithdrawalBundle) {
+                LogPrintf("%s: Invalid Withdrawal Bundle hash in block header!\n", __func__);
+                return state.DoS(25, false, REJECT_INVALID, "bad-header-withdrawal-bundle-commit", false, "Withdrawal Bundle hash in header is invalid!");
             }
         }
-        // Check for & validate WT^ status updates
+        // Check for & validate Withdrawal Bundle status updates
         for (const CTxOut& txout : block.vtx[0]->vout) {
             const CScript& scriptPubKey = txout.scriptPubKey;
 
-            uint256 hashWTPrime;
-            bool fFailCommit = scriptPubKey.IsWTPrimeFailCommit(hashWTPrime);
+            uint256 hashWithdrawalBundle;
+            bool fFailCommit = scriptPubKey.IsWithdrawalBundleFailCommit(hashWithdrawalBundle);
 
-            if (fFailCommit || scriptPubKey.IsWTPrimeSpentCommit(hashWTPrime)) {
+            if (fFailCommit || scriptPubKey.IsWithdrawalBundleSpentCommit(hashWithdrawalBundle)) {
                 // Verify with the mainchain when we are also checking BMM
                 if (fCheckBMM) {
                     bool fVerified = fFailCommit ?
-                        client.HaveFailedWTPrime(hashWTPrime) :
-                        client.HaveSpentWTPrime(hashWTPrime);
+                        client.HaveFailedWithdrawalBundle(hashWithdrawalBundle) :
+                        client.HaveSpentWithdrawalBundle(hashWithdrawalBundle);
 
                     if (!fVerified)
-                        return state.Error(strprintf("%s: Invalid WT^ update : %s - %s!\n",
+                        return state.Error(strprintf("%s: Invalid Withdrawal Bundle update : %s - %s!\n",
                                     __func__, fFailCommit ? "Failed" : "Paid out",
-                                    hashWTPrime.ToString()));
+                                    hashWithdrawalBundle.ToString()));
                 }
 
-                // Load the WT^ object from LDB if we need to and then write an
-                // update with the new WT^ status. If the commit is for the
-                // current WT^ (which it always should be in practice) we have
+                // Load the Withdrawal Bundle object from LDB if we need to and then write an
+                // update with the new Withdrawal Bundle status. If the commit is for the
+                // current Withdrawal Bundle (which it always should be in practice) we have
                 // already loaded it.
-                if (hashWTPrime == wtPrimeLatest.wtPrime.GetHash()) {
-                    wtPrimeLatest.status = fFailCommit ? WTPRIME_FAILED : WTPRIME_SPENT;
+                if (hashWithdrawalBundle == withdrawalBundleLatest.tx.GetHash()) {
+                    withdrawalBundleLatest.status = fFailCommit ? WITHDRAWAL_BUNDLE_FAILED : WITHDRAWAL_BUNDLE_SPENT;
 
-                    // Keep track of the height a WT^ was marked failed
+                    // Keep track of the height a Withdrawal Bundle was marked failed
                     if (fFailCommit)
-                        wtPrimeLatest.nFailHeight = pindex->nHeight;
+                        withdrawalBundleLatest.nFailHeight = pindex->nHeight;
 
-                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrimeLatest))
-                        return state.Error(strprintf("%s: Failed to write WT^ update!\n", __func__));
+                    if (!psidechaintree->WriteWithdrawalBundleUpdate(withdrawalBundleLatest))
+                        return state.Error(strprintf("%s: Failed to write Withdrawal Bundle update!\n", __func__));
 
                 } else {
-                    SidechainWTPrime wtPrime;
-                    if (!psidechaintree->GetWTPrime(hashWTPrime, wtPrime))
-                        return state.Error(strprintf("%s: Failed to read WT^ for update!\n", __func__));
+                    SidechainWithdrawalBundle withdrawalBundle;
+                    if (!psidechaintree->GetWithdrawalBundle(hashWithdrawalBundle, withdrawalBundle))
+                        return state.Error(strprintf("%s: Failed to read Withdrawal Bundle for update!\n", __func__));
 
-                    wtPrime.status = fFailCommit ? WTPRIME_FAILED : WTPRIME_SPENT;
+                    withdrawalBundle.status = fFailCommit ? WITHDRAWAL_BUNDLE_FAILED : WITHDRAWAL_BUNDLE_SPENT;
 
-                    // Keep track of the height a WT^ was marked failed
+                    // Keep track of the height a Withdrawal Bundle was marked failed
                     if (fFailCommit)
-                        wtPrimeLatest.nFailHeight = pindex->nHeight;
+                        withdrawalBundleLatest.nFailHeight = pindex->nHeight;
 
-                    if (!psidechaintree->WriteWTPrimeUpdate(wtPrime))
-                        return state.Error(strprintf("%s: Failed to write WT^ update!\n", __func__));
+                    if (!psidechaintree->WriteWithdrawalBundleUpdate(withdrawalBundle))
+                        return state.Error(strprintf("%s: Failed to write Withdrawal Bundle update!\n", __func__));
                 }
             }
         }
 
         // Collect & verify sidechain objects
         std::vector<std::pair<uint256, const SidechainObj *> > vSidechainObjects;
-        bool fFoundWTPrime = false;
+        bool fFoundWithdrawalBundle = false;
         for (const CTransactionRef& tx : block.vtx) {
             for (const CTxOut& txout : tx->vout) {
                 const CScript& scriptPubKey = txout.scriptPubKey;
@@ -2427,12 +2427,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     return state.Error("Invalid sidechain obj script");
 
                 // TODO
-                // Refactor. We are also loading SidechainWT *wt later when
+                // Refactor. We are also loading SidechainWithdrawal later when
                 // calculating the ID. Instead do it only once.
 
-                // Check validity of wt(s). Block invalid if any wt is invalid.
-                if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
-                    const SidechainWT *wt = (const SidechainWT *) obj;
+                // Check validity of withdrawals.
+                if (obj->sidechainop == DB_SIDECHAIN_WITHDRAWAL_OP) {
+                    const SidechainWithdrawal *withdrawal = (const SidechainWithdrawal *) obj;
                     // Verify that burn output actually exists
                     bool fBurnFound = false;
                     // TODO refactor: looping through vout again during a loop
@@ -2440,49 +2440,50 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     for (const CTxOut& o : tx->vout) {
                         if (o.scriptPubKey.size()
                                 && o.scriptPubKey[0] == OP_RETURN
-                                && o.nValue == wt->amount)
+                                && o.nValue == withdrawal->amount)
                         {
                             // Make sure that the burn amount & fee are valid
-                            if (wt->amount > 0 && wt->mainchainFee > 0 && wt->amount > wt->mainchainFee)
+                            if (withdrawal->amount > 0 && withdrawal->mainchainFee > 0
+                                    && withdrawal->amount > withdrawal->mainchainFee)
                                 fBurnFound = true;
                         }
                     }
                     if (!fBurnFound) {
-                        return state.Error("Invalid WT: invalid-wt-missing-or-invalid-burn");
+                        return state.Error("Invalid Withdrawal: invalid-withdrawal-missing-or-invalid-burn");
                     }
                 }
 
-                // If the object is a wt we do not want the ID to change when
-                // the wt status is changed so that we can update the status
+                // If the object is a withdrawal we do not want the ID to change when
+                // the withdrawal status is changed so that we can update the status
                 // using the same ID in ldb.
                 uint256 id;
-                if (obj->sidechainop == DB_SIDECHAIN_WT_OP) {
-                    const SidechainWT *wt = (const SidechainWT *) obj;
-                    id = wt->GetID();
+                if (obj->sidechainop == DB_SIDECHAIN_WITHDRAWAL_OP) {
+                    const SidechainWithdrawal *withdrawal = (const SidechainWithdrawal *) obj;
+                    id = withdrawal->GetID();
                 }
                 else
-                if (obj->sidechainop == DB_SIDECHAIN_WTPRIME_OP) {
-                    // A block is invalid if it adds a new WT^ when the current
-                    // WT^ status hasn't been updated to either WTPRIME_FAILED
-                    // or WTPRIME_SPENT
-                    if (!hashLatestWTPrime.IsNull()) {
-                        if (wtPrimeLatest.status == WTPRIME_CREATED) {
-                            return state.Error(strprintf("%s Invalid WT^ - current WT^ still pending!\n", __func__));
+                if (obj->sidechainop == DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP) {
+                    // A block is invalid if it adds a new Withdrawal Bundle when the current
+                    // Withdrawal Bundle status hasn't been updated to either WITHDRAWAL_BUNDLE_FAILED
+                    // or WITHDRAWAL_BUNDLE_SPENT
+                    if (!hashLatestWithdrawalBundle.IsNull()) {
+                        if (withdrawalBundleLatest.status == WITHDRAWAL_BUNDLE_CREATED) {
+                            return state.Error(strprintf("%s Invalid Withdrawal Bundle - current Withdrawal Bundle still pending!\n", __func__));
                         }
                     }
 
-                    // If we find a WT^ we will call VerifyWTPrimes later
-                    fFoundWTPrime = true;
+                    // If we find a Withdrawal Bundle we will call VerifyWithdrawalBundles later
+                    fFoundWithdrawalBundle = true;
 
-                    SidechainWTPrime *wtPrime = (SidechainWTPrime *) obj;
+                    SidechainWithdrawalBundle *withdrawalBundle = (SidechainWithdrawalBundle *) obj;
 
                     // Insert block height
-                    wtPrime->nHeight = pindex->nHeight;
+                    withdrawalBundle->nHeight = pindex->nHeight;
 
-                    id = wtPrime->GetID();
-                    obj = (SidechainObj *) wtPrime;
+                    id = withdrawalBundle->GetID();
+                    obj = (SidechainObj *) withdrawalBundle;
 
-                    LogPrintf("%s: Found new WT^: %s.\n", __func__, wtPrime->wtPrime.GetHash().ToString());
+                    LogPrintf("%s: Found new Withdrawal Bundle: %s.\n", __func__, withdrawalBundle->tx.GetHash().ToString());
                 }
                 else
                 if (obj->sidechainop == DB_SIDECHAIN_DEPOSIT_OP) {
@@ -2493,23 +2494,23 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             }
         }
 
-        // Handle WT^ verification & wt status update
-        if (fFoundWTPrime) {
+        // Handle Withdrawal Bundle verification & withdrawal status update
+        if (fFoundWithdrawalBundle) {
             std::string strFail = "";
-            std::vector<SidechainWT> vWT;
-            uint256 hashWTPrime;
-            uint256 hashWTPrimeID;
+            std::vector<SidechainWithdrawal> vWithdrawal;
+            uint256 hashWithdrawalBundle;
+            uint256 hashWithdrawalBundleID;
 
-            // This will also return a list of wt(s) from the WT^
-            if (!VerifyWTPrimes(strFail, pindex->nHeight, block.vtx, vWT, hashWTPrime, hashWTPrimeID, fCheckBMM /* fReplicate */))
-                return state.Error(strprintf("%s: Invalid WT^! Error: %s", __func__, strFail));
+            // This will also return a list of withdrawal(s) from the Withdrawal Bundle
+            if (!VerifyWithdrawalBundles(strFail, pindex->nHeight, block.vtx, vWithdrawal, hashWithdrawalBundle, hashWithdrawalBundleID, fCheckBMM /* fReplicate */))
+                return state.Error(strprintf("%s: Invalid Withdrawal Bundle! Error: %s", __func__, strFail));
 
-            if (hashWTPrime.IsNull())
-                return state.Error(strprintf("%s: hashWTPrime shouldn't be null if VerifyWTPrimes passed!\n", __func__));
+            if (hashWithdrawalBundle.IsNull())
+                return state.Error(strprintf("%s: hashWithdrawalBundle shouldn't be null if VerifyWithdrawalBundles passed!\n", __func__));
 
-            // Write the updated status of wt(s) in the WT^ (WT_IN_WTPRIME)
-            if (!psidechaintree->WriteWTUpdate(vWT))
-                return state.Error(strprintf("%s: Failed to write wt update!\n", __func__));
+            // Write the updated status of withdrawals in the Withdrawal Bundle (Withdrawal_IN_WITHDRAWAL_BUNDLE)
+            if (!psidechaintree->WriteWithdrawalUpdate(vWithdrawal))
+                return state.Error(strprintf("%s: Failed to write withdrawal update!\n", __func__));
         }
 
         // Write sidechain objects to db
@@ -3707,10 +3708,10 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
     return commitment;
 }
 
-CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime)
+CScript GenerateWithdrawalBundleFailCommit(const uint256& hashWithdrawalBundle)
 {
     /*
-     * Generate a script commit indicating that the WT^ failed on the mainchain
+     * Generate a script commit indicating that the Withdrawal Bundle failed on the mainchain
      */
 
     CScript scriptPubKey;
@@ -3723,16 +3724,16 @@ CScript GenerateWTPrimeFailCommit(const uint256& hashWTPrime)
     scriptPubKey[3] = 0xC6;
     scriptPubKey[4] = 0x89;
 
-    // Add WT^ hash
-    memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
+    // Add Withdrawal Bundle hash
+    memcpy(&scriptPubKey[5], hashWithdrawalBundle.begin(), 32);
 
     return scriptPubKey;
 }
 
-CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime)
+CScript GenerateWithdrawalBundleSpentCommit(const uint256& hashWithdrawalBundle)
 {
     /*
-     * Generate a script commit indicating that the WT^ was spent by mainchain
+     * Generate a script commit indicating that the Withdrawal Bundle was spent by mainchain
      */
 
     CScript scriptPubKey;
@@ -3745,16 +3746,16 @@ CScript GenerateWTPrimeSpentCommit(const uint256& hashWTPrime)
     scriptPubKey[3] = 0x45;
     scriptPubKey[4] = 0xDE;
 
-    // Add WT^ hash
-    memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
+    // Add Withdrawal Bundle hash
+    memcpy(&scriptPubKey[5], hashWithdrawalBundle.begin(), 32);
 
     return scriptPubKey;
 }
 
-CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig)
+CScript GenerateWithdrawalRefundRequest(const uint256& id, const std::vector<unsigned char>& vchSig)
 {
     /*
-     * Generate a script commit indicating that the WT^ failed on the mainchain
+     * Generate a script commit indicating that the Withdrawal Bundle failed on the mainchain
      */
 
     CScript scriptPubKey;
@@ -3767,8 +3768,8 @@ CScript GenerateWTRefundRequest(const uint256& wtID, const std::vector<unsigned 
     scriptPubKey[3] = 0xE5;
     scriptPubKey[4] = 0x46;
 
-    // Add WT ID (the ID it has in ldb)
-    memcpy(&scriptPubKey[5], wtID.begin(), 32);
+    // Add Withdrawal ID (the ID it has in ldb)
+    memcpy(&scriptPubKey[5], id.begin(), 32);
 
     // Add vchSig
     memcpy(&scriptPubKey[37], vchSig.data(), 65);
@@ -3799,10 +3800,10 @@ CScript GeneratePrevBlockCommit(const uint256& hashPrevMain, const uint256& hash
     return scriptPubKey;
 }
 
-CScript GenerateWTPrimeHashCommit(const uint256& hashWTPrime)
+CScript GenerateWithdrawalBundleHashCommit(const uint256& hashWithdrawalBundle)
 {
     /*
-     * Generate a script commit of current WT^ hash
+     * Generate a script commit of current Withdrawal Bundle hash
      */
 
     CScript scriptPubKey;
@@ -3815,8 +3816,8 @@ CScript GenerateWTPrimeHashCommit(const uint256& hashWTPrime)
     scriptPubKey[3] = 0x1D;
     scriptPubKey[4] = 0xFE;
 
-    // Add WT^ hash
-    memcpy(&scriptPubKey[5], hashWTPrime.begin(), 32);
+    // Add Withdrawal Bundle hash
+    memcpy(&scriptPubKey[5], hashWithdrawalBundle.begin(), 32);
 
     return scriptPubKey;
 }
@@ -3846,10 +3847,10 @@ CScript GenerateBlockVersionCommit(const int32_t nVersion)
     return scriptPubKey;
 }
 
-bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>& vchSig, SidechainWT& wt)
+bool VerifyWithdrawalRefundRequest(const uint256& id, const std::vector<unsigned char>& vchSig, SidechainWithdrawal& withdrawal)
 {
-    if (wtID.IsNull()) {
-        LogPrintf("%s: Null WT ID!\n", __func__);
+    if (id.IsNull()) {
+        LogPrintf("%s: Null Withdrawal ID!\n", __func__);
         return false;
     }
     if (vchSig.size() != 65) {
@@ -3861,7 +3862,7 @@ bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>
     CHashWriter ss(SER_GETHASH, 0);
     ss << strMessageMagic;
     ss << strRefundMessageMagic;
-    ss << wtID.ToString();
+    ss << id.ToString();
 
     // Recover the public key that signed the refund request
     CPubKey pubkey;
@@ -3870,18 +3871,18 @@ bool VerifyWTRefundRequest(const uint256& wtID, const std::vector<unsigned char>
         return false;
     }
 
-    // Lookup & verify status of WT
-    if (!psidechaintree->GetWT(wtID, wt)) {
-        LogPrintf("%s: WT not found!\n", __func__);
+    // Lookup & verify status of Withdrawal
+    if (!psidechaintree->GetWithdrawal(id, withdrawal)) {
+        LogPrintf("%s: Withdrawal not found!\n", __func__);
         return false;
     }
-    // Check status of WT
-    if (wt.status != WT_UNSPENT) {
-        LogPrintf("%s: WT status != WT_UNSPENT\n", __func__);
+    // Check status of Withdrawal
+    if (withdrawal.status != WITHDRAWAL_UNSPENT) {
+        LogPrintf("%s: Withdrawal status != Withdrawal_UNSPENT\n", __func__);
         return false;
     }
     // Verify refund address matches the one recreated from signature
-    if (DecodeDestination(wt.strRefundDestination) != CTxDestination(pubkey.GetID())) {
+    if (DecodeDestination(withdrawal.strRefundDestination) != CTxDestination(pubkey.GetID())) {
         LogPrintf("%s: Refund address does not match signature!\n", __func__);
         return false;
     }
@@ -4189,18 +4190,18 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     bool fInitialBlockDownload = IsInitialBlockDownload();
 
     bool fNewTip = (chainActive.Tip() == pindex->pprev);
-    bool fVerifyWTPrimeAcceptBlock = gArgs.GetBoolArg("-verifywtprimeacceptblock", DEFAULT_VERIFY_WTPRIME_ACCEPT_BLOCK);
-    if (fVerifyWTPrimeAcceptBlock && fNewTip && !fInitialBlockDownload) {
-        // Note that here we call VerifyWTPrimes with fReplicate set so that we
-        // replicate the WT^ on our own and verify that it matches the WT^ in
+    bool fVerifyWithdrawalBundleAcceptBlock = gArgs.GetBoolArg("-verifywithdrawalbundleacceptblock", DEFAULT_VERIFY_WITHDRAWAL_BUNDLE_ACCEPT_BLOCK);
+    if (fVerifyWithdrawalBundleAcceptBlock && fNewTip && !fInitialBlockDownload) {
+        // Note that here we call VerifyWithdrawalBundles with fReplicate set so that we
+        // replicate the Withdrawal Bundle on our own and verify that it matches the Withdrawal Bundle in
         // this new block if there are any.
         std::string strFail = "";
-        std::vector<SidechainWT> vWT;
-        uint256 hashWTPrime;
-        uint256 hashWTPrimeID;
-        if (!VerifyWTPrimes(strFail, pindex->nHeight, block.vtx, vWT, hashWTPrime, hashWTPrimeID, true /* fReplicate */)) {
-            state.Error(strprintf("%s: invalid-wtprime error: %s", __func__, strFail));
-            return error("%s: invalid WT^! Error: %s", __func__, strFail);
+        std::vector<SidechainWithdrawal> vWithdrawal;
+        uint256 hashWithdrawalBundle;
+        uint256 hashWithdrawalBundleID;
+        if (!VerifyWithdrawalBundles(strFail, pindex->nHeight, block.vtx, vWithdrawal, hashWithdrawalBundle, hashWithdrawalBundleID, true /* fReplicate */)) {
+            state.Error(strprintf("%s: invalid-withdrawal-bundle error: %s", __func__, strFail));
+            return error("%s: invalid Withdrawal Bundle! Error: %s", __func__, strFail);
         }
     }
 
@@ -5520,7 +5521,7 @@ void LoadBMMCache()
         return;
     }
 
-    std::vector<uint256> vHashWT;
+    std::vector<uint256> vHashWithdrawal;
     std::vector<uint256> vHashBMM;
     std::vector<uint256> vDepositTXID;
     try {
@@ -5531,12 +5532,12 @@ void LoadBMMCache()
             return;
         }
 
-        int nWT = 0;
-        filein >> nWT;
-        for (int i = 0; i < nWT; i++) {
+        int nWithdrawal = 0;
+        filein >> nWithdrawal;
+        for (int i = 0; i < nWithdrawal; i++) {
             uint256 hash;
             filein >> hash;
-            vHashWT.push_back(hash);
+            vHashWithdrawal.push_back(hash);
         }
         int nBMM = 0;
         filein >> nBMM;
@@ -5558,8 +5559,8 @@ void LoadBMMCache()
         return;
     }
 
-    for (const uint256& u : vHashWT) {
-        bmmCache.StoreBroadcastedWTPrime(u);
+    for (const uint256& u : vHashWithdrawal) {
+        bmmCache.StoreBroadcastedWithdrawalBundle(u);
     }
     for (const uint256& u : vHashBMM) {
         bmmCache.CacheVerifiedBMM(u);
@@ -5571,11 +5572,11 @@ void LoadBMMCache()
 
 void DumpBMMCache()
 {
-    std::vector<uint256> vHashWT = bmmCache.GetBroadcastedWTPrimeCache();
+    std::vector<uint256> vHashWithdrawal = bmmCache.GetBroadcastedWithdrawalBundleCache();
     std::vector<uint256> vHashBMM = bmmCache.GetVerifiedBMMCache();
     std::vector<uint256> vDepositTXID = bmmCache.GetVerifiedDepositCache();
 
-    int nWT = vHashWT.size();
+    int nWithdrawal = vHashWithdrawal.size();
     int nBMM = vHashBMM.size();
     int nDeposit = vDepositTXID.size();
 
@@ -5589,19 +5590,19 @@ void DumpBMMCache()
         fileout << 160000; // version required to read: 0.16.00 or later
         fileout << CLIENT_VERSION; // version that wrote the file
 
-        // Broadcasted WT^ hash cache
-        fileout << nWT; // Number of WT^ hashes in file
-        for (const uint256& u : vHashWT) {
+        // Broadcasted Withdrawal Bundle hash cache
+        fileout << nWithdrawal; // Number of Withdrawal Bundle hashes in file
+        for (const uint256& u : vHashWithdrawal) {
             fileout << u;
         }
         // Verified BMM hash cache
-        fileout << nBMM; // Number of WT^ hashes in file
+        fileout << nBMM; // Number of Withdrawal Bundle hashes in file
         for (const uint256& u : vHashBMM) {
             fileout << u;
         }
 
         // Verified deposit txid cache
-        fileout << nDeposit; // Number of WT^ hashes in file
+        fileout << nDeposit; // Number of Withdrawal Bundle hashes in file
         for (const uint256& u : vDepositTXID) {
             fileout << u;
         }
@@ -5670,7 +5671,7 @@ void DumpMainBlockCache()
     try {
         fileout << 160000; // version required to read: 0.16.00 or later
         fileout << CLIENT_VERSION; // version that wrote the file
-        fileout << count; // Number of WT^ hashes in file
+        fileout << count; // Number of Withdrawal Bundle hashes in file
 
         for (const uint256& u : vHash) {
             fileout << u;
@@ -5688,15 +5689,15 @@ void DumpMainBlockCache()
     LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
-void DumpWTIDCache()
+void DumpWithdrawalIDCache()
 {
-    std::set<uint256> setWTID = bmmCache.GetCachedWTID();
-    if (setWTID.empty())
+    std::set<uint256> setWithdrawalID = bmmCache.GetCachedWithdrawalID();
+    if (setWithdrawalID.empty())
         return;
 
-    int count = setWTID.size();
+    int count = setWithdrawalID.size();
 
-    fs::path path = GetDataDir() / "wtid.dat.new";
+    fs::path path = GetDataDir() / "withdrawalid.dat.new";
     CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5705,33 +5706,33 @@ void DumpWTIDCache()
     try {
         fileout << 160000; // version required to read: 0.16.00 or later
         fileout << CLIENT_VERSION; // version that wrote the file
-        fileout << count; // Number of WT IDs in file
+        fileout << count; // Number of Withdrawal IDs in file
 
-        for (const uint256& u : setWTID) {
+        for (const uint256& u : setWithdrawalID) {
             fileout << u;
         }
     }
     catch (const std::exception& e) {
-        LogPrintf("%s: Error writing WT ID cache: %s", __func__, e.what());
+        LogPrintf("%s: Error writing Withdrawal ID cache: %s", __func__, e.what());
         return;
     }
 
     FileCommit(fileout.Get());
     fileout.fclose();
-    RenameOver(GetDataDir() / "wtid.dat.new", GetDataDir() / "wtid.dat");
+    RenameOver(GetDataDir() / "withdrawalid.dat.new", GetDataDir() / "withdrawalid.dat");
 
     LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
-void LoadWTIDCache()
+void LoadWithdrawalIDCache()
 {
-    fs::path path = GetDataDir() / "wtid.dat";
+    fs::path path = GetDataDir() / "withdrawalid.dat";
     CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return;
     }
 
-    std::vector<uint256> vWTID;
+    std::vector<uint256> vWithdrawalID;
     try {
         int nVersionRequired, nVersionThatWrote;
         filein >> nVersionRequired;
@@ -5743,87 +5744,85 @@ void LoadWTIDCache()
         int count = 0;
         filein >> count;
         for (int i = 0; i < count; i++) {
-            uint256 wtid;
-            filein >> wtid;
-            vWTID.push_back(wtid);
+            uint256 id;
+            filein >> id;
+            vWithdrawalID.push_back(id);
         }
     }
     catch (const std::exception& e) {
-        LogPrintf("%s: Error reading WT ID cache: %s", __func__, e.what());
+        LogPrintf("%s: Error reading Withdrawal ID cache: %s", __func__, e.what());
         return;
     }
 
-    for (const uint256& u : vWTID)
-        bmmCache.CacheWTID(u);
+    for (const uint256& u : vWithdrawalID)
+        bmmCache.CacheWithdrawalID(u);
 }
 
-/** Create joined WT^ to be sent to the mainchain */
-bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& wtPrimeDataTx, bool fReplicationCheck, bool fCheckUnique)
+/** Create joined Withdrawal Bundle to be sent to the mainchain */
+bool CreateWithdrawalBundleTx(int nHeight, CTransactionRef& withdrawalBundleTx, CTransactionRef& withdrawalBundleDataTx, bool fReplicationCheck, bool fCheckUnique)
 {
-    unsigned int nMinWT = gArgs.GetArg("-minwt", DEFAULT_MIN_WT_CREATE_WTPRIME);
+    unsigned int nMinWithdrawal = gArgs.GetArg("-minwithdrawal", DEFAULT_MIN_WITHDRAWAL_CREATE_BUNDLE);
 
-    // Load the latest WT^
-    bool fHaveWTPrimes = false;
-    uint256 hashLatestWTPrime;
-    SidechainWTPrime wtPrimeLatest;
-    psidechaintree->GetLastWTPrimeHash(hashLatestWTPrime);
-    if (psidechaintree->GetWTPrime(hashLatestWTPrime, wtPrimeLatest)) {
-        fHaveWTPrimes = true;
+    // Load the latest Withdrawal Bundle
+    bool fHaveWithdrawalBundles = false;
+    uint256 hashLatestWithdrawalBundle;
+    SidechainWithdrawalBundle withdrawalBundleLatest;
+    psidechaintree->GetLastWithdrawalBundleHash(hashLatestWithdrawalBundle);
+    if (psidechaintree->GetWithdrawalBundle(hashLatestWithdrawalBundle, withdrawalBundleLatest)) {
+        fHaveWithdrawalBundles = true;
     }
 
-    // If the last WT^ failed - wait WT_FAIL_WAIT_PERIOD blocks before creating
+    // If the last Withdrawal Bundle failed - wait Withdrawal_FAIL_WAIT_PERIOD blocks before creating
     // a new one.
-    if (fHaveWTPrimes && wtPrimeLatest.status == WTPRIME_FAILED) {
-        if (nHeight - wtPrimeLatest.nFailHeight < WTPRIME_FAIL_WAIT_PERIOD) {
-            LogPrintf("%s: Not enough blocks since last failed WT^!\n", __func__);
+    if (fHaveWithdrawalBundles && withdrawalBundleLatest.status == WITHDRAWAL_BUNDLE_FAILED) {
+        if (nHeight - withdrawalBundleLatest.nFailHeight < WITHDRAWAL_BUNDLE_FAIL_WAIT_PERIOD) {
+            LogPrintf("%s: Not enough blocks since last failed Withdrawal Bundle!\n", __func__);
             return false;
         }
     }
 
     if (!fReplicationCheck) {
-        if (fHaveWTPrimes) {
-            if (wtPrimeLatest.status == WTPRIME_CREATED) {
-                LogPrintf("%s: Current WT^ for this sidechain still pending!\n", __func__);
+        if (fHaveWithdrawalBundles) {
+            if (withdrawalBundleLatest.status == WITHDRAWAL_BUNDLE_CREATED) {
+                LogPrintf("%s: Current Withdrawal Bundle for this sidechain still pending!\n", __func__);
                 return false;
             }
-            // Check for existing WT^ in mainchain SCDB for this sidechain
+            // Check for existing Withdrawal Bundle in mainchain SCDB for this sidechain
             SidechainClient client;
-            std::vector<uint256> vHashWTPrime;
-            if (client.ListWTPrimeStatus(vHashWTPrime)) {
-                LogPrintf("%s: Mainchain SCDB already tracking WT^ for this sidechain\n", __func__);
+            std::vector<uint256> vHashWithdrawalBundle;
+            if (client.ListWithdrawalBundleStatus(vHashWithdrawalBundle)) {
+                LogPrintf("%s: Mainchain SCDB already tracking Withdrawal Bundle for this sidechain\n", __func__);
                 return false;
             }
         }
     }
 
-    // Get WT(s) from psidechaintree
-    std::vector<SidechainWT> vWT = psidechaintree->GetWTs(THIS_SIDECHAIN);
-    if (vWT.empty()) {
-        LogPrintf("%s: No wt(s) to create WT^\n", __func__);
+    // Get Withdrawal(s) from psidechaintree
+    std::vector<SidechainWithdrawal> vWithdrawal = psidechaintree->GetWithdrawals(THIS_SIDECHAIN);
+    if (vWithdrawal.empty()) {
+        LogPrintf("%s: No withdrawals(s) to create bundle!\n", __func__);
         return false;
     }
 
-    // Select only WTs with WT_UNSPENT status
-    SelectUnspentWT(vWT);
+    // Select only Withdrawals with Withdrawal_UNSPENT status
+    SelectUnspentWithdrawal(vWithdrawal);
 
-    // Sort WTs by mainchain fee amount
-    SortWTByFee(vWT);
+    // Sort Withdrawals by mainchain fee amount
+    SortWithdrawalByFee(vWithdrawal);
 
-    if (!fReplicationCheck && vWT.size() < nMinWT) {
-        LogPrintf("%s: Not enough WT(s) to create WT^\n", __func__);
+    if (!fReplicationCheck && vWithdrawal.size() < nMinWithdrawal) {
+        LogPrintf("%s: Not enough Withdrawal(s) to create Withdrawal Bundle\n", __func__);
         return false;
     }
 
-    // TODO sort vWT by fees
+    // Withdrawal Bundle database object for psidechaintree (sidechain only)
+    SidechainWithdrawalBundle withdrawalBundle;
+    withdrawalBundle.nSidechain = THIS_SIDECHAIN;
 
-    // WT^ database object for psidechaintree (sidechain only)
-    SidechainWTPrime wtPrime;
-    wtPrime.nSidechain = THIS_SIDECHAIN;
+    CMutableTransaction wjtx; // Withdrawal Bundle
 
-    CMutableTransaction wjtx; // WT^
-
-    // Add SIDECHAIN_WTPRIME_RETURN_DEST OP_RETURN output
-    wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WTPRIME_RETURN_DEST))));
+    // Add SIDECHAIN_WITHDRAWAL_BUNDLE_RETURN_DEST OP_RETURN output
+    wjtx.vout.push_back(CTxOut(0, CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WITHDRAWAL_BUNDLE_RETURN_DEST))));
 
     // Add a dummy output for mainchain fee encoding (updated later)
     CAmount amountMainchainFees = 0;
@@ -5832,82 +5831,82 @@ bool CreateWTPrimeTx(int nHeight, CTransactionRef& wtPrimeTx, CTransactionRef& w
     wjtx.nVersion = 2;
     wjtx.vin.resize(1); // Dummy vin for serialization...
     wjtx.vin[0].scriptSig = CScript() << OP_0;
-    for (const SidechainWT& wt : vWT) {
-        CAmount amountWT = wt.amount - wt.mainchainFee;
+    for (const SidechainWithdrawal& withdrawal : vWithdrawal) {
+        CAmount amountWithdrawal = withdrawal.amount - withdrawal.mainchainFee;
 
-        amountMainchainFees += wt.mainchainFee;
+        amountMainchainFees += withdrawal.mainchainFee;
 
         // TODO check IsValidDestination
         // Output to mainchain keyID
-        CTxDestination dest = DecodeDestination(wt.strDestination, true /* fMainchain */);
-        wjtx.vout.push_back(CTxOut(amountWT, GetScriptForDestination(dest)));
+        CTxDestination dest = DecodeDestination(withdrawal.strDestination, true /* fMainchain */);
+        wjtx.vout.push_back(CTxOut(amountWithdrawal, GetScriptForDestination(dest)));
 
-        // Add WT objid to WT^ obj
-        wtPrime.vWT.push_back(wt.GetID());
+        // Add Withdrawal objid to Withdrawal Bundle obj
+        withdrawalBundle.vWithdrawalID.push_back(withdrawal.GetID());
 
         // Make sure we have room for more outputs
-        if (GetTransactionWeight(wjtx) > MAX_WTPRIME_WEIGHT) {
+        if (GetTransactionWeight(wjtx) > MAX_WITHDRAWAL_BUNDLE_WEIGHT) {
             // If we went over size, undo this output and stop
-            wtPrime.vWT.pop_back();
+            withdrawalBundle.vWithdrawalID.pop_back();
             wjtx.vout.pop_back();
 
             // Also remove added fees
-            amountMainchainFees -= wt.mainchainFee;
+            amountMainchainFees -= withdrawal.mainchainFee;
 
             break;
         }
     }
 
     // Update mainchain fee encoding output.
-    wjtx.vout[1].scriptPubKey = EncodeWTFees(amountMainchainFees);
+    wjtx.vout[1].scriptPubKey = EncodeWithdrawalFees(amountMainchainFees);
 
-    // Did anything make it into the WT^?
+    // Did anything make it into the Withdrawal Bundle?
     if (!wjtx.vout.size()) {
-        LogPrintf("%s: ERROR: WT^ empty!\n", __func__);
+        LogPrintf("%s: ERROR: Withdrawal Bundle empty!\n", __func__);
         return false;
     }
 
-    // If the WT^ hash will be the same as a previous WT^ return false. It is
-    // possible for a new WT^ to have the same hash as a previous WT^ if all of
+    // If the Withdrawal Bundle hash will be the same as a previous Withdrawal Bundle return false. It is
+    // possible for a new Withdrawal Bundle to have the same hash as a previous Withdrawal Bundle if all of
     // the outputs (destinations & amounts) are exactly the same. In that case,
-    // wait for a new WT to be added to the database so that this WT^ will have
+    // wait for a new Withdrawal to be added to the database so that this Withdrawal Bundle will have
     // a unique hash. It would also be possible to remove one of the outputs to
-    // obtain a unique WT^ hash (TODO?)
-    if (fCheckUnique && psidechaintree->HaveWTPrime(wjtx.GetHash())) {
-        LogPrintf("%s: ERROR: WT^ is not unique!\n", __func__);
+    // obtain a unique Withdrawal Bundle hash (TODO?)
+    if (fCheckUnique && psidechaintree->HaveWithdrawalBundle(wjtx.GetHash())) {
+        LogPrintf("%s: ERROR: Withdrawal Bundle is not unique!\n", __func__);
         return false;
     }
 
-    // Check that the WT^ is valid by mainchain policy
+    // Check that the Withdrawal Bundle is valid by mainchain policy
     CFeeRate dust = CFeeRate(DUST_RELAY_TX_FEE);
     std::string strReason = "";
     if (!CoreIsStandardTx(wjtx, true, dust, strReason)) {
-        LogPrintf("%s: ERROR: WT^ failed core standardness tests! Reason: %s\n", __func__, strReason);
+        LogPrintf("%s: ERROR: Withdrawal Bundle failed core standardness tests! Reason: %s\n", __func__, strReason);
         return false;
     }
 
-    // Add WT^ transaction to the WT^ database object
-    wtPrime.wtPrime = wjtx;
+    // Add Withdrawal Bundle transaction to the Withdrawal Bundle database object
+    withdrawalBundle.tx = wjtx;
 
-    // Return the WT^ transaction itself by reference
-    wtPrimeTx = MakeTransactionRef(wjtx);
+    // Return the Withdrawal Bundle transaction itself by reference
+    withdrawalBundleTx = MakeTransactionRef(wjtx);
 
     // Output data
     CMutableTransaction mtx;
-    mtx.vout.push_back(CTxOut(0, wtPrime.GetScript()));
+    mtx.vout.push_back(CTxOut(0, withdrawalBundle.GetScript()));
 
-    // Return the WT^ data transaction by reference
-    wtPrimeDataTx = MakeTransactionRef(mtx);
+    // Return the Withdrawal Bundle data transaction by reference
+    withdrawalBundleDataTx = MakeTransactionRef(mtx);
 
-    LogPrintf("%s: WT^ created! Hash: %s\n", __func__, wjtx.GetHash().ToString());
+    LogPrintf("%s: Withdrawal Bundle created! Hash: %s\n", __func__, wjtx.GetHash().ToString());
     return true;
 }
 
-bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWT>& vWT, uint256& hashWTPrime, uint256& hashWTPrimeID, bool fReplicate) {
-    // Keep track of how many WT^(s) are in the block, only 1 is allowed
-    int nWTPrime = 0;
+bool VerifyWithdrawalBundles(std::string& strFail, int nHeight, const std::vector<CTransactionRef>& vtx, std::vector<SidechainWithdrawal>& vWithdrawal, uint256& hashWithdrawalBundle, uint256& hashWithdrawalBundleID, bool fReplicate) {
+    // Keep track of how many Withdrawal Bundle(s) are in the block, only 1 is allowed
+    int nWithdrawalBundle = 0;
 
-    // Loop through the blocks txns and look for WT^(s) to verify
+    // Loop through the blocks txns and look for Withdrawal Bundle(s) to verify
     CAmount amountMainchainFees = 0;
     for (const CTransactionRef& tx : vtx) {
         for (const CTxOut& txout : tx->vout) {
@@ -5923,75 +5922,75 @@ bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransa
                 return false;
             }
 
-            if (obj->sidechainop != DB_SIDECHAIN_WTPRIME_OP)
+            if (obj->sidechainop != DB_SIDECHAIN_WITHDRAWAL_BUNDLE_OP)
                 continue;
 
-            nWTPrime++;
-            if (nWTPrime > 1) {
-                strFail = "Invalid WT^ - multiple in block!\n";
+            nWithdrawalBundle++;
+            if (nWithdrawalBundle > 1) {
+                strFail = "Invalid Withdrawal Bundle - multiple in block!\n";
                 return false;
             }
 
-            const SidechainWTPrime *wtPrime = (const SidechainWTPrime *) obj;
+            const SidechainWithdrawalBundle *withdrawalBundle = (const SidechainWithdrawalBundle *) obj;
 
-            // Check that every WT this WT^ has listed is in the db
+            // Check that every Withdrawal this Withdrawal Bundle has listed is in the db
             // and verify the status is not spent.
-            for (const uint256& wtid : wtPrime->vWT) {
-                SidechainWT wt;
+            for (const uint256& id : withdrawalBundle->vWithdrawalID) {
+                SidechainWithdrawal withdrawal;
 
-                if (!psidechaintree->GetWT(wtid, wt)) {
-                    strFail = "Invalid wt - does not exist!\n";
+                if (!psidechaintree->GetWithdrawal(id, withdrawal)) {
+                    strFail = "Invalid withdrawal - does not exist!\n";
                     return false;
                 }
-                if (wt.status != WT_UNSPENT) {
-                    strFail = "Invalid wt - spent!\n";
+                if (withdrawal.status != WITHDRAWAL_UNSPENT) {
+                    strFail = "Invalid withdrawal - spent!\n";
                     return false;
                 }
 
-                amountMainchainFees += wt.mainchainFee;
+                amountMainchainFees += withdrawal.mainchainFee;
 
-                vWT.push_back(wt);
+                vWithdrawal.push_back(withdrawal);
             }
 
             // Check that there are actually enough outputs for this to be valid
-            if (wtPrime->wtPrime.vout.size() < 3) {
-                strFail = "Invalid WT^ - too few outputs!\n";
+            if (withdrawalBundle->tx.vout.size() < 3) {
+                strFail = "Invalid Withdrawal Bundle - too few outputs!\n";
                 return false;
             }
 
             // Check that the number of outputs equals the number of
-            // WT(s) listed in the WT^ + one encoded mainchain fee output + one
+            // Withdrawal(s) listed in the Withdrawal Bundle + one encoded mainchain fee output + one
             // encoded change return dest output
-            if (wtPrime->wtPrime.vout.size() != vWT.size() + 2) {
-                strFail = "Invalid WT^ - missing / extra outputs!\n";
+            if (withdrawalBundle->tx.vout.size() != vWithdrawal.size() + 2) {
+                strFail = "Invalid Withdrawal Bundle - missing / extra outputs!\n";
                 return false;
             }
 
             // Check that the amount in the encoded mainchain fee output is
-            // equal to the sum of fees from the wt(s)
+            // equal to the sum of fees from the withdrawals
             CAmount amountRead = 0;
-            if (!DecodeWTFees(wtPrime->wtPrime.vout[1].scriptPubKey, amountRead)) {
-                strFail = "Invalid WT^ - failed to decode mainchain fee output!\n";
+            if (!DecodeWithdrawalFees(withdrawalBundle->tx.vout[1].scriptPubKey, amountRead)) {
+                strFail = "Invalid Withdrawal Bundle - failed to decode mainchain fee output!\n";
                 return false;
             }
 
             if (amountRead != amountMainchainFees) {
-                strFail = "Invalid WT^ - invalid encoded mainchain fee output!\n";
+                strFail = "Invalid Withdrawal Bundle - invalid encoded mainchain fee output!\n";
                 return false;
             }
 
-            // Check that every WT listed in the WT^ is included
-            for (const SidechainWT& wt : vWT) {
+            // Check that every Withdrawal listed in the Withdrawal Bundle is included
+            for (const SidechainWithdrawal& w : vWithdrawal) {
                 bool fFound = false;
-                for (const CTxOut& out : wtPrime->wtPrime.vout) {
-                    if (out.nValue == wt.amount - wt.mainchainFee &&
-                            GetScriptForDestination(DecodeDestination(wt.strDestination, true)) == out.scriptPubKey) {
+                for (const CTxOut& out : withdrawalBundle->tx.vout) {
+                    if (out.nValue == w.amount - w.mainchainFee &&
+                            GetScriptForDestination(DecodeDestination(w.strDestination, true)) == out.scriptPubKey) {
                         fFound = true;
                         break;
                     }
                 }
                 if (!fFound) {
-                    strFail = "Invalid WT^ - missing output!\n";
+                    strFail = "Invalid Withdrawal Bundle - missing output!\n";
                     return false;
                 }
             }
@@ -5999,45 +5998,45 @@ bool VerifyWTPrimes(std::string& strFail, int nHeight, const std::vector<CTransa
             // Check if standard by mainchain bitcoin core standards
             CFeeRate dust = CFeeRate(DUST_RELAY_TX_FEE);
             std::string strReason = "";
-            if (!CoreIsStandardTx(wtPrime->wtPrime, true, dust, strReason)) {
-                strFail = "Invalid WT^ - failed CoreIsStandardTx!\n";
+            if (!CoreIsStandardTx(withdrawalBundle->tx, true, dust, strReason)) {
+                strFail = "Invalid Withdrawal Bundle - failed CoreIsStandardTx!\n";
                 return false;
             }
 
-            // Check WT^ weight
-            if (GetTransactionWeight(wtPrime->wtPrime) > MAX_WTPRIME_WEIGHT) {
-                strFail = "Invalid WT^ - too large!\n";
+            // Check Withdrawal Bundle weight
+            if (GetTransactionWeight(withdrawalBundle->tx) > MAX_WITHDRAWAL_BUNDLE_WEIGHT) {
+                strFail = "Invalid Withdrawal Bundle - too large!\n";
                 return false;
             }
 
-            // Verify that we can replicate this WT^ if fReplicate is set
+            // Verify that we can replicate this Withdrawal Bundle if fReplicate is set
             if (fReplicate) {
-                // Try to create the same WT^
-                CTransactionRef wtPrimeTx;
-                CTransactionRef wtPrimeDataTx;
-                if (!CreateWTPrimeTx(nHeight, wtPrimeTx, wtPrimeDataTx, true /* fReplicationCheck */ )) {
-                    strFail = "Invalid WT^ - failed to create replicant WT^!\n";
+                // Try to create the same Withdrawal Bundle
+                CTransactionRef withdrawalBundleTx;
+                CTransactionRef withdrawalBundleDataTx;
+                if (!CreateWithdrawalBundleTx(nHeight, withdrawalBundleTx, withdrawalBundleDataTx, true /* fReplicationCheck */ )) {
+                    strFail = "Invalid Withdrawal Bundle - failed to create replicant Withdrawal Bundle!\n";
                     return false;
                 }
-                // Verify that our WT^ matches the one in this block
-                if (*wtPrimeTx != CTransaction(wtPrime->wtPrime)) {
-                    strFail = "Invalid WT^ - replicated WT^ does not match!\n";
+                // Verify that our Withdrawal Bundle matches the one in this block
+                if (*withdrawalBundleTx != CTransaction(withdrawalBundle->tx)) {
+                    strFail = "Invalid Withdrawal Bundle - replicated Withdrawal Bundle does not match!\n";
                     return false;
                 }
             }
 
-            hashWTPrime = wtPrime->wtPrime.GetHash();
-            hashWTPrimeID = wtPrime->GetID();
+            hashWithdrawalBundle = withdrawalBundle->tx.GetHash();
+            hashWithdrawalBundleID = withdrawalBundle->GetID();
 
-            // Update the status of wt(s) included in the WT^ - returned by
+            // Update the status of withdrawals included in the Withdrawal Bundle - returned by
             // reference and applied to the DB if needed
-            for (size_t i = 0; i < vWT.size(); i++)
-                vWT[i].status = WT_IN_WTPRIME;
+            for (size_t i = 0; i < vWithdrawal.size(); i++)
+                vWithdrawal[i].status = WITHDRAWAL_IN_BUNDLE;
         }
     }
-    if (!hashWTPrime.IsNull()) {
+    if (!hashWithdrawalBundle.IsNull()) {
         std::string strReplicated = fReplicate ? "true" : "false";
-        LogPrintf("%s Verified WT^: %s.\n Replicated? %s\n", __func__, hashWTPrime.ToString(), strReplicated);
+        LogPrintf("%s Verified Withdrawal Bundle: %s.\n Replicated? %s\n", __func__, hashWithdrawalBundle.ToString(), strReplicated);
     }
     return true;
 }
@@ -6384,7 +6383,7 @@ void HandleMainchainReorg(const std::vector<uint256>& vOrphan)
     }
 }
 
-CScript EncodeWTFees(const CAmount& amount)
+CScript EncodeWithdrawalFees(const CAmount& amount)
 {
     CDataStream s(SER_NETWORK, PROTOCOL_VERSION);
     s << amount;
@@ -6396,7 +6395,7 @@ CScript EncodeWTFees(const CAmount& amount)
     return script;
 }
 
-bool DecodeWTFees(const CScript& script, CAmount& amount)
+bool DecodeWithdrawalFees(const CScript& script, CAmount& amount)
 {
     if (script[0] != OP_RETURN || script.size() != 10) {
         LogPrintf("%s: Error: Invalid script!\n", __func__);
@@ -6433,13 +6432,13 @@ bool DecodeWTFees(const CScript& script, CAmount& amount)
     return true;
 }
 
-uint256 GetWTRefundMessageHash(const uint256& wtid)
+uint256 GetWithdrawalRefundMessageHash(const uint256& id)
 {
     // Standard format of refund request message
     CHashWriter ss(SER_GETHASH, 0);
     ss << strMessageMagic;
     ss << strRefundMessageMagic;
-    ss << wtid.ToString();
+    ss << id.ToString();
 
     return ss.GetHash();
 }

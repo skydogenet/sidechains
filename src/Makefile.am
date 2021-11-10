@@ -123,7 +123,7 @@ BITCOIN_CORE_H = \
   policy/fees.h \
   policy/policy.h \
   policy/rbf.h \
-  policy/wtprime.h \
+  policy/withdrawalbundle.h \
   protocol.h \
   random.h \
   reverse_iterator.h \
