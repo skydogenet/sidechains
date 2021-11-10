@@ -615,8 +615,8 @@ fs::path static StartupShortcutPath()
 {
     std::string chain = ChainNameFromCommandLine();
     if (chain == CBaseChainParams::MAIN)
-        return GetSpecialFolderPath(CSIDL_STARTUP) / "TestChain.lnk";
-    return GetSpecialFolderPath(CSIDL_STARTUP) / strprintf("TestChain (%s).lnk", chain);
+        return GetSpecialFolderPath(CSIDL_STARTUP) / "TrainChain.lnk";
+    return GetSpecialFolderPath(CSIDL_STARTUP) / strprintf("TrainChain (%s).lnk", chain);
 }
 
 bool GetStartOnSystemStartup()
@@ -711,8 +711,8 @@ fs::path static GetAutostartFilePath()
 {
     std::string chain = ChainNameFromCommandLine();
     if (chain == CBaseChainParams::MAIN)
-        return GetAutostartDir() / "testchain.desktop";
-    return GetAutostartDir() / strprintf("testchain-%s.lnk", chain);
+        return GetAutostartDir() / "trainchain.desktop";
+    return GetAutostartDir() / strprintf("trainchain-%s.lnk", chain);
 }
 
 bool GetStartOnSystemStartup()
@@ -756,9 +756,9 @@ bool SetStartOnSystemStartup(bool fAutoStart)
         optionFile << "[Desktop Entry]\n";
         optionFile << "Type=Application\n";
         if (chain == CBaseChainParams::MAIN)
-            optionFile << "Name=TestChain\n";
+            optionFile << "Name=TrainChain\n";
         else
-            optionFile << strprintf("Name=TestChain (%s)\n", chain);
+            optionFile << strprintf("Name=TrainChain (%s)\n", chain);
         optionFile << "Exec=" << pszExePath << strprintf(" -min -regtest=%d\n", gArgs.GetBoolArg("-regtest", false));
         optionFile << "Terminal=false\n";
         optionFile << "Hidden=false\n";
