@@ -140,7 +140,7 @@ TrainChain100Setup::TrainChain100Setup() : TestingSetup(CBaseChainParams::REGTES
 
     // Reset the gArgs we set
     gArgs.ForceSetArg("-verifybmmacceptblock", "1");
-    gArgs.ForceSetArg("-verifywtprimeacceptblock", "1");
+    gArgs.ForceSetArg("-verifywithdrawalbundleacceptblock", "1");
 }
 
 // TODO refactor
@@ -196,7 +196,7 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CMutableTransaction &tx) {
 
 CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn) {
     return CTxMemPoolEntry(MakeTransactionRef(txn), nFee, nTime, nHeight,
-                           spendsCoinbase, fWTRefund, wtID, sigOpCost, lp);
+                           spendsCoinbase, fWithdrawalRefund, wtID, sigOpCost, lp);
 }
 
 /**

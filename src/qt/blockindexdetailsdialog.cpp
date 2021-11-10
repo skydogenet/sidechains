@@ -114,8 +114,8 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     // Main Block Hash
     ui->labelMainBlockHash->setText(QString::fromStdString(index->hashMainBlock.ToString()));
 
-    // WT^ hash
-    ui->labelHashWTPrime->setText(QString::fromStdString(index->hashWTPrime.ToString()));
+    // WithdrawalBundle hash
+    ui->labelHashWithdrawalBundle->setText(QString::fromStdString(index->hashWithdrawalBundle.ToString()));
 
     // Hash of the block that came after this one if any
     ui->labelNextBlockHash->setText(QString::fromStdString(hashNext.ToString()));

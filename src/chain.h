@@ -210,7 +210,7 @@ public:
 
     //! BMM
     uint256 hashMainBlock;
-    uint256 hashWTPrime;
+    uint256 hashWithdrawalBundle;
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId;
@@ -237,7 +237,7 @@ public:
         hashMerkleRoot = uint256();
         nTime          = 0;
 
-        hashWTPrime = uint256();
+        hashWithdrawalBundle = uint256();
         hashMainBlock = uint256();
     }
 
@@ -254,7 +254,7 @@ public:
         hashMerkleRoot = block.hashMerkleRoot;
         nTime          = block.nTime;
 
-        hashWTPrime = block.hashWTPrime;
+        hashWithdrawalBundle = block.hashWithdrawalBundle;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -283,7 +283,7 @@ public:
             block.hashPrevBlock  = pprev->GetBlockHash();
         block.hashMerkleRoot     = hashMerkleRoot;
         block.nTime              = nTime;
-        block.hashWTPrime        = hashWTPrime;
+        block.hashWithdrawalBundle        = hashWithdrawalBundle;
         block.hashMainchainBlock = hashMainBlock;
         return block;
     }
@@ -400,7 +400,7 @@ public:
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
         READWRITE(hashMainBlock);
-        READWRITE(hashWTPrime);
+        READWRITE(hashWithdrawalBundle);
     }
 
     uint256 GetBlockHash() const
@@ -410,7 +410,7 @@ public:
         block.hashPrevBlock      = hashPrev;
         block.hashMerkleRoot     = hashMerkleRoot;
         block.nTime              = nTime;
-        block.hashWTPrime        = hashWTPrime;
+        block.hashWithdrawalBundle        = hashWithdrawalBundle;
         block.hashMainchainBlock = hashMainBlock;
         return block.GetHash();
     }

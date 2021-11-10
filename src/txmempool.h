@@ -71,8 +71,8 @@ private:
     int64_t nTime;             //!< Local time when entering the mempool
     unsigned int entryHeight;  //!< Chain height when entering the mempool
     bool spendsCoinbase;       //!< keep track of transactions that spend a coinbase
-    bool fWTRefund;            //!< Track transactions that are WT refund requests
-    uint256 wtID;              //!< The ID of a WT for a WT refund (if it is one)
+    bool fWithdrawalRefund;            //!< Track transactions that are Withdrawalrefund requests
+    uint256 wtID;              //!< The ID of a Withdrawalfor a Withdrawalrefund (if it is one)
     int64_t sigOpCost;         //!< Total sigop cost
     int64_t feeDelta;          //!< Used for determining the priority of the transaction for mining in a block
     LockPoints lockPoints;     //!< Track the height and time at which tx was final
@@ -93,7 +93,7 @@ private:
 public:
     CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,
                     int64_t _nTime, unsigned int _entryHeight,
-                    bool spendsCoinbase, bool fWTRefund, uint256 wtID,
+                    bool spendsCoinbase, bool fWithdrawalRefund, uint256 wtID,
                     int64_t nSigOpsCost, LockPoints lp);
 
     const CTransaction& GetTx() const { return *this->tx; }
@@ -124,8 +124,8 @@ public:
 
     bool GetSpendsCoinbase() const { return spendsCoinbase; }
 
-    bool IsWTRefund() const { return fWTRefund; }
-    uint256 GetWTID() const { return wtID; }
+    bool IsWithdrawalRefund() const { return fWithdrawalRefund; }
+    uint256 GetWITHDRAWALID() const { return wtID; }
 
     uint64_t GetCountWithAncestors() const { return nCountWithAncestors; }
     uint64_t GetSizeWithAncestors() const { return nSizeWithAncestors; }
@@ -519,9 +519,9 @@ private:
 
     std::vector<indexed_transaction_set::const_iterator> GetSortedDepthAndScore() const;
 
-    // In mempool WT refund IDs - keep track of them so we don't accept multiple
-    // refunds for the same WT into the mempool.
-    std::set<uint256> setWTRefund;
+    // In mempool Withdrawalrefund IDs - keep track of them so we don't accept multiple
+    // refunds for the same Withdrawalinto the mempool.
+    std::set<uint256> setWithdrawalRefund;
 
 public:
     indirectmap<COutPoint, const CTransaction*> mapNextTx;
@@ -649,10 +649,10 @@ public:
         return (mapTx.count(hash) != 0);
     }
 
-    bool WTRefundExists(const uint256& wtid) const
+    bool WithdrawalRefundExists(const uint256& wtid) const
     {
         LOCK(cs);
-        return setWTRefund.count(wtid);
+        return setWithdrawalRefund.count(wtid);
     }
 
     CTransactionRef get(const uint256& hash) const;

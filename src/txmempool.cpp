@@ -20,9 +20,9 @@
 
 CTxMemPoolEntry::CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,
                                  int64_t _nTime, unsigned int _entryHeight,
-                                 bool _spendsCoinbase, bool _fWTRefund, uint256 _wtID, int64_t _sigOpsCost, LockPoints lp):
+                                 bool _spendsCoinbase, bool _fWithdrawalRefund, uint256 _wtID, int64_t _sigOpsCost, LockPoints lp):
     tx(_tx), nFee(_nFee), nTime(_nTime), entryHeight(_entryHeight),
-    spendsCoinbase(_spendsCoinbase), fWTRefund(_fWTRefund), wtID(_wtID), sigOpCost(_sigOpsCost), lockPoints(lp)
+    spendsCoinbase(_spendsCoinbase), fWithdrawalRefund(_fWithdrawalRefund), wtID(_wtID), sigOpCost(_sigOpsCost), lockPoints(lp)
 {
     nTxWeight = GetTransactionWeight(*tx);
     nUsageSize = RecursiveDynamicUsage(tx);
@@ -413,9 +413,9 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,
     vTxHashes.emplace_back(tx.GetWitnessHash(), newit);
     newit->vTxHashesIdx = vTxHashes.size() - 1;
 
-    // Keep track of WT refunds
-    if (entry.IsWTRefund()) {
-        setWTRefund.insert(entry.GetWTID());
+    // Keep track of Withdrawalrefunds
+    if (entry.IsWithdrawalRefund()) {
+        setWithdrawalRefund.insert(entry.GetWITHDRAWALID());
     }
 
     return true;
@@ -438,9 +438,9 @@ void CTxMemPool::removeUnchecked(txiter it, MemPoolRemovalReason reason)
         vTxHashes.clear();
     }
 
-    // If we are removing a WT refund request, also remove the WT ID from set
-    if (it->IsWTRefund()) {
-        setWTRefund.erase(it->GetWTID());
+    // If we are removing a Withdrawalrefund request, also remove the WithdrawalID from set
+    if (it->IsWithdrawalRefund()) {
+        setWithdrawalRefund.erase(it->GetWITHDRAWALID());
     }
 
     totalTxSize -= it->GetTxSize();

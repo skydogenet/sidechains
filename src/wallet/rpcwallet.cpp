@@ -3495,7 +3495,7 @@ UniValue bumpfee(const JSONRPCRequest& request)
     return result;
 }
 
-UniValue createwt(const JSONRPCRequest& request)
+UniValue createwithdrawal(const JSONRPCRequest& request)
 {
     CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
     if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
@@ -3505,7 +3505,7 @@ UniValue createwt(const JSONRPCRequest& request)
     if (request.fHelp || request.params.size() != 5)
         throw std::runtime_error(
             "createwt amount \"address\"\n"
-            "\nCreate a WT so that it can be included in a WT^.\n"
+            "\nCreate a withdrawal so that it can be included in a bundle.\n"
             + HelpRequiringPassphrase(pwallet) +
             "\nArguments:\n"
             "1. \"address\"            (string, required) The bitcoin address to send to.\n"
@@ -3558,19 +3558,19 @@ UniValue createwt(const JSONRPCRequest& request)
     std::string strFail = "";
     uint256 txid;
     uint256 wtid;
-    if (!pwallet->CreateWT(nAmount, nFee, nMainchainFee, request.params[0].get_str(), request.params[1].get_str(), strFail, txid, wtid)) {
+    if (!pwallet->CreateWithdrawal(nAmount, nFee, nMainchainFee, request.params[0].get_str(), request.params[1].get_str(), strFail, txid, wtid)) {
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
-    // Cache user's WT ID
-    bmmCache.CacheWTID(wtid);
+    // Cache user's withdrawal ID
+    bmmCache.CacheWithdrawalID(wtid);
 
     UniValue response(UniValue::VOBJ);
     response.pushKV("txid", txid.ToString());
     return response;
 }
 
-UniValue createwtrefundrequest(const JSONRPCRequest& request)
+UniValue createwithdrawalrefundrequest(const JSONRPCRequest& request)
 {
     CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
     if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
@@ -3579,46 +3579,46 @@ UniValue createwtrefundrequest(const JSONRPCRequest& request)
 
     if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
-            "createwtrefundrequest \"wtid\"\n"
-            "\nCreate a WT refund request.\n"
+            "createwithdrawalrefundrequest \"wtid\"\n"
+            "\nCreate a withdrawal refund request.\n"
             + HelpRequiringPassphrase(pwallet) +
             "\nArguments:\n"
-            "1. \"wtid\"        (string, required) The WT ID from leveldb.\n"
+            "1. \"id\"        (string, required) The withdrawal ID from leveldb.\n"
             "\nResult:\n"
             "\"txid\"           (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("createwtrefundrequest", "\"bd63ef0e581c53ec261fea45436c171033a313d6c3a4bcac435da0b8a353249a\"")
-            + HelpExampleRpc("createwtrefundrequest", "\"bd63ef0e581c53ec261fea45436c171033a313d6c3a4bcac435da0b8a353249a\"")
+            + HelpExampleCli("createwithdrawalrefundrequest", "\"bd63ef0e581c53ec261fea45436c171033a313d6c3a4bcac435da0b8a353249a\"")
+            + HelpExampleRpc("createwithdrawalrefundrequest", "\"bd63ef0e581c53ec261fea45436c171033a313d6c3a4bcac435da0b8a353249a\"")
         );
 
     ObserveSafeMode();
 
     uint256 wtID = uint256S(request.params[0].get_str());
     if (wtID.IsNull()) {
-        throw JSONRPCError(RPC_MISC_ERROR, "Invalid WT ID!");
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid withdrawal ID!");
     }
 
-    // Get WT
-    SidechainWT wt;
-    if (!psidechaintree->GetWT(wtID, wt)) {
-        throw JSONRPCError(RPC_MISC_ERROR, "Specified WT not found!");
+    // Get withdrawal
+    SidechainWithdrawal wt;
+    if (!psidechaintree->GetWithdrawal(wtID, wt)) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Specified withdrawal not found!");
     }
 
-    // Check WT status
-    if (wt.status != WT_UNSPENT) {
+    // Check status
+    if (wt.status != WITHDRAWAL_UNSPENT) {
         throw JSONRPCError(RPC_MISC_ERROR, "Withdrawal is already spent or in a bundle!");
     }
 
     // Get refund address
     CTxDestination dest = DecodeDestination(wt.strRefundDestination);
     if (!IsValidDestination(dest)) {
-        throw JSONRPCError(RPC_MISC_ERROR, "WT has invalid refund address!");
+        throw JSONRPCError(RPC_MISC_ERROR, "Withdrawal has invalid refund address!");
     }
 
     // Double checking that the destination is for a KeyID
     const CKeyID* id = boost::get<CKeyID>(&dest);
     if (!id) {
-        throw JSONRPCError(RPC_MISC_ERROR, "WT has non P2PKH destination!");
+        throw JSONRPCError(RPC_MISC_ERROR, "Withdrawal has non P2PKH destination!");
     }
 
     // Make sure the results are valid at least up to the most recent block
@@ -3636,7 +3636,7 @@ UniValue createwtrefundrequest(const JSONRPCRequest& request)
     }
 
     // Get refund message hash
-    uint256 hashMessage = GetWTRefundMessageHash(wtID);
+    uint256 hashMessage = GetWithdrawalRefundMessageHash(wtID);
 
     // Sign refund message hash
     std::vector<unsigned char> vchSig;
@@ -3646,7 +3646,7 @@ UniValue createwtrefundrequest(const JSONRPCRequest& request)
 
     std::string strFail = "";
     uint256 txid;
-    if (!pwallet->CreateWTRefundRequest(wtID, vchSig, strFail, txid)) {
+    if (!pwallet->CreateWithdrawalRefundRequest(wtID, vchSig, strFail, txid)) {
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
@@ -3655,7 +3655,7 @@ UniValue createwtrefundrequest(const JSONRPCRequest& request)
     return response;
 }
 
-UniValue refundallwts(const JSONRPCRequest& request)
+UniValue refundallwithdrawals(const JSONRPCRequest& request)
 {
     CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
     if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
@@ -3664,46 +3664,46 @@ UniValue refundallwts(const JSONRPCRequest& request)
 
     if (request.fHelp || request.params.size())
         throw std::runtime_error(
-            "refundallwts \"wtid\"\n"
-            "\nCreate a WT refund request for all of my WT(s). (For testing)\n"
+            "refundallwithdrawals\n"
+            "\nCreate a withdrawal refund request for all of my withdrawals.\n"
             + HelpRequiringPassphrase(pwallet) +
             "\nResult (array):\n"
             "\"txid\"           (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("refundallwts", "")
-            + HelpExampleRpc("refundallwts", "")
+            + HelpExampleCli("refundallwithdrawals", "")
+            + HelpExampleRpc("refundallwithdrawals", "")
         );
 
     ObserveSafeMode();
 
     UniValue result(UniValue::VARR);
-    std::set<uint256> setWTID = bmmCache.GetCachedWTID();
-    for (const uint256& wtID : setWTID) {
+    std::set<uint256> setWithdrawalID = bmmCache.GetCachedWithdrawalID();
+    for (const uint256& wtID : setWithdrawalID) {
         if (wtID.IsNull()) {
-            throw JSONRPCError(RPC_MISC_ERROR, "Invalid WT ID!");
+            throw JSONRPCError(RPC_MISC_ERROR, "Invalid withdrawal ID!");
         }
 
-        // Get WT
-        SidechainWT wt;
-        if (!psidechaintree->GetWT(wtID, wt)) {
+        // Get withdrawal
+        SidechainWithdrawal wt;
+        if (!psidechaintree->GetWithdrawal(wtID, wt)) {
             continue;
         }
 
-        // Check WT status
-        if (wt.status != WT_UNSPENT) {
+        // Check status
+        if (wt.status != WITHDRAWAL_UNSPENT) {
             continue;
         }
 
         // Get refund address
         CTxDestination dest = DecodeDestination(wt.strRefundDestination);
         if (!IsValidDestination(dest)) {
-            throw JSONRPCError(RPC_MISC_ERROR, "WT has invalid refund address!");
+            throw JSONRPCError(RPC_MISC_ERROR, "Withdrawal has invalid refund address!");
         }
 
         // Double checking that the destination is for a KeyID
         const CKeyID* id = boost::get<CKeyID>(&dest);
         if (!id) {
-            throw JSONRPCError(RPC_MISC_ERROR, "WT has non P2PKH destination!");
+            throw JSONRPCError(RPC_MISC_ERROR, "Withdrawal has non P2PKH destination!");
         }
 
         // Make sure the results are valid at least up to the most recent block
@@ -3721,7 +3721,7 @@ UniValue refundallwts(const JSONRPCRequest& request)
         }
 
         // Get refund message hash
-        uint256 hashMessage = GetWTRefundMessageHash(wtID);
+        uint256 hashMessage = GetWithdrawalRefundMessageHash(wtID);
 
         // Sign refund message hash
         std::vector<unsigned char> vchSig;
@@ -3731,7 +3731,7 @@ UniValue refundallwts(const JSONRPCRequest& request)
 
         std::string strFail = "";
         uint256 txid;
-        if (!pwallet->CreateWTRefundRequest(wtID, vchSig, strFail, txid)) {
+        if (!pwallet->CreateWithdrawalRefundRequest(wtID, vchSig, strFail, txid)) {
             throw JSONRPCError(RPC_MISC_ERROR, strFail);
         }
 
@@ -4101,9 +4101,9 @@ static const CRPCCommand commands[] =
     { "wallet",             "removeprunedfunds",                &removeprunedfunds,             {"txid"} },
     { "wallet",             "rescanblockchain",                 &rescanblockchain,              {"start_height", "stop_height"} },
 
-    { "sidechain",          "createwt",                         &createwt,                      {"address","refundaddress","namount","nfee", "nmainchainfee"} },
-    { "sidechain",          "createwtrefundrequest",            &createwtrefundrequest,         {"wtid"} },
-    { "hidden",             "refundallwts",                     &refundallwts,                  {} },
+    { "sidechain",          "createwithdrawal",                 &createwithdrawal,                      {"address","refundaddress","namount","nfee", "nmainchainfee"} },
+    { "sidechain",          "createwithdrawalrefundrequest",    &createwithdrawalrefundrequest,         {"id"} },
+    { "sidechain",          "refundallwithdrawals",             &refundallwithdrawals,                  {} },
 };
 
 void RegisterWalletRPCCommands(CRPCTable &t)

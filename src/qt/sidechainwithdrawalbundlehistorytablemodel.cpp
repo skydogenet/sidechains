@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <qt/sidechainwtprimehistorytablemodel.h>
+#include <qt/sidechainwithdrawalbundlehistorytablemodel.h>
 
 #include <QTimer>
 
@@ -16,24 +16,24 @@
 #include <txdb.h>
 #include <validation.h>
 
-Q_DECLARE_METATYPE(WTPrimeHistoryTableObject)
+Q_DECLARE_METATYPE(WithdrawalBundleHistoryTableObject)
 
-SidechainWTPrimeHistoryTableModel::SidechainWTPrimeHistoryTableModel(QObject *parent) :
+SidechainWithdrawalBundleHistoryTableModel::SidechainWithdrawalBundleHistoryTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
 }
 
-int SidechainWTPrimeHistoryTableModel::rowCount(const QModelIndex & /*parent*/) const
+int SidechainWithdrawalBundleHistoryTableModel::rowCount(const QModelIndex & /*parent*/) const
 {
     return model.size();
 }
 
-int SidechainWTPrimeHistoryTableModel::columnCount(const QModelIndex & /*parent*/) const
+int SidechainWithdrawalBundleHistoryTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
     return 4;
 }
 
-QVariant SidechainWTPrimeHistoryTableModel::data(const QModelIndex &index, int role) const
+QVariant SidechainWithdrawalBundleHistoryTableModel::data(const QModelIndex &index, int role) const
 {
     if (!walletModel)
         return false;
@@ -44,10 +44,10 @@ QVariant SidechainWTPrimeHistoryTableModel::data(const QModelIndex &index, int r
     int row = index.row();
     int col = index.column();
 
-    if (!model.at(row).canConvert<WTPrimeHistoryTableObject>())
+    if (!model.at(row).canConvert<WithdrawalBundleHistoryTableObject>())
         return QVariant();
 
-    WTPrimeHistoryTableObject object = model.at(row).value<WTPrimeHistoryTableObject>();
+    WithdrawalBundleHistoryTableObject object = model.at(row).value<WithdrawalBundleHistoryTableObject>();
 
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
 
@@ -97,7 +97,7 @@ QVariant SidechainWTPrimeHistoryTableModel::data(const QModelIndex &index, int r
     return QVariant();
 }
 
-QVariant SidechainWTPrimeHistoryTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant SidechainWithdrawalBundleHistoryTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role == Qt::DisplayRole) {
         if (orientation == Qt::Horizontal) {
@@ -116,30 +116,30 @@ QVariant SidechainWTPrimeHistoryTableModel::headerData(int section, Qt::Orientat
     return QVariant();
 }
 
-void SidechainWTPrimeHistoryTableModel::UpdateModel()
+void SidechainWithdrawalBundleHistoryTableModel::UpdateModel()
 {
     beginResetModel();
     model.clear();
     endResetModel();
 
-    // Get all of the current WT^(s)
-    std::vector<SidechainWTPrime> vWTPrime;
-    vWTPrime = psidechaintree->GetWTPrimes(THIS_SIDECHAIN);
+    // Get all of the current WithdrawalBundle(s)
+    std::vector<SidechainWithdrawalBundle> vWithdrawalBundle;
+    vWithdrawalBundle = psidechaintree->GetWithdrawalBundles(THIS_SIDECHAIN);
 
-    if (vWTPrime.empty())
+    if (vWithdrawalBundle.empty())
         return;
 
-    // Sort WT^(s) by height
-    SortWTPrimeByHeight(vWTPrime);
+    // Sort WithdrawalBundle(s) by height
+    SortWithdrawalBundleByHeight(vWithdrawalBundle);
 
-    // Add WT^(s) to model
-    beginInsertRows(QModelIndex(), model.size(), model.size() + vWTPrime.size() - 1);
-    for (const SidechainWTPrime& wt : vWTPrime) {
-        WTPrimeHistoryTableObject object;
+    // Add WithdrawalBundle(s) to model
+    beginInsertRows(QModelIndex(), model.size(), model.size() + vWithdrawalBundle.size() - 1);
+    for (const SidechainWithdrawalBundle& wt : vWithdrawalBundle) {
+        WithdrawalBundleHistoryTableObject object;
 
-        // Insert new WT^ into table
-        object.hash = QString::fromStdString(wt.wtPrime.GetHash().ToString());
-        object.amount = CTransaction(wt.wtPrime).GetValueOut();
+        // Insert new WithdrawalBundle into table
+        object.hash = QString::fromStdString(wt.tx.GetHash().ToString());
+        object.amount = CTransaction(wt.tx).GetValueOut();
         object.status = QString::fromStdString(wt.GetStatusStr());
         object.height = wt.nHeight;
         model.append(QVariant::fromValue(object));
@@ -147,27 +147,27 @@ void SidechainWTPrimeHistoryTableModel::UpdateModel()
     endInsertRows();
 }
 
-bool SidechainWTPrimeHistoryTableModel::GetWTPrimeInfoAtRow(int row, uint256& hash) const
+bool SidechainWithdrawalBundleHistoryTableModel::GetWithdrawalBundleInfoAtRow(int row, uint256& hash) const
 {
     if (row >= model.size())
         return false;
 
-    if (!model[row].canConvert<WTPrimeHistoryTableObject>())
+    if (!model[row].canConvert<WithdrawalBundleHistoryTableObject>())
         return false;
 
-    WTPrimeHistoryTableObject object = model[row].value<WTPrimeHistoryTableObject>();
+    WithdrawalBundleHistoryTableObject object = model[row].value<WithdrawalBundleHistoryTableObject>();
 
     hash = uint256S(object.hash.toStdString());
 
     return true;
 }
 
-void SidechainWTPrimeHistoryTableModel::setWalletModel(WalletModel *model)
+void SidechainWithdrawalBundleHistoryTableModel::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
 }
 
-void SidechainWTPrimeHistoryTableModel::setClientModel(ClientModel *model)
+void SidechainWithdrawalBundleHistoryTableModel::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     if (model)

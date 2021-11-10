@@ -646,11 +646,11 @@ public:
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
 
     /** Script formats for Drivechains */
-    bool IsWTPrimeFailCommit(uint256& hashWTPrime) const;
-    bool IsWTPrimeSpentCommit(uint256& hashWTPrime) const;
-    bool IsWTRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSig) const;
+    bool IsWithdrawalBundleFailCommit(uint256& hashWithdrawalBundle) const;
+    bool IsWithdrawalBundleSpentCommit(uint256& hashWithdrawalBundle) const;
+    bool IsWithdrawalRefundRequest(uint256& wtID, std::vector<unsigned char>& vchSig) const;
     bool IsPrevBlockCommit(uint256& hashPrevMain, uint256& hashPrevSide) const;
-    bool IsWTPrimeHashCommit(uint256& hashWTPrime) const;
+    bool IsWithdrawalBundleHashCommit(uint256& hashWithdrawalBundle) const;
     bool IsBlockVersionCommit(int32_t& nVersion) const;
     bool IsSidechainObj(std::vector<unsigned char>& vch) const;
 

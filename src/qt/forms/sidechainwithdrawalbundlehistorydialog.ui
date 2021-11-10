@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SidechainWTPrimeHistoryDialog</class>
- <widget class="QDialog" name="SidechainWTPrimeHistoryDialog">
+ <class>SidechainWithdrawalBundleHistoryDialog</class>
+ <widget class="QDialog" name="SidechainWithdrawalBundleHistoryDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,7 +17,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Double click to show on WT^ explorer</string>
+      <string>Double click to show on Withdrawal Bundle explorer</string>
      </property>
     </widget>
    </item>

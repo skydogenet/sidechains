@@ -18,7 +18,7 @@ enum TopLevelIndex {
     INDEX_WITNESS_PROGRAM,
     INDEX_WITNESS_COMMIT,
     INDEX_PREV_BLOCK_COMMIT,
-    INDEX_WTPRIME_HASH_COMMIT,
+    INDEX_WITHDRAWAL_BUNDLE_HASH_COMMIT,
     INDEX_BLOCK_VERSION_COMMIT,
     INDEX_UNKNOWN_OPRETURN,
 };
@@ -74,7 +74,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     // Witness program
     int nWitVersion = -1;
     std::vector<unsigned char> vWitProgram;
-    uint256 hashWTPrime = uint256();
+    uint256 hashWithdrawalBundle = uint256();
     uint256 hashPrevMain = uint256();
     uint256 hashPrevSide = uint256();
     int32_t nVersion = 0;
@@ -135,14 +135,14 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             AddTreeItem(INDEX_PREV_BLOCK_COMMIT, subItem);
         }
         else
-        if (scriptPubKey.IsWTPrimeHashCommit(hashWTPrime)) {
+        if (scriptPubKey.IsWithdrawalBundleHashCommit(hashWithdrawalBundle)) {
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            QString str = "WT^ Hash Commit: \n";
-            str += QString::fromStdString(hashWTPrime.ToString());
+            QString str = "WithdrawalBundle Hash Commit: \n";
+            str += QString::fromStdString(hashWithdrawalBundle.ToString());
 
             subItem->setText(1, str);
-            AddTreeItem(INDEX_WTPRIME_HASH_COMMIT, subItem);
+            AddTreeItem(INDEX_WITHDRAWAL_BUNDLE_HASH_COMMIT, subItem);
         }
         else
         if (scriptPubKey.IsBlockVersionCommit(nVersion)) {
@@ -203,8 +203,8 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
         else
         if (index == INDEX_PREV_BLOCK_COMMIT)
             topItem->setText(0, "PrevBlock Commit");
-        if (index == INDEX_WTPRIME_HASH_COMMIT)
-            topItem->setText(0, "WT^ Hash Commit");
+        if (index == INDEX_WITHDRAWAL_BUNDLE_HASH_COMMIT)
+            topItem->setText(0, "WithdrawalBundle Hash Commit");
         else
         if (index == INDEX_UNKNOWN_OPRETURN)
             topItem->setText(0, "Unknown OP_RETURN");

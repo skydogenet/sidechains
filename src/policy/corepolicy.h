@@ -15,7 +15,7 @@ class CScript;
 class CTransaction;
 
 /**
- * This class exists so that WT^(s) can be checked for most mainchain policies
+ * This class exists so that WithdrawalBundle(s) can be checked for most mainchain policies
  * and standardness requirements without contacting the mainchain.
  *
  * Bitcoin core policy settings, taken from github.com/bitcoin/bitcoin
@@ -24,14 +24,14 @@ class CTransaction;
 
 static const int CORE_WITNESS_SCALE_FACTOR = 4;
 
-// TODO check when creating WT^
+// TODO check when creating WithdrawalBundle
 //static const size_t CORE_MIN_TRANSACTION_WEIGHT = CORE_WITNESS_SCALE_FACTOR * 60; // 60 is the lower bound for the size of a valid serialized CTransaction
 //static const size_t CORE_MIN_SERIALIZABLE_TRANSACTION_WEIGHT = CORE_WITNESS_SCALE_FACTOR * 10; // 10 is the lower bound for the size of a serialized CTransaction
 
 /** The maximum weight for transactions we're willing to relay/mine */
 static const unsigned int CORE_MAX_STANDARD_TX_WEIGHT = 400000;
 
-// TODO check when creating WT^
+// TODO check when creating WithdrawalBundle
 /** The minimum non-witness size for transactions we're willing to relay/mine (1 segwit input + 1 P2WPKH output = 82 bytes) */
 //static const unsigned int CORE_MIN_STANDARD_TX_NONWITNESS_SIZE = 82;
 /** The maximum number of sigops we're willing to relay/mine in a single tx */

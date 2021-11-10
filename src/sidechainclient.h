@@ -23,9 +23,9 @@ public:
     SidechainClient();
 
     /*
-     * Send B-WT^ hash to local node
+     * Send Withdrawal Bundle tx to local node
      */
-    bool BroadcastWTPrime(const std::string& hex);
+    bool BroadcastWithdrawalBundle(const std::string& hex);
 
     /*
      * Ask for an updated list of recent deposits
@@ -67,15 +67,15 @@ public:
 
     bool GetBlockCount(int& nBlocks);
 
-    bool GetWorkScore(const uint256& hashWTPrime, int& nWorkScore);
+    bool GetWorkScore(const uint256& hash, int& nWorkScore);
 
-    bool ListWTPrimeStatus(std::vector<uint256>& vHashWTPrime);
+    bool ListWithdrawalBundleStatus(std::vector<uint256>& vHashWithdrawalBundle);
 
     bool GetBlockHash(int nHeight, uint256& hashBlock);
 
-    bool HaveSpentWTPrime(const uint256& hashWTPrime);
+    bool HaveSpentWithdrawalBundle(const uint256& hash);
 
-    bool HaveFailedWTPrime(const uint256& hashWTPrime);
+    bool HaveFailedWithdrawalBundle(const uint256& hash);
 
 private:
     /*
