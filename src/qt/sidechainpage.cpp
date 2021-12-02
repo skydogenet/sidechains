@@ -959,11 +959,11 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
 #ifdef MAC_OSX
     strDrivenetData = "DriveNet";
 #else
-    strDrivenetData = ".drivenet";
+    strDrivenetData = ".skydoge";
 #endif
 #endif
 
-    // Does the drivenet directory exist?
+    // Does the skydoge directory exist?
     fs::path pathDrivenetData = pathHome / strDrivenetData;
     if (!fs::exists(pathDrivenetData))
         LogPrintf("%s: Configuration error - drivechain data directory not found!\n");
@@ -975,10 +975,10 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     }
 
     // Do we have configuration files for the mainchain & sidechain?
-    fs::path pathConfMain = pathDrivenetData / "drivenet.conf";
+    fs::path pathConfMain = pathDrivenetData / "skydoge.conf";
     fs::path pathConfSide = pathSide / "testchain.conf";
 
-    // Do drivenet.conf & side.conf exist?
+    // Do skydoge.conf & side.conf exist?
     if (fs::exists(pathConfMain) && fs::exists(pathConfSide))
         fConfig = true;
 

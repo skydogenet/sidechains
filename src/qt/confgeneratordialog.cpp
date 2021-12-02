@@ -108,14 +108,14 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
 #ifdef MAC_OSX
     strData = "DriveNet";
 #else
-    strData = ".drivenet";
+    strData = ".skydoge";
 #endif
 #endif
 
-    // Does the drivenet directory exist?
+    // Does the skydoge directory exist?
     fs::path pathData = pathHome / strData;
     if (!fs::exists(pathData)) {
-        QString strError = "DriveNet data directory (~/.drivenet) not found!\n";
+        QString strError = "DriveNet data directory (~/.skydoge) not found!\n";
         messageBox.setText(strError);
         messageBox.exec();
         return false;
@@ -127,7 +127,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
     // doesn't have RPC configured we will generate a new mainchain config file.
 
     // Do we need to backup the old config file?
-    fs::path pathConf = pathData / "drivenet.conf";
+    fs::path pathConf = pathData / "skydoge.conf";
     bool fExists = fs::exists(pathConf);
 
     // Check for existing RPC configuration
