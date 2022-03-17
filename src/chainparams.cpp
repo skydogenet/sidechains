@@ -99,7 +99,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0xc0e399ae110b36ea5e03794699168d942a68d71d1779593b694cd1fdc5d2b7e1");
+        consensus.defaultAssumeValid = uint256S("0x2a0637183ef985057576b94bab8ad5c65c8f68a75b0990828b688f184c75ec14");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -140,7 +140,7 @@ public:
 
         checkpointData = {
             {
-                { 0, uint256S("0xc0e399ae110b36ea5e03794699168d942a68d71d1779593b694cd1fdc5d2b7e1")},
+                { 0, uint256S("0x2a0637183ef985057576b94bab8ad5c65c8f68a75b0990828b688f184c75ec14")},
             }
         };
 
