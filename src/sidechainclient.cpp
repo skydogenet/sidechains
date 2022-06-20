@@ -274,7 +274,7 @@ uint256 SidechainClient::SendBMMRequest(const uint256& hashCritical, const uint2
     json.append(hashCritical.ToString());
     json.append("\",");
     json.append(UniValue((int)THIS_SIDECHAIN).write());
-    json.append(",");
+    json.append("\",");
     json.append(strPrevHash.substr(strPrevHash.size() - 4, strPrevHash.size() - 1));
     json.append("\"");
     json.append("] }");
