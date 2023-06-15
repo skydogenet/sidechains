@@ -959,7 +959,7 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
 #ifdef MAC_OSX
     strDrivechainData = "Skydoge";
 #else
-    strDrivenetData = ".skydoge";
+    strDrivechainData = ".skydoge";
 #endif
 #endif
 
