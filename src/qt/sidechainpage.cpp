@@ -954,12 +954,12 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     std::string strDrivechainData = "";
 
 #ifdef WIN32
-    strDrivechainData = "Drivechain";
+    strDrivechainData = "Skydoge";
 #else
 #ifdef MAC_OSX
-    strDrivechainData = "Drivechain";
+    strDrivechainData = "Skydoge";
 #else
-    strDrivechainData = ".drivechain";
+    strDrivechainData = ".skydoge";
 #endif
 #endif
 
@@ -975,7 +975,7 @@ void SidechainPage::CheckConfiguration(bool& fConfig, bool& fConnection)
     }
 
     // Do we have configuration files for the mainchain & sidechain?
-    fs::path pathConfMain = pathDrivechainData / "drivechain.conf";
+    fs::path pathConfMain = pathDrivechainData / "skydoge.conf";
     fs::path pathConfSide = pathSide / "testchain.conf";
 
     // Do drivechain.conf & side.conf exist?

@@ -102,13 +102,13 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
 
     std::string strData = "";
 #ifdef WIN32
-    strData = "Drivechain";
+    strData = "Skydoge";
 #else
 
 #ifdef MAC_OSX
-    strData = "Drivechain";
+    strData = "Skydoge";
 #else
-    strData = ".drivechain";
+    strData = ".skydoge";
 #endif
 #endif
 
@@ -127,7 +127,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
     // doesn't have RPC configured we will generate a new mainchain config file.
 
     // Do we need to backup the old config file?
-    fs::path pathConf = pathData / "drivechain.conf";
+    fs::path pathConf = pathData / "skydoge.conf";
     bool fExists = fs::exists(pathConf);
 
     // Check for existing RPC configuration
