@@ -31,8 +31,6 @@
 #include <utilmoneystr.h>
 #include <validation.h>
 #include <validationinterface.h>
-#include <wallet/coincontrol.h>
-#include <wallet/fees.h>
 
 #include <algorithm>
 #include <queue>
@@ -40,6 +38,8 @@
 
 #ifdef ENABLE_WALLET
 #include <wallet/wallet.h>
+#include <wallet/coincontrol.h>
+#include <wallet/fees.h>
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -303,7 +303,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         hashLastDeposit = lastDeposit.dtx.GetHash();
         nBurnIndex = lastDeposit.nBurnIndex;
     }
-    vDeposit = client.UpdateDeposits(SIDECHAIN_ADDRESS_BYTES, hashLastDeposit, nBurnIndex);
+    vDeposit = client.UpdateDeposits(hashLastDeposit, nBurnIndex);
 
     // Find new deposits
     std::vector<SidechainDeposit> vDepositNew;
@@ -853,6 +853,10 @@ bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, CAmo
     // been passed in
     std::unique_ptr<CBlockTemplate> pblocktemplate;
     if (scriptPubKey.empty()) {
+        #ifndef ENABLE_WALLET
+            strError = "No wallet active!\n";
+            return false;
+        #else    
         if (vpwallets.empty()) {
             strError = "No wallet active!\n";
             return false;
@@ -867,6 +871,7 @@ bool BlockAssembler::GenerateBMMBlock(CBlock& block, std::string& strError, CAmo
             return false;
         }
         pblocktemplate = BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, false, hashPrevBlock, nFeesOut);
+        #endif
     } else {
         pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptPubKey, true, false, hashPrevBlock, nFeesOut);
     }

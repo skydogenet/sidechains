@@ -58,7 +58,7 @@ void ConfGeneratorDialog::on_pushButtonApply_clicked()
         messageBox.setIcon(QMessageBox::Information);
         messageBox.setWindowTitle("Configuration files created!");
         QString str = "Configuration files created!\n\n";
-        str += "You must restart DriveNet and any\n";
+        str += "You must restart Drivechain and any\n";
         str += "sidechains for changes to be applied.";
         messageBox.setText(str);
         messageBox.exec();
@@ -102,12 +102,15 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
 
     std::string strData = "";
 #ifdef WIN32
-    strData = "DriveNet";
+    strData = "Drivechain";
 #else
 
 #ifdef MAC_OSX
-    strData = "DriveNet";
+    strData = "Drivechain";
 #else
+
+
+
     strData = ".skydoge";
 #endif
 #endif
@@ -115,7 +118,7 @@ bool ConfGeneratorDialog::WriteConfigFiles(const QString& strUser, const QString
     // Does the skydoge directory exist?
     fs::path pathData = pathHome / strData;
     if (!fs::exists(pathData)) {
-        QString strError = "DriveNet data directory (~/.skydoge) not found!\n";
+        QString strError = "Skydoge data directory (~/.skydoge) not found!\n";
         messageBox.setText(strError);
         messageBox.exec();
         return false;

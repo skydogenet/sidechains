@@ -77,6 +77,10 @@ const std::string BitcoinGUI::DEFAULT_UIPLATFORM =
 #endif
         ;
 
+#include <boost/bind/placeholders.hpp>
+
+using namespace boost::placeholders;
+
 static constexpr int HEADER_HEIGHT_DELTA_SYNC = 24;
 
 /** Display name for default wallet name. Uses tilde to avoid name
@@ -118,9 +122,9 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     openRPCConsoleAction(0),
     openAction(0),
     showHelpMessageAction(0),
+    sidechainAction(0),
     showHashCalcDialogAction(0),
     showBlockExplorerDialogAction(0),
-    sidechainAction(0),
     trayIcon(0),
     trayIconMenu(0),
     notificator(0),
@@ -780,7 +784,7 @@ void BitcoinGUI::updateNetworkState()
 
     bool fNetworking = clientModel->getNetworkActive();
     if (fNetworking) {
-        tooltip = tr("%n active connection(s) to DriveNet network", "", count) + QString(".<br>");
+        tooltip = tr("%n active connection(s) to Drivechain network", "", count) + QString(".<br>");
     } else {
         tooltip = tr("Network activity disabled.") + QString("<br>") + tr("Click to enable network activity again.");
     }
